@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">MamaCook</string>
+    
+    <!-- 1. Thay ID ứng dụng mới của bạn vào đây -->
+    <string name="facebook_app_id">1435559144936955</string>
+    
+    <!-- 2. Thay ID ứng dụng mới vào sau chữ fb -->
+    <string name="fb_login_protocol_scheme">fb1435559144936955</string>
+    
+    <!-- 3. Dán Client Token mới lấy ở mục Nâng cao vào đây -->
+    <string name="facebook_client_token">8055829f5a0bc6f5de94e2c75fb71587</string>
 </resources>
