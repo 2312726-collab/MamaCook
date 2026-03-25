@@ -20,10 +20,13 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
 
@@ -31,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int RC_SIGN_IN = 9001;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
     private GoogleSignInClient mGoogleSignInClient;
     private CallbackManager mCallbackManager;
     
@@ -43,11 +47,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
         mCallbackManager = CallbackManager.Factory.create();
         
         // Cấu hình Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id)) // Firebase tự tạo ID này
+                .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
@@ -57,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
         btnLoginFacebook = findViewById(R.id.btn_login_facebook);
         btnLoginGoogle = findViewById(R.id.btn_login_google);
 
-        // 1. Đăng nhập Google
         if (btnLoginGoogle != null) {
             btnLoginGoogle.setOnClickListener(v -> {
                 Intent signInIntent = mGoogleSignInClient.getSignInIntent();
@@ -65,7 +69,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // 2. Đăng nhập Facebook
         if (btnLoginFacebook != null) {
             btnLoginFacebook.setOnClickListener(v -> {
                 LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile", "email"));
@@ -77,10 +80,11 @@ public class MainActivity extends AppCompatActivity {
                 handleFacebookAccessToken(loginResult.getAccessToken().getToken());
             }
             @Override public void onCancel() {}
-            @Override public void onError(FacebookException error) {}
+            @Override public void onError(FacebookException error) {
+                Toast.makeText(MainActivity.this, "Lỗi Facebook: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         });
 
-        // 3. Đăng nhập thường & Chuyển trang
         if (btnNavRegister != null) {
             btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
         }
@@ -94,10 +98,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        mCallbackManager.onActivityResult(requestCode, resultCode, data); // Cho Facebook
+        mCallbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
 
-        // Cho Google
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -113,8 +116,7 @@ public class MainActivity extends AppCompatActivity {
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
-                startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                finish();
+                saveUserToFirestore(mAuth.getCurrentUser());
             }
         });
     }
@@ -123,9 +125,35 @@ public class MainActivity extends AppCompatActivity {
         AuthCredential credential = FacebookAuthProvider.getCredential(token);
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
-                startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                finish();
+                saveUserToFirestore(mAuth.getCurrentUser());
             }
         });
+    }
+
+    private void saveUserToFirestore(FirebaseUser firebaseUser) {
+        if (firebaseUser == null) return;
+
+        String uid = firebaseUser.getUid();
+        String name = firebaseUser.getDisplayName();
+        String email = firebaseUser.getEmail();
+        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "";
+
+        User user = new User();
+        user.setId_nguoi_dung(uid);
+        user.setHo_ten(name);
+        user.setEmail(email);
+        user.setAnh_dai_dien(photoUrl);
+        user.setNgay_tao(Timestamp.now()); // Sử dụng Timestamp chuẩn của Firebase
+        user.setTrang_thai_tai_khoan("dang_hoat_dong");
+
+        db.collection("nguoi_dung").document(uid)
+                .set(user)
+                .addOnSuccessListener(aVoid -> {
+                    startActivity(new Intent(MainActivity.this, HomeActivity.class));
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(MainActivity.this, "Lỗi lưu dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

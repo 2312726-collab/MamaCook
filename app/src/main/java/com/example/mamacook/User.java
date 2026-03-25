@@ -3,28 +3,19 @@ package com.example.mamacook;
 import com.google.firebase.Timestamp;
 
 public class User {
-    private String id_nguoi_dung;
+    private String id_nguoi_dung; 
     private String ho_ten;
     private String email;
-    private String mat_khau;
+    private String mat_khau; 
     private String anh_dai_dien;
     private String ngay_sinh;
     private String gioi_tinh;
     private String so_dien_thoai;
-    private Timestamp ngay_tao;
-    private String trang_thai_tai_khoan;
+    private Timestamp ngay_tao; // Chuyển sang Timestamp
+    private String trang_thai_tai_khoan; 
 
     public User() {}
 
-    public User(String ho_ten, String email, String mat_khau) {
-        this.ho_ten = ho_ten;
-        this.email = email;
-        this.mat_khau = mat_khau;
-        this.ngay_tao = Timestamp.now();
-        this.trang_thai_tai_khoan = "active";
-    }
-
-    // Full Getters and Setters
     public String getId_nguoi_dung() { return id_nguoi_dung; }
     public void setId_nguoi_dung(String id_nguoi_dung) { this.id_nguoi_dung = id_nguoi_dung; }
     public String getHo_ten() { return ho_ten; }
