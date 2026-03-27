@@ -2,7 +2,10 @@ package com.example.mamacook;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Patterns;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     
     private TextView btnNavRegister;
     private Button btnLoginMain, btnLoginFacebook, btnLoginGoogle;
+    private EditText etLoginUser, etLoginPassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +54,14 @@ public class MainActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mCallbackManager = CallbackManager.Factory.create();
         
+        // Ánh xạ thêm các trường nhập liệu
+        etLoginUser = findViewById(R.id.et_login_user);
+        etLoginPassword = findViewById(R.id.et_login_password);
+        btnNavRegister = findViewById(R.id.btn_nav_register);
+        btnLoginMain = findViewById(R.id.btn_login_main);
+        btnLoginFacebook = findViewById(R.id.btn_login_facebook);
+        btnLoginGoogle = findViewById(R.id.btn_login_google);
+
         // Cấu hình Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
@@ -57,10 +69,10 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        btnNavRegister = findViewById(R.id.btn_nav_register);
-        btnLoginMain = findViewById(R.id.btn_login_main);
-        btnLoginFacebook = findViewById(R.id.btn_login_facebook);
-        btnLoginGoogle = findViewById(R.id.btn_login_google);
+        // XỬ LÝ ĐĂNG NHẬP CHÍNH (Email/SĐT + Password)
+        if (btnLoginMain != null) {
+            btnLoginMain.setOnClickListener(v -> loginUser());
+        }
 
         if (btnLoginGoogle != null) {
             btnLoginGoogle.setOnClickListener(v -> {
@@ -74,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
                 LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile", "email"));
             });
         }
+
         LoginManager.getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
@@ -88,12 +101,32 @@ public class MainActivity extends AppCompatActivity {
         if (btnNavRegister != null) {
             btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
         }
-        if (btnLoginMain != null) {
-            btnLoginMain.setOnClickListener(v -> {
-                startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                finish();
-            });
+    }
+
+    private void loginUser() {
+        String input = etLoginUser.getText().toString().trim();
+        String password = etLoginPassword.getText().toString().trim();
+
+        if (TextUtils.isEmpty(input) || TextUtils.isEmpty(password)) {
+            Toast.makeText(this, "Vui lòng nhập tài khoản và mật khẩu", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        // Logic nhận diện Email hay SĐT để khớp với dữ liệu lúc đăng ký
+        String finalEmail = input;
+        if (input.matches("\\d+")) { // Nếu là số
+            finalEmail = input + "@mamacook.com";
+        }
+
+        mAuth.signInWithEmailAndPassword(finalEmail, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        startActivity(new Intent(MainActivity.this, HomeActivity.class));
+                        finish();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Sai tài khoản hoặc mật khẩu!", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     @Override
@@ -132,28 +165,23 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveUserToFirestore(FirebaseUser firebaseUser) {
         if (firebaseUser == null) return;
-
         String uid = firebaseUser.getUid();
-        String name = firebaseUser.getDisplayName();
-        String email = firebaseUser.getEmail();
-        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "";
+        
+        // Kiểm tra xem user đã tồn tại trong Firestore chưa trước khi lưu mới
+        db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(documentSnapshot -> {
+            if (!documentSnapshot.exists()) {
+                User user = new User();
+                user.setId_nguoi_dung(uid);
+                user.setHo_ten(firebaseUser.getDisplayName());
+                user.setEmail(firebaseUser.getEmail());
+                user.setAnh_dai_dien(firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "");
+                user.setNgay_tao(Timestamp.now());
+                user.setTrang_thai_tai_khoan("dang_hoat_dong");
 
-        User user = new User();
-        user.setId_nguoi_dung(uid);
-        user.setHo_ten(name);
-        user.setEmail(email);
-        user.setAnh_dai_dien(photoUrl);
-        user.setNgay_tao(Timestamp.now()); // Sử dụng Timestamp chuẩn của Firebase
-        user.setTrang_thai_tai_khoan("dang_hoat_dong");
-
-        db.collection("nguoi_dung").document(uid)
-                .set(user)
-                .addOnSuccessListener(aVoid -> {
-                    startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(MainActivity.this, "Lỗi lưu dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                db.collection("nguoi_dung").document(uid).set(user);
+            }
+            startActivity(new Intent(MainActivity.this, HomeActivity.class));
+            finish();
+        });
     }
 }

@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".HomeActivity">
 
-    <!-- 1. Background ảnh toàn màn hình -->
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -25,7 +24,6 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- 2. Header Logo -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -39,7 +37,6 @@
                     android:src="@drawable/ic_mama" />
             </LinearLayout>
 
-            <!-- 3. Tấm nền màu kem bo tròn -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -47,7 +44,6 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Greeting Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -59,7 +55,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="serif"
-                        android:text="Xin chào Hoàng!"
+                        android:text="Xin chào khách!"
                         android:textColor="#4E342E"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -76,21 +72,77 @@
                         android:textStyle="italic" />
                 </LinearLayout>
 
-                <!-- 2. Thanh tìm kiếm -->
-                <EditText
-                    android:id="@+id/et_search"
+                <!-- Tìm kiếm và Nút Lọc -->
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    android:background="@drawable/bg_input_field"
-                    android:drawableStart="@android:drawable/ic_menu_search"
-                    android:drawablePadding="10dp"
-                    android:hint="Tìm kiếm món ăn..."
-                    android:textColor="@color/black"
-                    android:paddingHorizontal="15dp"
-                    android:textColorHint="#999999" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <!-- 3. Danh mục món ăn -->
+                    <EditText
+                        android:id="@+id/et_search"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_input_field"
+                        android:drawableStart="@android:drawable/ic_menu_search"
+                        android:drawablePadding="10dp"
+                        android:hint="Tìm kiếm món ăn..."
+                        android:textColor="@color/black"
+                        android:paddingHorizontal="15dp"
+                        android:textColorHint="#999999"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:maxLines="1" />
+
+                    <ImageButton
+                        android:id="@+id/btn_filter"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_marginStart="10dp"
+                        android:background="@drawable/bg_input_field"
+                        android:src="@drawable/ic_filter"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="#4E342E" />
+                </LinearLayout>
+
+                <!-- Khu vực Spinner (Mặc định ẩn) -->
+                <LinearLayout
+                    android:id="@+id/layout_filters"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
+                    android:weightSum="3">
+
+                    <Spinner
+                        android:id="@+id/spn_difficulty_main"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/bg_input_field" />
+
+                    <Spinner
+                        android:id="@+id/spn_time_main"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:layout_marginHorizontal="2dp"
+                        android:background="@drawable/bg_input_field" />
+
+                    <Spinner
+                        android:id="@+id/spn_rating_main"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/bg_input_field" />
+                </LinearLayout>
+
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -109,7 +161,6 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
-                <!-- Section: Món ăn theo danh mục -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -123,15 +174,8 @@
                         android:textColor="#4E342E"
                         android:textSize="18sp"
                         android:textStyle="bold" />
-                    <TextView
-                        android:id="@+id/btn_see_all_category"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:text="Xem tất cả"
-                        android:textColor="#8B0000"
-                        android:textStyle="bold" />
                 </RelativeLayout>
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_category_dishes"
                     android:layout_width="match_parent"
@@ -140,7 +184,6 @@
                     android:orientation="horizontal"
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-                <!-- 4. Món ăn nổi bật -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -158,28 +201,16 @@
                     android:orientation="horizontal"
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-                <!-- 5. Công thức mới -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
+                <!-- PHẦN THÊM LẠI CHO CÔNG THỨC MỚI -->
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="serif"
-                        android:text="Công thức mới"
-                        android:textColor="#4E342E"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:id="@+id/btn_see_all_new"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:text="Xem tất cả"
-                        android:textColor="#8B0000"
-                        android:textStyle="bold" />
-                </RelativeLayout>
+                    android:layout_marginTop="24dp"
+                    android:fontFamily="serif"
+                    android:text="Công thức mới"
+                    android:textColor="#4E342E"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_new_recipes"
                     android:layout_width="match_parent"
@@ -188,28 +219,16 @@
                     android:orientation="horizontal"
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-                <!-- 6. Các món đã xem gần đây -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
+                <!-- PHẦN THÊM LẠI CHO LỊCH SỬ -->
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="serif"
-                        android:text="Vừa xem gần đây"
-                        android:textColor="#4E342E"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:id="@+id/btn_see_all_history"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:text="Xem tất cả"
-                        android:textColor="#8B0000"
-                        android:textStyle="bold" />
-                </RelativeLayout>
+                    android:layout_marginTop="24dp"
+                    android:fontFamily="serif"
+                    android:text="Vừa xem gần đây"
+                    android:textColor="#4E342E"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_history"
                     android:layout_width="match_parent"
@@ -222,7 +241,6 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- 7. Bottom Navigation -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"

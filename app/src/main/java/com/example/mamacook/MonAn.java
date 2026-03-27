@@ -18,6 +18,9 @@ public class MonAn {
 
     private List<BuocNau> danh_sach_buoc_nau;
     private List<ChiTietNguyenLieu> danh_sach_nguyen_lieu;
+    
+    // Trường mới để hỗ trợ tìm kiếm cả tên món và nguyên liệu
+    private List<String> tu_khoa_tim_kiem;
 
     public MonAn() {}
 
@@ -30,7 +33,7 @@ public class MonAn {
 
     public static class ChiTietNguyenLieu {
         public String ten_nguyen_lieu;
-        public int so_luong; // ĐÃ SỬA: Chuyển từ String sang int để khớp với Firestore
+        public int so_luong;
         public String don_vi;
         public ChiTietNguyenLieu() {}
     }
@@ -62,4 +65,6 @@ public class MonAn {
     public void setDanh_sach_buoc_nau(List<BuocNau> danh_sach_buoc_nau) { this.danh_sach_buoc_nau = danh_sach_buoc_nau; }
     public List<ChiTietNguyenLieu> getDanh_sach_nguyen_lieu() { return danh_sach_nguyen_lieu; }
     public void setDanh_sach_nguyen_lieu(List<ChiTietNguyenLieu> danh_sach_nguyen_lieu) { this.danh_sach_nguyen_lieu = danh_sach_nguyen_lieu; }
+    public List<String> getTu_khoa_tim_kiem() { return tu_khoa_tim_kiem; }
+    public void setTu_khoa_tim_kiem(List<String> tu_khoa_tim_kiem) { this.tu_khoa_tim_kiem = tu_khoa_tim_kiem; }
 }
