@@ -62,7 +62,7 @@ public class SampleData {
                             "Cho dứa, cà chua, đậu bắp vào nồi nấu sôi.", 
                             "Cuối cùng cho cá vào lại nồi, nêm rau ngổ, ngò gai rồi tắt bếp."}));
 
-        samples.add(createSample("Canh Khổ Qua Nhồi Thịt", "https://cdn.tgdd.vn/Files/2019/04/10/1160166/cach-lam-canh-kho-qua-nhoi-thit-khong-dang-giu-duoc-mau-xanh-202112311450201140.jpg", 50, "Trung bình", "mon_canh", 1100, 4.5, 40,
+        samples.add(createSample("Canh Khổ Qua Nhồi Thịt", "https://cdn.tgdd.vn/Files/2019/01/03/1142366/bi-quyet-nau-canh-kho-qua-don-thit-khong-bao-gio-bi-dang-202107301211370247.jpg", 50, "Trung bình", "mon_canh", 1100, 4.5, 40,
                 new Object[][]{{"Khổ qua", 3, "quả"}, {"Thịt heo băm", 200, "g"}, {"Mộc nhĩ", 2, "tai"}, {"Hành lá", 2, "nhánh"}},
                 new String[]{"Khổ qua rửa sạch, bỏ ruột.", 
                             "Trộn thịt băm với mộc nhĩ thái nhỏ và gia vị, sau đó nhồi vào khổ qua.", 
@@ -127,14 +127,14 @@ public class SampleData {
                             "Thêm muối tôm, tắc, sa tế trộn đều.", 
                             "Thêm lạc rang và rau răm."}));
 
-        samples.add(createSample("Chân Gà Sả Tắc", "https://cdn.tgdd.vn/Files/2020/05/20/1257125/cach-lam-chan-ga-ngam-sa-tac-ngon-gion-tham-vi-khong-bi-dang-202112311036069094.jpg", 40, "Trung bình", "an_vat", 4500, 4.9, 320,
+        samples.add(createSample("Chân Gà Sả Tắc", "https://file.hstatic.net/200000700229/article/lam-chan-ga-ngam-sa-tac-xoai-thumb_dafa66b5c7044a26bf70955c9c8f5ce6.jpg", 40, "Trung bình", "an_vat", 4500, 4.9, 320,
                 new Object[][]{{"Chân gà", 500, "g"}, {"Sả", 5, "cây"}, {"Tắc", 10, "quả"}, {"Ớt", 5, "quả"}},
                 new String[]{"Luộc chín chân gà với sả gừng, ngâm đá.", 
                             "Pha nước mắm đường tắc.", 
                             "Trộn chân gà với sả, tắc, ớt và nước mắm.", 
                             "Để thấm trong tủ lạnh 4 tiếng."}));
 
-        samples.add(createSample("Gỏi Khô Bò", "https://cdn.tgdd.vn/Files/2017/03/24/964614/cach-lam-goi-kho-bo-ngon-gion-chuan-vi-sai-gon-202206031025281143.jpg", 20, "Dễ", "an_vat", 1800, 4.7, 110,
+        samples.add(createSample("Gỏi Khô Bò", "https://cdn.tgdd.vn/Files/2020/04/24/1251601/cach-lam-kho-bo-den-an-kem-goi-du-du-thom-ngon-do-15-760x367.jpg", 20, "Dễ", "an_vat", 1800, 4.7, 110,
                 new Object[][]{{"Đu đủ xanh", 1, "quả"}, {"Khô bò", 100, "g"}, {"Lạc rang", 50, "g"}, {"Nước mắm", 2, "muỗng"}},
                 new String[]{"Đu đủ bào sợi giòn.", 
                             "Pha nước mắm chua ngọt.", 

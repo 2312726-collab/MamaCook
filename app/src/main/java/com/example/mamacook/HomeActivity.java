@@ -2,6 +2,8 @@ package com.example.mamacook;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -47,6 +49,10 @@ public class HomeActivity extends AppCompatActivity {
     private TextView currentSelectedCategory;
     private List<MonAn> listFullCurrentCategory = new ArrayList<>();
 
+    // BIẾN GHI NHỚ TRẠNG THÁI DANH MỤC
+    private String lastCategoryId = "all";
+    private String lastCategoryTitle = "Gợi ý cho bạn";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,8 +85,67 @@ public class HomeActivity extends AppCompatActivity {
 
         currentSelectedCategory = findViewById(R.id.btn_cat_all);
         loadRecipesByCategory("all", "Gợi ý cho bạn");
-
     }
+
+    private void setupSearchAction() {
+        etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                String query = etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
+                
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+
+                if (!query.isEmpty()) {
+                    performSearch(query);
+                } else {
+                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
+                }
+                return true;
+            }
+            return false;
+        });
+
+        // XỬ LÝ KHI XÓA CHỮ TRONG Ô TÌM KIẾM
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.toString().trim().isEmpty()) {
+                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
+                }
+            }
+        });
+    }
+
+    private void setupCategoryButtons() {
+        int[] btnIds = {R.id.btn_cat_all, R.id.btn_cat_man, R.id.btn_cat_canh, R.id.btn_cat_chay, R.id.btn_cat_vat, R.id.btn_cat_lau};
+        String[] categoryIds = {"all", "mon_man", "mon_canh", "mon_chay", "an_vat", "mon_lau"};
+        String[] titles = {"Gợi ý cho bạn", "Món mặn", "Món canh", "Món chay", "Ăn vặt", "Món lẩu"};
+        for (int i = 0; i < btnIds.length; i++) {
+            final int index = i;
+            TextView btn = findViewById(btnIds[i]);
+            if (btn != null) {
+                btn.setOnClickListener(v -> {
+                    lastCategoryId = categoryIds[index];
+                    lastCategoryTitle = titles[index];
+
+                    if (currentSelectedCategory != null) {
+                        currentSelectedCategory.setBackgroundResource(R.drawable.bg_input_field);
+                        currentSelectedCategory.setTextColor(android.graphics.Color.parseColor("#555555"));
+                    }
+                    btn.setBackgroundResource(R.drawable.bg_register_button);
+                    btn.setTextColor(android.graphics.Color.WHITE);
+                    currentSelectedCategory = btn;
+                    
+                    etSearch.setText(""); 
+                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
+                });
+            }
+        }
+    }
+
+    // --- CÁC PHƯƠNG THỨC MỚI VÀ HỖ TRỢ VIẾT Ở CUỐI FILE ---
 
     private void toggleFilterLayout() {
         if (layoutFilters.getVisibility() == View.GONE) {
@@ -124,25 +189,6 @@ public class HomeActivity extends AppCompatActivity {
         spnDifficulty.setOnItemSelectedListener(filterListener);
         spnTime.setOnItemSelectedListener(filterListener);
         spnRating.setOnItemSelectedListener(filterListener);
-    }
-
-    private void setupSearchAction() {
-        etSearch.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                String query = etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
-                
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-
-                if (!query.isEmpty()) {
-                    performSearch(query);
-                } else {
-                    loadRecipesByCategory("all", "Gợi ý cho bạn");
-                }
-                return true;
-            }
-            return false;
-        });
     }
 
     private void performSearch(String searchText) {
@@ -318,26 +364,4 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void loadHistoryRecipes() {}
-
-    private void setupCategoryButtons() {
-        int[] btnIds = {R.id.btn_cat_all, R.id.btn_cat_man, R.id.btn_cat_canh, R.id.btn_cat_chay, R.id.btn_cat_vat, R.id.btn_cat_lau};
-        String[] categoryIds = {"all", "mon_man", "mon_canh", "mon_chay", "an_vat", "mon_lau"};
-        String[] titles = {"Gợi ý cho bạn", "Món mặn", "Món canh", "Món chay", "Ăn vặt", "Món lẩu"};
-        for (int i = 0; i < btnIds.length; i++) {
-            final int index = i;
-            TextView btn = findViewById(btnIds[i]);
-            if (btn != null) {
-                btn.setOnClickListener(v -> {
-                    if (currentSelectedCategory != null) {
-                        currentSelectedCategory.setBackgroundResource(R.drawable.bg_input_field);
-                        currentSelectedCategory.setTextColor(android.graphics.Color.parseColor("#555555"));
-                    }
-                    btn.setBackgroundResource(R.drawable.bg_register_button);
-                    btn.setTextColor(android.graphics.Color.WHITE);
-                    currentSelectedCategory = btn;
-                    loadRecipesByCategory(categoryIds[index], titles[index]);
-                });
-            }
-        }
-    }
 }

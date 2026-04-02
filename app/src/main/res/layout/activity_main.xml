@@ -75,15 +75,15 @@
                     android:padding="20dp">
 
                     <EditText
-                        android:id="@+id/et_login_email"
+                        android:id="@+id/et_login_user"
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:background="@android:color/transparent"
-                        android:drawableStart="@android:drawable/ic_menu_myplaces"
+                        android:drawableStart="@drawable/ic_nav_profile"
                         android:drawablePadding="10dp"
-                        android:hint="Email của bạn"
+                        android:hint="Số điện thoại / Email"
                         android:textColorHint="@color/brown_light"
-                        android:inputType="textEmailAddress"
+                        android:inputType="text"
                         android:textColor="@color/black"
                         android:paddingHorizontal="10dp" />
 
@@ -98,7 +98,7 @@
                         android:layout_height="50dp"
                         android:layout_marginTop="10dp"
                         android:background="@android:color/transparent"
-                        android:drawableStart="@android:drawable/ic_lock_idle_lock"
+                        android:drawableStart="@drawable/ic_lock_outline"
                         android:drawablePadding="10dp"
                         android:hint="Mật khẩu của bạn"
                         android:textColorHint="@color/brown_light"
@@ -153,38 +153,77 @@
                             android:textColor="#555555" />
                     </RelativeLayout>
 
-                    <androidx.appcompat.widget.AppCompatButton
+                    <!-- Nút Google đã có Icon chuẩn -->
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_login_google"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginTop="15dp"
                         android:background="@drawable/bg_edittext"
-                        android:text="Đăng nhập với Google"
+                        app:backgroundTint="@null"
+                        app:icon="@drawable/ic_google"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconTint="@null"
+                        android:text="Tiếp tục với Google"
                         android:textAllCaps="false"
-                        android:textColor="#555555" />
+                        android:textColor="#555555"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
 
-                    <androidx.appcompat.widget.AppCompatButton
+                    <!-- Nút Facebook đã có Icon chuẩn -->
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_login_facebook"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:layout_marginTop="10dp"
                         android:background="@drawable/bg_button_facebook"
-                        android:text="Đăng nhập với Facebook"
+                        app:backgroundTint="@null"
+                        app:icon="@drawable/ic_facebook"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconTint="@null"
+                        android:text="Tiếp tục với Facebook"
                         android:textAllCaps="false"
-                        android:textColor="@color/white" />
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <TextView
-                android:id="@+id/btn_nav_register"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Bạn chưa có tài khoản? Đăng Ký"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bạn chưa có tài khoản? "
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="2"
+                    android:shadowDy="2"
+                    android:shadowRadius="2" />
+
+                <TextView
+                    android:id="@+id/btn_nav_register"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Đăng ký"
+                    android:textColor="#2196F3"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="2"
+                    android:shadowDy="2"
+                    android:shadowRadius="2" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
