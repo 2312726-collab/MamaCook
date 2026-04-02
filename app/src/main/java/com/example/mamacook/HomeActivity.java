@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -15,6 +16,8 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -49,7 +52,6 @@ public class HomeActivity extends AppCompatActivity {
     private TextView currentSelectedCategory;
     private List<MonAn> listFullCurrentCategory = new ArrayList<>();
 
-    // BIẾN GHI NHỚ TRẠNG THÁI DANH MỤC
     private String lastCategoryId = "all";
     private String lastCategoryTitle = "Gợi ý cho bạn";
 
@@ -91,29 +93,20 @@ public class HomeActivity extends AppCompatActivity {
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 String query = etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
-                
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-
-                if (!query.isEmpty()) {
-                    performSearch(query);
-                } else {
-                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-                }
+                if (!query.isEmpty()) performSearch(query);
+                else loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
                 return true;
             }
             return false;
         });
 
-        // XỬ LÝ KHI XÓA CHỮ TRONG Ô TÌM KIẾM
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.toString().trim().isEmpty()) {
-                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-                }
+            @Override public void afterTextChanged(Editable s) {
+                if (s.toString().trim().isEmpty()) loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
             }
         });
     }
@@ -129,7 +122,6 @@ public class HomeActivity extends AppCompatActivity {
                 btn.setOnClickListener(v -> {
                     lastCategoryId = categoryIds[index];
                     lastCategoryTitle = titles[index];
-
                     if (currentSelectedCategory != null) {
                         currentSelectedCategory.setBackgroundResource(R.drawable.bg_input_field);
                         currentSelectedCategory.setTextColor(android.graphics.Color.parseColor("#555555"));
@@ -137,15 +129,12 @@ public class HomeActivity extends AppCompatActivity {
                     btn.setBackgroundResource(R.drawable.bg_register_button);
                     btn.setTextColor(android.graphics.Color.WHITE);
                     currentSelectedCategory = btn;
-                    
                     etSearch.setText(""); 
                     loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
                 });
             }
         }
     }
-
-    // --- CÁC PHƯƠNG THỨC MỚI VÀ HỖ TRỢ VIẾT Ở CUỐI FILE ---
 
     private void toggleFilterLayout() {
         if (layoutFilters.getVisibility() == View.GONE) {
@@ -166,17 +155,13 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupSpinners() {
-        String[] difficulties = {"Độ khó", "Dễ", "Trung bình", "Khó"};
-        String[] times = {"Thời gian", "Dưới 15'", "15-30'", "30-60'", "Trên 60'"};
-        String[] ratings = {"Đánh giá", "4★ trở lên", "3★ trở lên", "2★ trở lên"};
+        String[] difficulties = {"Tất cả", "Dễ", "Trung bình", "Khó"};
+        String[] times = {"Tất cả", "Dưới 15'", "15-30'", "30-60'", "Trên 60'"};
+        String[] ratings = {"Tất cả", "4★ trở lên", "3★ trở lên", "2★ trở lên"};
 
-        ArrayAdapter<String> adapterDiff = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, difficulties);
-        ArrayAdapter<String> adapterTime = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, times);
-        ArrayAdapter<String> adapterRate = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ratings);
-
-        spnDifficulty.setAdapter(adapterDiff);
-        spnTime.setAdapter(adapterTime);
-        spnRating.setAdapter(adapterRate);
+        spnDifficulty.setAdapter(new LabelSpinnerAdapter(this, "Độ khó", difficulties));
+        spnTime.setAdapter(new LabelSpinnerAdapter(this, "Thời gian", times));
+        spnRating.setAdapter(new LabelSpinnerAdapter(this, "Đánh giá", ratings));
 
         AdapterView.OnItemSelectedListener filterListener = new AdapterView.OnItemSelectedListener() {
             @Override
@@ -191,64 +176,74 @@ public class HomeActivity extends AppCompatActivity {
         spnRating.setOnItemSelectedListener(filterListener);
     }
 
+    // ADAPTER TÙY CHỈNH ĐỂ HIỂN THỊ TÊN NHÃN KHI CHỌN "TẤT CẢ"
+    private static class LabelSpinnerAdapter extends ArrayAdapter<String> {
+        private final String label;
+
+        public LabelSpinnerAdapter(Context context, String label, String[] items) {
+            super(context, R.layout.spinner_item_selected, items);
+            this.label = label;
+            setDropDownViewResource(R.layout.spinner_dropdown_item);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            TextView view = (TextView) super.getView(position, convertView, parent);
+            String item = getItem(position);
+            // Nếu là "Tất cả", hiển thị tên Nhãn (Độ khó, Thời gian, ...)
+            // Nếu đã chọn cái khác (Dễ, Khó, ...), hiển thị đúng cái đó
+            if (item != null && item.equals("Tất cả")) {
+                view.setText(label);
+            } else {
+                view.setText(item);
+            }
+            return view;
+        }
+
+        @Override
+        public View getDropDownView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            // Trong danh sách xổ xuống thì cứ hiện bình thường: Tất cả, Dễ, Trung bình...
+            return super.getDropDownView(position, convertView, parent);
+        }
+    }
+
     private void performSearch(String searchText) {
         tvCategoryTitle.setText("Kết quả cho: '" + searchText + "'");
         String searchTextNoTone = VNCharacterUtils.removeAccents(searchText);
         String[] searchWordsNoTone = searchTextNoTone.split("\\s+");
-
-        db.collection("mon_an")
-                .whereArrayContains("tu_khoa_tim_kiem", searchWordsNoTone[0])
-                .get()
+        db.collection("mon_an").whereArrayContains("tu_khoa_tim_kiem", searchWordsNoTone[0]).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<MonAn> results = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         MonAn mon = doc.toObject(MonAn.class);
                         mon.setId_mon_an(doc.getId());
-                        
                         List<String> dbKeywords = mon.getTu_khoa_tim_kiem();
                         if (dbKeywords == null) continue;
-
                         boolean matchAll = true;
                         for (String wordNoTone : searchWordsNoTone) {
-                            if (!dbKeywords.contains(wordNoTone)) {
-                                matchAll = false;
-                                break;
-                            }
+                            if (!dbKeywords.contains(wordNoTone)) { matchAll = false; break; }
                         }
                         if (matchAll) results.add(mon);
                     }
-
-                    Collections.sort(results, (m1, m2) -> {
-                        int score1 = calculateRelevance(m1, searchText, searchTextNoTone);
-                        int score2 = calculateRelevance(m2, searchText, searchTextNoTone);
-                        return Integer.compare(score2, score1);
-                    });
-
+                    Collections.sort(results, (m1, m2) -> Integer.compare(calculateRelevance(m2, searchText, searchTextNoTone), calculateRelevance(m1, searchText, searchTextNoTone)));
                     listFullCurrentCategory = new ArrayList<>(results);
                     applyFilters();
-                    
-                    if (listCategory.isEmpty() && !results.isEmpty()) {
-                        Toast.makeText(this, "Không có món nào khớp bộ lọc!", Toast.LENGTH_SHORT).show();
-                    } else if (results.isEmpty()) {
-                        Toast.makeText(this, "Không tìm thấy món ăn phù hợp!", Toast.LENGTH_SHORT).show();
-                    }
                 });
     }
 
     private void applyFilters() {
         if (spnDifficulty.getSelectedItem() == null) return;
-        
         String difficulty = spnDifficulty.getSelectedItem().toString();
         String timeRange = spnTime.getSelectedItem().toString();
         String ratingRange = spnRating.getSelectedItem().toString();
 
         List<MonAn> filteredList = new ArrayList<>();
         for (MonAn mon : listFullCurrentCategory) {
-            boolean matchDifficulty = difficulty.equals("Độ khó") || mon.getDo_kho().equals(difficulty);
-            
+            boolean matchDifficulty = difficulty.equals("Tất cả") || mon.getDo_kho().equals(difficulty);
             boolean matchTime = false;
             int time = mon.getThoi_gian_nau();
-            if (timeRange.equals("Thời gian")) matchTime = true;
+            if (timeRange.equals("Tất cả")) matchTime = true;
             else if (timeRange.equals("Dưới 15'") && time < 15) matchTime = true;
             else if (timeRange.equals("15-30'") && time >= 15 && time <= 30) matchTime = true;
             else if (timeRange.equals("30-60'") && time > 30 && time <= 60) matchTime = true;
@@ -256,14 +251,12 @@ public class HomeActivity extends AppCompatActivity {
 
             boolean matchRating = false;
             double rating = mon.getRating();
-            if (ratingRange.equals("Đánh giá")) matchRating = true;
+            if (ratingRange.equals("Tất cả")) matchRating = true;
             else if (ratingRange.equals("4★ trở lên") && rating >= 4.0) matchRating = true;
             else if (ratingRange.equals("3★ trở lên") && rating >= 3.0) matchRating = true;
             else if (ratingRange.equals("2★ trở lên") && rating >= 2.0) matchRating = true;
 
-            if (matchDifficulty && matchTime && matchRating) {
-                filteredList.add(mon);
-            }
+            if (matchDifficulty && matchTime && matchRating) filteredList.add(mon);
         }
         listCategory.clear();
         listCategory.addAll(filteredList);
@@ -286,14 +279,11 @@ public class HomeActivity extends AppCompatActivity {
     private void displayUserProfile() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
-            String uid = user.getUid();
-            db.collection("nguoi_dung").document(uid).get()
+            db.collection("nguoi_dung").document(user.getUid()).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String name = documentSnapshot.getString("ho_ten");
-                        if (name != null && !name.isEmpty()) {
-                            tvGreeting.setText("Xin chào " + name + "!");
-                        }
+                        if (name != null && !name.isEmpty()) tvGreeting.setText("Xin chào " + name + "!");
                     }
                 });
         }
@@ -304,17 +294,14 @@ public class HomeActivity extends AppCompatActivity {
         rvFeatured = findViewById(R.id.rv_featured);
         rvNew = findViewById(R.id.rv_new_recipes);
         rvHistory = findViewById(R.id.rv_history);
-        
         rvCategory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvFeatured.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvNew.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvHistory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        
         adapterCategory = new MonAnAdapter(listCategory);
         adapterFeatured = new MonAnAdapter(listFeatured);
         adapterNew = new MonAnAdapter(listNew);
         adapterHistory = new MonAnAdapter(listHistory);
-        
         rvCategory.setAdapter(adapterCategory);
         rvFeatured.setAdapter(adapterFeatured);
         rvNew.setAdapter(adapterNew);
