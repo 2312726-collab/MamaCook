@@ -82,30 +82,24 @@ public class DetailMonAnActivity extends AppCompatActivity {
             fetchCommentsCleanRealtime(currentDishId);
             checkIfSaved();
             
-            // 🔥 NẾU ÔNG MUỐN XÓA SẠCH ĐỂ TEST LẠI THÌ BỎ 2 DẤU // Ở DƯỚI RỒI CHẠY APP
-            // clearAllComments(); 
+            // ĐÃ XÓA hàm tự động xóa database (Lộn đề tài của ông)
         }
 
-        // GÁN SỰ KIỆN CHO CÁC NÚT (Đã fix đủ)
+        // GÁN SỰ KIỆN CHO CÁC NÚT (Fix lỗi bấm không được)
         btnGuiBinhLuan.setOnClickListener(v -> postCommentWithAI());
         btnSaveRecipe.setOnClickListener(v -> toggleSaveRecipe());
         
-        btnCamera.setOnClickListener(v -> {
-            Toast.makeText(this, "Chức năng gửi ảnh đang được cập nhật!", Toast.LENGTH_SHORT).show();
-        });
+        if (btnCamera != null) {
+            btnCamera.setOnClickListener(v -> {
+                Toast.makeText(this, "Chức năng gửi ảnh đang được cập nhật!", Toast.LENGTH_SHORT).show();
+            });
+        }
 
-        tvSummaryRating.setOnClickListener(v -> {
-            Toast.makeText(this, "Xem tất cả đánh giá của món này", Toast.LENGTH_SHORT).show();
-        });
-    }
-
-    private void clearAllComments() {
-        db.collection("danh_gia").get().addOnSuccessListener(querySnapshot -> {
-            for (var doc : querySnapshot.getDocuments()) {
-                doc.getReference().delete();
-            }
-            Toast.makeText(this, "🔥 Đã dọn dẹp sạch database!", Toast.LENGTH_SHORT).show();
-        });
+        if (tvSummaryRating != null) {
+            tvSummaryRating.setOnClickListener(v -> {
+                Toast.makeText(this, "Xem tất cả đánh giá của món này", Toast.LENGTH_SHORT).show();
+            });
+        }
     }
 
     private void fetchDishDetailsRealtime(String id) {
@@ -178,7 +172,10 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(contentText)) return;
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String name = (user != null && user.getDisplayName() != null) ? user.getDisplayName() : (user != null ? user.getEmail() : "Người dùng");
+        String name = "Người dùng";
+        if (user != null) {
+            name = (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) ? user.getDisplayName() : user.getEmail();
+        }
 
         Map<String, Object> data = new HashMap<>();
         data.put("id_mon_an", currentDishId);
@@ -193,12 +190,12 @@ public class DetailMonAnActivity extends AppCompatActivity {
             Toast.makeText(this, "Đang kiểm duyệt...", Toast.LENGTH_SHORT).show();
 
             // 🤖 PROMPT MỚI: CÔNG TÂM - KHÔNG CHẶN NHẦM LỜI KHEN
-            String prompt = "Mày là trợ lý kiểm duyệt bình luận cho App nấu ăn MamaCook. " +
+            String prompt = "Bạn là trợ lý kiểm duyệt bình luận văn minh cho App nấu ăn MamaCook. " +
                             "Nhiệm vụ: Phân loại bình luận sau: '" + contentText + "'. " +
                             "QUY TẮC: " +
-                            "- Trả về 'APPROVE' cho các lời khen, cảm nhận tích cực (VD: ngon, tuyệt, hay, cám ơn...). " +
-                            "- CHỈ trả về 'REJECT' khi nội dung có chửi thề, viết tắt thô tục (VD: cc, cl, đm, vcl...). " +
-                            "TRẢ VỀ ĐÚNG 1 TỪ: APPROVE HOẶC REJECT. KHÔNG GIẢI THÍCH.";
+                            "- Trả về 'APPROVE' nếu nội dung tích cực, khen ngợi (VD: ngon, tuyệt, hay, cám ơn...). " +
+                            "- Trả về 'REJECT' nếu có từ chửi thề, viết tắt xúc phạm (VD: cc, cl, đm, vcl...). " +
+                            "CHỈ TRẢ VỀ DUY NHẤT 1 TỪ: APPROVE HOẶC REJECT. KHÔNG GIẢI THÍCH.";
 
             GenerativeModel gm = new GenerativeModel("gemini-1.5-flash", "YOUR_API_KEY"); 
             GenerativeModelFutures model = GenerativeModelFutures.from(gm);
@@ -211,7 +208,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     String finalStatus = verdict.contains("APPROVE") ? "hien_thi" : "vi_pham";
                     docRef.update("trang_thai", finalStatus);
                     if (finalStatus.equals("vi_pham")) {
-                        Toast.makeText(DetailMonAnActivity.this, "Bình luận vi phạm đã bị ẩn!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(DetailMonAnActivity.this, "Bình luận không phù hợp đã bị ẩn!", Toast.LENGTH_SHORT).show();
                     }
                 }
                 @Override public void onFailure(Throwable t) { 
@@ -233,7 +230,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void toggleSaveRecipe() {
         if (currentUserId == null) return;
-        String idLuu = currentUserId + "_" + currentDishId; // Fix lỗi ID lưu
+        String idLuu = currentUserId + "_" + currentDishId; // Fix lỗi ID lưu món
         if (isSaved) {
             db.collection("mon_da_luu").document(idLuu).delete();
         } else {
