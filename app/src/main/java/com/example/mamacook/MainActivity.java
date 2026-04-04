@@ -70,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // XỬ LÝ ĐĂNG NHẬP CHÍNH (Email/SĐT + Password)
         if (btnLoginMain != null) {
             btnLoginMain.setOnClickListener(v -> loginUser());
         }
@@ -105,21 +104,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loginUser() {
-        String input = etLoginUser.getText().toString().trim();
+        String input = etLoginEmail.getText().toString().trim();
         String password = etLoginPassword.getText().toString().trim();
 
         if (TextUtils.isEmpty(input) || TextUtils.isEmpty(password)) {
-            Toast.makeText(this, "Vui lòng nhập tài khoản và mật khẩu", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng nhập email và mật khẩu", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Logic nhận diện Email hay SĐT để khớp với dữ liệu lúc đăng ký
-        String finalEmail = input;
-        if (input.matches("\\d+")) { // Nếu là số
-            finalEmail = input + "@mamacook.com";
-        }
-
-        mAuth.signInWithEmailAndPassword(finalEmail, password)
+        mAuth.signInWithEmailAndPassword(input, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         startActivity(new Intent(MainActivity.this, HomeActivity.class));
@@ -167,8 +160,7 @@ public class MainActivity extends AppCompatActivity {
     private void saveUserToFirestore(FirebaseUser firebaseUser) {
         if (firebaseUser == null) return;
         String uid = firebaseUser.getUid();
-        
-        // Kiểm tra xem user đã tồn tại trong Firestore chưa trước khi lưu mới
+
         db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(documentSnapshot -> {
             if (!documentSnapshot.exists()) {
                 User user = new User();

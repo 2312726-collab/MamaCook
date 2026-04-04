@@ -6,7 +6,19 @@
 
     <style name="Theme.MamaCook" parent="Base.Theme.MamaCook" />
 
-    <!-- Style cho chữ khi được chọn (Active) - HIỆU ỨNG PHÓNG TO -->
+    <!-- ĐỊNH NGHĨA LẠI STYLE VÒNG TRÒN CHO ẢNH ĐẠI DIỆN -->
+    <style name="Circle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- STYLE BO GÓC CHO HÌNH ẢNH CÁC BƯỚC NẤU -->
+    <style name="RoundedCorner" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">10dp</item>
+    </style>
+
+    <!-- Style cho chữ khi được chọn -->
     <style name="BottomNavTextActive">
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
@@ -14,7 +26,7 @@
         <item name="android:textColor">#000000</item>
     </style>
 
-    <!-- Style cho chữ khi chưa chọn (Inactive) -->
+    <!-- Style cho chữ khi chưa chọn -->
     <style name="BottomNavTextInactive">
         <item name="android:textSize">11sp</item>
         <item name="android:textStyle">normal</item>
