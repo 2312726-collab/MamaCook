@@ -15,11 +15,11 @@ public class MonAn {
     private int luot_xem;
     private double rating;
     private int tong_luot_danh_gia;
+    private double gia_tien; // Thêm trường giá tiền
 
     private List<BuocNau> danh_sach_buoc_nau;
     private List<ChiTietNguyenLieu> danh_sach_nguyen_lieu;
     
-    // Trường mới để hỗ trợ tìm kiếm cả tên món và nguyên liệu
     private List<String> tu_khoa_tim_kiem;
 
     public MonAn() {}
@@ -39,6 +39,9 @@ public class MonAn {
     }
 
     // Getters và Setters
+    public double getGia_tien() { return gia_tien; }
+    public void setGia_tien(double gia_tien) { this.gia_tien = gia_tien; }
+
     public String getId_mon_an() { return id_mon_an; }
     public void setId_mon_an(String id_mon_an) { this.id_mon_an = id_mon_an; }
     public String getTen_mon() { return ten_mon; }

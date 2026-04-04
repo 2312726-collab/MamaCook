@@ -26,7 +26,6 @@
                 android:scaleType="centerCrop"
                 android:src="@drawable/bg_splash" />
 
-            <!-- Nút Trái tim với nền tròn mờ -->
             <ImageView
                 android:id="@+id/btn_favorite"
                 android:layout_width="30dp"
@@ -39,7 +38,6 @@
                 app:tint="#FFFFFF" />
         </RelativeLayout>
 
-        <!-- Khung dưới màu nâu đất nhạt -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

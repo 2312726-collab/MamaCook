@@ -1,5 +1,6 @@
 package com.example.mamacook;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -38,6 +39,8 @@ public class MonAnAdapter extends RecyclerView.Adapter<MonAnAdapter.ViewHolder> 
         holder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
         holder.tvRating.setText(String.valueOf(monAn.getRating()));
         
+        // Đã xóa phần hiển thị giá tiền để giống hình mẫu
+        
         if (monAn.getHinh_anh() != null && !monAn.getHinh_anh().isEmpty()) {
             Glide.with(holder.itemView.getContext())
                 .load(monAn.getHinh_anh())
@@ -48,9 +51,14 @@ public class MonAnAdapter extends RecyclerView.Adapter<MonAnAdapter.ViewHolder> 
                 .into(holder.imgMonAn);
         }
 
-        // Xử lý nút yêu thích (Trái tim)
+        // Chuyển sang màn hình Chi tiết khi click vào item
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(v.getContext(), DetailMonAnActivity.class);
+            intent.putExtra("ID_MON_AN", monAn.getId_mon_an());
+            v.getContext().startActivity(intent);
+        });
+
         holder.btnFavorite.setOnClickListener(v -> {
-            // Hiệu ứng đổi màu ngay lập tức
             boolean isCurrentlyWhite = holder.btnFavorite.getColorFilter() == null || 
                                        holder.btnFavorite.getTag() == null || 
                                        (int)holder.btnFavorite.getTag() == Color.WHITE;
@@ -94,7 +102,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<MonAnAdapter.ViewHolder> 
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgMonAn, btnFavorite;
-        TextView tvTenMon, tvThoiGian, tvRating;
+        TextView tvTenMon, tvThoiGian, tvRating; // Đã xóa tvGia
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
