@@ -8,7 +8,7 @@ public class DanhGia {
     private String id_mon_an;
     private String ho_ten;
     private String anh_dai_dien;
-    private int so_sao;
+    private float so_sao;
     private String noi_dung_danh_gia;
     private String trang_thai; // 'hien_thi' hoặc 'pending'
     private Timestamp ngay_danh_gia;
@@ -30,8 +30,8 @@ public class DanhGia {
     public String getAnh_dai_dien() { return anh_dai_dien; }
     public void setAnh_dai_dien(String anh_dai_dien) { this.anh_dai_dien = anh_dai_dien; }
 
-    public int getSo_sao() { return so_sao; }
-    public void setSo_sao(int so_sao) { this.so_sao = so_sao; }
+    public float getSo_sao() { return so_sao; }
+    public void setSo_sao(float so_sao) { this.so_sao = so_sao; }
 
     public String getNoi_dung_danh_gia() { return noi_dung_danh_gia; }
     public void setNoi_dung_danh_gia(String noi_dung_danh_gia) { this.noi_dung_danh_gia = noi_dung_danh_gia; }
