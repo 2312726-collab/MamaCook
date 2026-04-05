@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FDFCF9">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_marginTop="35dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp"
+        android:gravity="center_vertical"
+        android:background="@android:color/white"
+        android:elevation="2dp">
+
+        <ImageView
+            android:id="@+id/imgBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:padding="12dp"
+            android:src="@drawable/ic_back_arrow" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="Tất cả đánh giá"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:background="#FFFFFF">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnMoBoLoc"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lọc theo: Mới nhất ▾"
+            android:textColor="#333333"
+            app:strokeColor="#DDDDDD"
+            app:cornerRadius="20dp" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvTatCaBinhLuan"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp"/>
+</LinearLayout>

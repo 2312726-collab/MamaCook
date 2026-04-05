@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="orange_main">#FF6600</color>
+    <color name="brown_dark">#4E342E</color>
+    <color name="brown_light">#8D6E63</color>
+    <color name="parchment_semi">#E6F5F5DC</color>
+    <color name="parchment_input">#B3FFFFFF</color>
+    <color name="facebook_blue">#3B5998</color>
+    <color name="google_white">#FFFFFF</color>
+
+    <!-- MÀU CHUẨN THEO HÌNH PHỞ BÒ - CẬP NHẬT -->
+    <color name="parchment_bg">#FAF3E0</color> <!-- Màu kem giấy cũ nhạt, sang trọng hơn -->
+    <color name="text_brown">#3E2723</color>  <!-- Màu nâu cà phê đậm cho chữ -->
+    <color name="accent_red_vcb">#A52A2A</color> <!-- Màu đỏ nâu của nút Lưu -->
+
+    <!-- Các màu cũ để tránh lỗi -->
+    <color name="vintage_beige">#FAF3E0</color>
+    <color name="vintage_paper">#FCF5E5</color>
+    <color name="text_dark">#2E2E2E</color>
+    <color name="accent_red">#D32F2F</color>
+    <color name="vcb_green">#7AB51D</color>
+    <color name="vcb_green_dark">#5E8C16</color>
+</resources>

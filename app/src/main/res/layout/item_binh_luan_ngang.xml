@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="260dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#F8F3EB">
+
+        <TextView
+            android:id="@+id/tvTenNguoiBinhLuan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Khách hàng ẩn danh"
+            android:textStyle="bold"
+            android:textColor="#D84315"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <RatingBar
+            android:id="@+id/rbSaoBinhLuan"
+            style="?android:attr/ratingBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:numStars="5"
+            android:rating="5"
+            android:progressTint="#FFD700" />
+
+        <TextView
+            android:id="@+id/tvNoiDungBinhLuan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Món này ngon quá 10 điểm không có nhưng..."
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:lineSpacingExtra="3dp"
+            android:maxLines="3"
+            android:ellipsize="end" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

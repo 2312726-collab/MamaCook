@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/parchment_bg">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="320dp"
+        android:background="@android:color/transparent">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed"
+            app:titleEnabled="false">
+
+            <ImageView
+                android:id="@+id/img_detail_mon_an"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/bg_splash" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:background="@drawable/bg_gradient_top" />
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar_detail"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:layout_marginTop="35dp"
+                app:layout_collapseMode="pin"
+                app:navigationIcon="@android:drawable/ic_menu_revert"
+                app:navigationIconTint="@color/white">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chi tiết món ăn"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </androidx.appcompat.widget.Toolbar>
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="-35dp"
+        android:background="@drawable/bg_top_corner_parchment"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tv_detail_ten"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@+id/btn_favorite_detail"
+                    android:layout_alignParentStart="true"
+                    android:fontFamily="serif"
+                    android:text="Phở Bò"
+                    android:textColor="@color/text_brown"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/btn_favorite_detail"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/bg_circle_dark"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_heart_filled"
+                    app:tint="@color/white" />
+
+            </RelativeLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_detail_rating_info"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🕒 4.9 ⭐ 1,528 (1,528)"
+                    android:textColor="@color/text_brown"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tv_detail_thoi_gian"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="⌛ 45 phút"
+                    android:textColor="@color/text_brown"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25dp"
+                android:fontFamily="serif"
+                android:text="Nguyên liệu"
+                android:textColor="@color/text_brown"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_detail_nguyen_lieu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:lineSpacingExtra="6dp"
+                android:text="• 200g thịt bò\n• 200g bánh phở..."
+                android:textColor="@color/text_brown"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:fontFamily="serif"
+                android:text="Các bước nấu"
+                android:textColor="@color/text_brown"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/layout_buoc_nau"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:orientation="vertical" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#D7CCC8"
+                android:layout_marginTop="35dp" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="❤ Đánh giá &amp; bình luận"
+                    android:textColor="@color/text_brown"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_summary_rating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="⭐ 4.9/1,528 >"
+                    android:textColor="#F57C00"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_danh_gia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:orientation="horizontal" />
+
+            <!-- Phần chọn sao và nhập bình luận -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:padding="5dp">
+
+                <RatingBar
+                    android:id="@+id/rb_chon_sao"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:numStars="5"
+                    android:rating="5"
+                    android:stepSize="1.0"
+                    android:progressTint="#FFD700"
+                    style="@android:style/Widget.DeviceDefault.RatingBar" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:background="@drawable/bg_input_field"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp">
+
+                    <EditText
+                        android:id="@+id/et_binh_luan"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@android:color/transparent"
+                        android:hint="Viết bình luận..."
+                        android:textColor="@color/text_brown"
+                        android:textSize="14sp" />
+
+                    <ImageView
+                        android:id="@+id/btn_camera"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="8dp"
+                        android:src="@android:drawable/ic_menu_camera"
+                        app:tint="#8D6E63" />
+
+                    <ImageView
+                        android:id="@+id/btn_gui_binh_luan"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@android:drawable/ic_menu_send"
+                        app:tint="@color/accent_red_vcb" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

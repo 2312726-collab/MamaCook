@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "465869652634",
+    "project_id": "mamacook-6af22",
+    "storage_bucket": "mamacook-6af22.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:465869652634:android:34c60753c214d91d4c5523",
+        "android_client_info": {
+          "package_name": "com.example.mamacook"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "465869652634-6hmot77hectn8d9lfq43ve449j7sc7he.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mamacook",
+            "certificate_hash": "cf1c30d5d336bac57e1f52ef66c88941c3a0ad0b"
+          }
+        },
+        {
+          "client_id": "465869652634-nherujam09rmkno2m783ps2b1g1v68o7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9ztGMxpSPLM4NnCOZDBOyAZwrMvpBEt8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "465869652634-nherujam09rmkno2m783ps2b1g1v68o7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
