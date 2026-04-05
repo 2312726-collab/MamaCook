@@ -27,11 +27,14 @@ import com.google.common.util.concurrent.Futures;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -81,11 +84,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
             fetchDishDetailsRealtime(currentDishId);
             fetchCommentsCleanRealtime(currentDishId);
             checkIfSaved();
-            
-            // ĐÃ XÓA hàm tự động xóa database (Lộn đề tài của ông)
+            saveToHistory(currentDishId); // Lưu vào lịch sử khi xem
         }
 
-        // GÁN SỰ KIỆN CHO CÁC NÚT (Fix lỗi bấm không được)
         btnGuiBinhLuan.setOnClickListener(v -> postCommentWithAI());
         btnSaveRecipe.setOnClickListener(v -> toggleSaveRecipe());
         
@@ -94,12 +95,21 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 Toast.makeText(this, "Chức năng gửi ảnh đang được cập nhật!", Toast.LENGTH_SHORT).show();
             });
         }
+    }
 
-        if (tvSummaryRating != null) {
-            tvSummaryRating.setOnClickListener(v -> {
-                Toast.makeText(this, "Xem tất cả đánh giá của món này", Toast.LENGTH_SHORT).show();
-            });
-        }
+    private void saveToHistory(String dishId) {
+        if (currentUserId == null) return;
+        
+        // Tạo ID lịch sử dựa trên User và Dish để tránh trùng lặp bản ghi cho cùng 1 món
+        String historyId = currentUserId + "_" + dishId;
+        
+        Map<String, Object> historyData = new HashMap<>();
+        historyData.put("id_lich_su", historyId);
+        historyData.put("id_nguoi_dung", currentUserId);
+        historyData.put("id_mon_an", dishId);
+        historyData.put("thoi_gian_xem", Timestamp.now());
+        
+        db.collection("lich_su_xem").document(historyId).set(historyData);
     }
 
     private void fetchDishDetailsRealtime(String id) {
@@ -111,7 +121,17 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     tvThoiGian.setText("⌛ " + monAn.getThoi_gian_nau() + " phút");
                     tvRatingInfo.setText("🕒 " + monAn.getRating() + " ⭐ " + monAn.getTong_luot_danh_gia() + " (" + monAn.getTong_luot_danh_gia() + ")");
                     tvSummaryRating.setText("⭐ " + monAn.getRating() + "/" + monAn.getTong_luot_danh_gia() + " >");
-                    Glide.with(this).load(monAn.getHinh_anh()).placeholder(R.drawable.bg_splash).into(imgMonAn);
+                    
+                    // LOAD ẢNH CHÍNH
+                    String hinhAnh = monAn.getHinh_anh();
+                    if (hinhAnh != null && !hinhAnh.isEmpty()) {
+                        if (hinhAnh.startsWith("http")) {
+                            Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+                        } else {
+                            StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                            Glide.with(this).load(storageRef).placeholder(R.drawable.bg_splash).error(R.drawable.ic_mama).into(imgMonAn);
+                        }
+                    }
 
                     StringBuilder sb = new StringBuilder();
                     if (monAn.getDanh_sach_nguyen_lieu() != null) {
@@ -128,8 +148,16 @@ public class DetailMonAnActivity extends AppCompatActivity {
                             ((TextView) stepView.findViewById(R.id.tv_step_title)).setText("Bước " + buoc.so_thu_tu);
                             ((TextView) stepView.findViewById(R.id.tv_step_content)).setText(buoc.noi_dung_buoc);
                             ImageView imgStep = stepView.findViewById(R.id.img_step);
+                            
+                            // LOAD ẢNH BƯỚC NẤU
                             if (buoc.hinh_anh_buoc != null && !buoc.hinh_anh_buoc.isEmpty()) {
-                                Glide.with(this).load(buoc.hinh_anh_buoc).into(imgStep);
+                                if (buoc.hinh_anh_buoc.startsWith("http")) {
+                                    Glide.with(this).load(buoc.hinh_anh_buoc).into(imgStep);
+                                } else {
+                                    StorageReference stRefStep = FirebaseStorage.getInstance().getReference().child(buoc.hinh_anh_buoc);
+                                    Glide.with(this).load(stRefStep).into(imgStep);
+                                }
+                                imgStep.setVisibility(View.VISIBLE);
                             } else {
                                 imgStep.setVisibility(View.GONE);
                             }
@@ -189,7 +217,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
             etBinhLuan.setText("");
             Toast.makeText(this, "Đang kiểm duyệt...", Toast.LENGTH_SHORT).show();
 
-            // 🤖 PROMPT MỚI: CÔNG TÂM - KHÔNG CHẶN NHẦM LỜI KHEN
             String prompt = "Bạn là trợ lý kiểm duyệt bình luận văn minh cho App nấu ăn MamaCook. " +
                             "Nhiệm vụ: Phân loại bình luận sau: '" + contentText + "'. " +
                             "QUY TẮC: " +
@@ -214,7 +241,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 @Override public void onFailure(Throwable t) { 
                     docRef.update("trang_thai", "vi_pham"); 
                 }
-            }, ContextCompat.getMainExecutor(this));
+            }, ContextCompat.getMainExecutor(DetailMonAnActivity.this));
         });
     }
 
@@ -230,7 +257,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void toggleSaveRecipe() {
         if (currentUserId == null) return;
-        String idLuu = currentUserId + "_" + currentDishId; // Fix lỗi ID lưu món
+        String idLuu = currentUserId + "_" + currentDishId;
         if (isSaved) {
             db.collection("mon_da_luu").document(idLuu).delete();
         } else {

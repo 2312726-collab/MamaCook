@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loginUser() {
-        String input = etLoginEmail.getText().toString().trim();
+        String input = etLoginUser.getText().toString().trim();
         String password = etLoginPassword.getText().toString().trim();
 
         if (TextUtils.isEmpty(input) || TextUtils.isEmpty(password)) {

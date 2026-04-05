@@ -1,11 +1,16 @@
 package com.example.mamacook;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -21,8 +26,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -58,6 +66,24 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // --- GIẢI PHÁP DỨT ĐIỂM KHOẢNG ĐEN ---
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            
+            // Chỉ tràn viền Status Bar, KHÔNG tràn viền Navigation Bar
+            int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+            
+            // Icon tối cho nền sáng
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+            window.getDecorView().setSystemUiVisibility(flags);
+            window.setStatusBarColor(Color.TRANSPARENT);
+        }
+
         setContentView(R.layout.activity_home);
 
         db = FirebaseFirestore.getInstance();
@@ -83,7 +109,7 @@ public class HomeActivity extends AppCompatActivity {
         
         loadFeaturedRecipes();
         loadNewRecipes();
-        loadHistoryRecipes();
+        loadHistoryRecipes(11); 
 
         currentSelectedCategory = findViewById(R.id.btn_cat_all);
         loadRecipesByCategory("all", "Gợi ý cho bạn");
@@ -176,35 +202,21 @@ public class HomeActivity extends AppCompatActivity {
         spnRating.setOnItemSelectedListener(filterListener);
     }
 
-    // ADAPTER TÙY CHỈNH ĐỂ HIỂN THỊ TÊN NHÃN KHI CHỌN "TẤT CẢ"
     private static class LabelSpinnerAdapter extends ArrayAdapter<String> {
         private final String label;
-
         public LabelSpinnerAdapter(Context context, String label, String[] items) {
             super(context, R.layout.spinner_item_selected, items);
             this.label = label;
             setDropDownViewResource(R.layout.spinner_dropdown_item);
         }
-
         @NonNull
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
             TextView view = (TextView) super.getView(position, convertView, parent);
             String item = getItem(position);
-            // Nếu là "Tất cả", hiển thị tên Nhãn (Độ khó, Thời gian, ...)
-            // Nếu đã chọn cái khác (Dễ, Khó, ...), hiển thị đúng cái đó
-            if (item != null && item.equals("Tất cả")) {
-                view.setText(label);
-            } else {
-                view.setText(item);
-            }
+            if (item != null && item.equals("Tất cả")) view.setText(label);
+            else view.setText(item);
             return view;
-        }
-
-        @Override
-        public View getDropDownView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            // Trong danh sách xổ xuống thì cứ hiện bình thường: Tất cả, Dễ, Trung bình...
-            return super.getDropDownView(position, convertView, parent);
         }
     }
 
@@ -260,6 +272,7 @@ public class HomeActivity extends AppCompatActivity {
         }
         listCategory.clear();
         listCategory.addAll(filteredList);
+        adapterCategory.setSectionInfo("DANH_MUC", lastCategoryId);
         adapterCategory.notifyDataSetChanged();
     }
 
@@ -294,14 +307,20 @@ public class HomeActivity extends AppCompatActivity {
         rvFeatured = findViewById(R.id.rv_featured);
         rvNew = findViewById(R.id.rv_new_recipes);
         rvHistory = findViewById(R.id.rv_history);
+        
         rvCategory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvFeatured.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvNew.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvHistory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        
         adapterCategory = new MonAnAdapter(listCategory);
         adapterFeatured = new MonAnAdapter(listFeatured);
+        adapterFeatured.setSectionInfo("NOI_BAT", "");
         adapterNew = new MonAnAdapter(listNew);
+        adapterNew.setSectionInfo("MOI", "");
         adapterHistory = new MonAnAdapter(listHistory);
+        adapterHistory.setSectionInfo("LICH_SU", "");
+        
         rvCategory.setAdapter(adapterCategory);
         rvFeatured.setAdapter(adapterFeatured);
         rvNew.setAdapter(adapterNew);
@@ -309,7 +328,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void loadFeaturedRecipes() {
-        db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(10).get()
+        db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(11).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     listFeatured.clear();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
@@ -322,7 +341,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void loadNewRecipes() {
-        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(5).get()
+        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(11).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     listNew.clear();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
@@ -337,7 +356,7 @@ public class HomeActivity extends AppCompatActivity {
     private void loadRecipesByCategory(String categoryId, String title) {
         if (tvCategoryTitle != null) tvCategoryTitle.setText(title);
         Query query = (categoryId.equals("all")) ? db.collection("mon_an") : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
-        query.get().addOnSuccessListener(queryDocumentSnapshots -> {
+        query.limit(11).get().addOnSuccessListener(queryDocumentSnapshots -> {
             listCategory.clear();
             listFullCurrentCategory.clear();
             for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
@@ -346,9 +365,51 @@ public class HomeActivity extends AppCompatActivity {
                 listCategory.add(mon);
                 listFullCurrentCategory.add(mon);
             }
+            adapterCategory.setSectionInfo("DANH_MUC", categoryId);
             applyFilters();
         });
     }
 
-    private void loadHistoryRecipes() {}
+    private void loadHistoryRecipes(int limit) {
+        String uid = mAuth.getUid();
+        if (uid == null) return;
+        db.collection("lich_su_xem").whereEqualTo("id_nguoi_dung", uid).orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(limit).get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<String> dishIds = new ArrayList<>();
+                    for (DocumentSnapshot doc : querySnapshot) dishIds.add(doc.getString("id_mon_an"));
+                    if (dishIds.isEmpty()) { listHistory.clear(); adapterHistory.notifyDataSetChanged(); return; }
+                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
+                    for (String id : dishIds) tasks.add(db.collection("mon_an").document(id).get());
+                    Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
+                        listHistory.clear();
+                        for (Object result : results) {
+                            DocumentSnapshot monDoc = (DocumentSnapshot) result;
+                            if (monDoc.exists()) {
+                                MonAn mon = monDoc.toObject(MonAn.class);
+                                mon.setId_mon_an(monDoc.getId());
+                                listHistory.add(mon);
+                            }
+                        }
+                        sortHistoryList(dishIds);
+                        adapterHistory.notifyDataSetChanged();
+                    });
+                });
+    }
+
+    private void sortHistoryList(List<String> orderIds) {
+        List<MonAn> sortedList = new ArrayList<>();
+        for (String id : orderIds) {
+            for (MonAn mon : listHistory) {
+                if (mon.getId_mon_an().equals(id)) { sortedList.add(mon); break; }
+            }
+        }
+        listHistory.clear();
+        listHistory.addAll(sortedList);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadHistoryRecipes(11); 
+    }
 }
