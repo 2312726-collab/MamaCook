@@ -1,6 +1,7 @@
 package com.example.mamacook;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -72,11 +73,7 @@ public class HomeActivity extends AppCompatActivity {
             Window window = getWindow();
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            
-            // Chỉ tràn viền Status Bar, KHÔNG tràn viền Navigation Bar
             int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-            
-            // Icon tối cho nền sáng
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
             }

@@ -110,7 +110,7 @@
                         app:tint="#4E342E" />
                 </LinearLayout>
 
-                <!-- KHU VỰC SPINNER ĐÃ FIX LỖI ĐÈ LÊN (Overlap) -->
+                <!-- KHU VỰC SPINNER -->
                 <LinearLayout
                     android:id="@+id/layout_filters"
                     android:layout_width="match_parent"
