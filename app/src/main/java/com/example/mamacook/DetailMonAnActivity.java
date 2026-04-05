@@ -1,53 +1,49 @@
 package com.example.mamacook;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.GenerativeModelFutures;
-import com.google.ai.client.generativeai.type.Content;
-import com.google.ai.client.generativeai.type.GenerateContentResponse;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DetailMonAnActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
-    private ImageView imgMonAn, btnCamera;
+    private ImageView imgMonAn, btnCamera, btnFavoriteDetail;
     private TextView tvTen, tvRatingInfo, tvThoiGian, tvNguyenLieu, tvSummaryRating;
-    private LinearLayout layoutBuocNau, layoutDanhGia;
+    private LinearLayout layoutBuocNau;
+    private RecyclerView rvDanhGia;
+    private BinhLuanNgangAdapter adapterBinhLuan;
+    private List<DanhGia> danhSachBinhLuan = new ArrayList<>();
     private EditText etBinhLuan;
+    private RatingBar rbChonSao;
     private ImageView btnGuiBinhLuan;
-    private Button btnSaveRecipe;
     private String currentDishId;
     private String currentUserId;
     private boolean isSaved = false;
@@ -60,19 +56,24 @@ public class DetailMonAnActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getUid();
 
-        // Ánh xạ views
         imgMonAn = findViewById(R.id.img_detail_mon_an);
         tvTen = findViewById(R.id.tv_detail_ten);
-        tvRatingInfo = findViewById(R.id.tv_detail_rating_info);
+        tvRatingInfo = findViewById(R.id.tv_detail_rating_info); 
         tvThoiGian = findViewById(R.id.tv_detail_thoi_gian);
         tvNguyenLieu = findViewById(R.id.tv_detail_nguyen_lieu);
         tvSummaryRating = findViewById(R.id.tv_summary_rating);
         layoutBuocNau = findViewById(R.id.layout_buoc_nau);
-        layoutDanhGia = findViewById(R.id.layout_danh_gia);
+        rvDanhGia = findViewById(R.id.rv_danh_gia);
         etBinhLuan = findViewById(R.id.et_binh_luan);
+        rbChonSao = findViewById(R.id.rb_chon_sao);
         btnGuiBinhLuan = findViewById(R.id.btn_gui_binh_luan);
-        btnSaveRecipe = findViewById(R.id.btn_save_recipe);
+        btnFavoriteDetail = findViewById(R.id.btn_favorite_detail);
         btnCamera = findViewById(R.id.btn_camera);
+
+        // Cài đặt RecyclerView vuốt ngang
+        adapterBinhLuan = new BinhLuanNgangAdapter(danhSachBinhLuan);
+        rvDanhGia.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvDanhGia.setAdapter(adapterBinhLuan);
 
         Toolbar toolbar = findViewById(R.id.toolbar_detail);
         setSupportActionBar(toolbar);
@@ -82,34 +83,27 @@ public class DetailMonAnActivity extends AppCompatActivity {
         currentDishId = getIntent().getStringExtra("ID_MON_AN");
         if (currentDishId != null) {
             fetchDishDetailsRealtime(currentDishId);
-            fetchCommentsCleanRealtime(currentDishId);
+            fetchCommentsSmartRealtime(currentDishId); 
             checkIfSaved();
-            saveToHistory(currentDishId); // Lưu vào lịch sử khi xem
         }
 
-        btnGuiBinhLuan.setOnClickListener(v -> postCommentWithAI());
-        btnSaveRecipe.setOnClickListener(v -> toggleSaveRecipe());
+        btnGuiBinhLuan.setOnClickListener(v -> postCommentToServerAI());
+        if (btnFavoriteDetail != null) {
+            btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
+        }
         
         if (btnCamera != null) {
-            btnCamera.setOnClickListener(v -> {
-                Toast.makeText(this, "Chức năng gửi ảnh đang được cập nhật!", Toast.LENGTH_SHORT).show();
+            btnCamera.setOnClickListener(v -> Toast.makeText(this, "Tính năng ảnh đang cập nhật", Toast.LENGTH_SHORT).show());
+        }
+
+        // BƯỚC 1: Bắt sự kiện bấm nút "Xem tất cả"
+        if (tvSummaryRating != null) {
+            tvSummaryRating.setOnClickListener(v -> {
+                Intent intent = new Intent(DetailMonAnActivity.this, TatCaBinhLuanActivity.class);
+                intent.putExtra("ID_MON_AN", currentDishId);
+                startActivity(intent);
             });
         }
-    }
-
-    private void saveToHistory(String dishId) {
-        if (currentUserId == null) return;
-        
-        // Tạo ID lịch sử dựa trên User và Dish để tránh trùng lặp bản ghi cho cùng 1 món
-        String historyId = currentUserId + "_" + dishId;
-        
-        Map<String, Object> historyData = new HashMap<>();
-        historyData.put("id_lich_su", historyId);
-        historyData.put("id_nguoi_dung", currentUserId);
-        historyData.put("id_mon_an", dishId);
-        historyData.put("thoi_gian_xem", Timestamp.now());
-        
-        db.collection("lich_su_xem").document(historyId).set(historyData);
     }
 
     private void fetchDishDetailsRealtime(String id) {
@@ -121,17 +115,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     tvThoiGian.setText("⌛ " + monAn.getThoi_gian_nau() + " phút");
                     tvRatingInfo.setText("🕒 " + monAn.getRating() + " ⭐ " + monAn.getTong_luot_danh_gia() + " (" + monAn.getTong_luot_danh_gia() + ")");
                     tvSummaryRating.setText("⭐ " + monAn.getRating() + "/" + monAn.getTong_luot_danh_gia() + " >");
-                    
-                    // LOAD ẢNH CHÍNH
-                    String hinhAnh = monAn.getHinh_anh();
-                    if (hinhAnh != null && !hinhAnh.isEmpty()) {
-                        if (hinhAnh.startsWith("http")) {
-                            Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
-                        } else {
-                            StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(hinhAnh);
-                            Glide.with(this).load(storageRef).placeholder(R.drawable.bg_splash).error(R.drawable.ic_mama).into(imgMonAn);
-                        }
-                    }
+                    Glide.with(this).load(monAn.getHinh_anh()).placeholder(R.drawable.bg_splash).into(imgMonAn);
 
                     StringBuilder sb = new StringBuilder();
                     if (monAn.getDanh_sach_nguyen_lieu() != null) {
@@ -147,20 +131,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                             View stepView = LayoutInflater.from(this).inflate(R.layout.item_step_cook, layoutBuocNau, false);
                             ((TextView) stepView.findViewById(R.id.tv_step_title)).setText("Bước " + buoc.so_thu_tu);
                             ((TextView) stepView.findViewById(R.id.tv_step_content)).setText(buoc.noi_dung_buoc);
-                            ImageView imgStep = stepView.findViewById(R.id.img_step);
-                            
-                            // LOAD ẢNH BƯỚC NẤU
-                            if (buoc.hinh_anh_buoc != null && !buoc.hinh_anh_buoc.isEmpty()) {
-                                if (buoc.hinh_anh_buoc.startsWith("http")) {
-                                    Glide.with(this).load(buoc.hinh_anh_buoc).into(imgStep);
-                                } else {
-                                    StorageReference stRefStep = FirebaseStorage.getInstance().getReference().child(buoc.hinh_anh_buoc);
-                                    Glide.with(this).load(stRefStep).into(imgStep);
-                                }
-                                imgStep.setVisibility(View.VISIBLE);
-                            } else {
-                                imgStep.setVisibility(View.GONE);
-                            }
                             layoutBuocNau.addView(stepView);
                         }
                     }
@@ -169,94 +139,113 @@ public class DetailMonAnActivity extends AppCompatActivity {
         });
     }
 
-    private void fetchCommentsCleanRealtime(String dishId) {
+    private void fetchCommentsSmartRealtime(String dishId) {
+        // NHÁ HÀNG ĐÚNG 5 CÁI MỚI NHẤT
         db.collection("danh_gia")
                 .whereEqualTo("id_mon_an", dishId)
-                .whereEqualTo("trang_thai", "hien_thi")
-                .orderBy("ngay_danh_gia", Query.Direction.DESCENDING)
+                .whereEqualTo("trang_thai", "hien_thi") 
                 .addSnapshotListener((value, error) -> {
-                    if (value == null) return;
-                    layoutDanhGia.removeAllViews();
-                    for (var doc : value.getDocuments()) {
-                        DanhGia dg = doc.toObject(DanhGia.class);
-                        if (dg != null) addCommentView(dg);
+                    if (error != null) {
+                        Log.e("Loi_Firebase", "Lỗi: " + error.getMessage());
+                        return;
                     }
+                    if (value == null) return;
+                    
+                    List<DanhGia> listAll = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : value) {
+                        DanhGia dg = doc.toObject(DanhGia.class);
+                        if (dg != null) listAll.add(dg);
+                    }
+                    
+                    // Sắp xếp mới nhất lên đầu trong Java
+                    Collections.sort(listAll, (o1, o2) -> {
+                        if (o1.getNgay_danh_gia() == null || o2.getNgay_danh_gia() == null) return 0;
+                        return o2.getNgay_danh_gia().compareTo(o1.getNgay_danh_gia());
+                    });
+
+                    // Chỉ lấy tối đa 5 cái để hiển thị ở màn hình chi tiết
+                    danhSachBinhLuan.clear();
+                    for (int i = 0; i < Math.min(5, listAll.size()); i++) {
+                        danhSachBinhLuan.add(listAll.get(i));
+                    }
+
+                    adapterBinhLuan.notifyDataSetChanged();
                 });
     }
 
-    private void addCommentView(DanhGia dg) {
-        View view = LayoutInflater.from(this).inflate(R.layout.item_danh_gia, layoutDanhGia, false);
-        ((TextView) view.findViewById(R.id.tv_user_name)).setText(dg.getHo_ten());
-        ((TextView) view.findViewById(R.id.tv_comment_content)).setText(dg.getNoi_dung_danh_gia());
-        TextView tvStatus = view.findViewById(R.id.tv_status_label);
-        tvStatus.setVisibility(View.VISIBLE);
-        tvStatus.setText("Đã đăng");
-        tvStatus.setTextColor(Color.parseColor("#4CAF50"));
-        layoutDanhGia.addView(view);
-    }
+    private void postCommentToServerAI() {
+        String noiDung = etBinhLuan.getText().toString().trim();
+        float soSao = rbChonSao.getRating();
 
-    private void postCommentWithAI() {
-        String contentText = etBinhLuan.getText().toString().trim();
-        if (TextUtils.isEmpty(contentText)) return;
+        if (TextUtils.isEmpty(noiDung)) return;
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String name = "Người dùng";
-        if (user != null) {
-            name = (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) ? user.getDisplayName() : user.getEmail();
-        }
+        String name = (user != null && user.getDisplayName() != null) ? user.getDisplayName() : (user != null ? user.getEmail() : "Người dùng");
+        String avatar = (user != null && user.getPhotoUrl() != null) ? user.getPhotoUrl().toString() : "";
 
         Map<String, Object> data = new HashMap<>();
         data.put("id_mon_an", currentDishId);
         data.put("id_nguoi_dung", currentUserId);
         data.put("ho_ten", name);
-        data.put("noi_dung_danh_gia", contentText);
+        data.put("anh_dai_dien", avatar);
+        data.put("noi_dung_danh_gia", noiDung);
+        data.put("so_sao", soSao);
         data.put("trang_thai", "pending"); 
-        data.put("ngay_danh_gia", Timestamp.now());
+        data.put("ngay_danh_gia", FieldValue.serverTimestamp());
 
-        db.collection("danh_gia").add(data).addOnSuccessListener(docRef -> {
-            etBinhLuan.setText("");
-            Toast.makeText(this, "Đang kiểm duyệt...", Toast.LENGTH_SHORT).show();
-
-            String prompt = "Bạn là trợ lý kiểm duyệt bình luận văn minh cho App nấu ăn MamaCook. " +
-                            "Nhiệm vụ: Phân loại bình luận sau: '" + contentText + "'. " +
-                            "QUY TẮC: " +
-                            "- Trả về 'APPROVE' nếu nội dung tích cực, khen ngợi (VD: ngon, tuyệt, hay, cám ơn...). " +
-                            "- Trả về 'REJECT' nếu có từ chửi thề, viết tắt xúc phạm (VD: cc, cl, đm, vcl...). " +
-                            "CHỈ TRẢ VỀ DUY NHẤT 1 TỪ: APPROVE HOẶC REJECT. KHÔNG GIẢI THÍCH.";
-
-            GenerativeModel gm = new GenerativeModel("gemini-1.5-flash", "YOUR_API_KEY"); 
-            GenerativeModelFutures model = GenerativeModelFutures.from(gm);
-            Content content = new Content.Builder().addText(prompt).build();
-
-            Futures.addCallback(model.generateContent(content), new FutureCallback<GenerateContentResponse>() {
-                @Override
-                public void onSuccess(GenerateContentResponse result) {
-                    String verdict = result.getText().trim().toUpperCase();
-                    String finalStatus = verdict.contains("APPROVE") ? "hien_thi" : "vi_pham";
-                    docRef.update("trang_thai", finalStatus);
-                    if (finalStatus.equals("vi_pham")) {
-                        Toast.makeText(DetailMonAnActivity.this, "Bình luận không phù hợp đã bị ẩn!", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override public void onFailure(Throwable t) { 
-                    docRef.update("trang_thai", "vi_pham"); 
-                }
-            }, ContextCompat.getMainExecutor(DetailMonAnActivity.this));
-        });
+        db.collection("danh_gia").add(data);
+        etBinhLuan.setText(""); 
+        rbChonSao.setRating(5);
+        Toast.makeText(this, "Đang gửi bình luận...", Toast.LENGTH_SHORT).show();
     }
 
     private void checkIfSaved() {
         if (currentUserId == null) return;
         db.collection("mon_da_luu").document(currentUserId + "_" + currentDishId).addSnapshotListener((doc, error) -> {
             if (doc != null) {
-                isSaved = doc.exists();
-                btnSaveRecipe.setText(isSaved ? "❤ Đã lưu" : "❤ Lưu công thức");
+                boolean newSavedStatus = doc.exists();
+                if (isSaved != newSavedStatus) { 
+                    isSaved = newSavedStatus;
+                    updateSaveButtonUI(true); 
+                } else {
+                    isSaved = newSavedStatus;
+                    updateSaveButtonUI(false); 
+                }
             }
         });
     }
 
+    private void updateSaveButtonUI(boolean animate) {
+        if (btnFavoriteDetail == null) return;
+        
+        if (isSaved) {
+            btnFavoriteDetail.setColorFilter(Color.RED); 
+        } else {
+            btnFavoriteDetail.setColorFilter(Color.WHITE);
+        }
+
+        if (animate) {
+            btnFavoriteDetail.animate()
+                    .scaleX(1.4f)
+                    .scaleY(1.4f)
+                    .setDuration(150)
+                    .withEndAction(() -> {
+                        btnFavoriteDetail.animate()
+                                .scaleX(1.0f)
+                                .scaleY(1.0f)
+                                .setDuration(150)
+                                .start();
+                    })
+                    .start();
+        }
+    }
+
     private void toggleSaveRecipe() {
-        if (currentUserId == null) return;
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
         String idLuu = currentUserId + "_" + currentDishId;
         if (isSaved) {
             db.collection("mon_da_luu").document(idLuu).delete();
@@ -266,5 +255,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
             data.put("id_mon_an", currentDishId);
             db.collection("mon_da_luu").document(idLuu).set(data);
         }
+        
+        btnFavoriteDetail.animate().scaleX(0.7f).scaleY(0.7f).setDuration(100).withEndAction(() -> {
+            btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+        }).start();
     }
 }

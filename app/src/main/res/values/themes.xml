@@ -57,4 +57,10 @@
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
     </style>
+
+    <!-- STYLE CHO RATINGBAR MÀU VÀNG XỊN -->
+    <style name="RatingBarTheme" parent="Theme.AppCompat">
+        <item name="colorControlNormal">#D1D1D1</item>
+        <item name="colorControlActivated">#FFC107</item>
+    </style>
 </resources>
