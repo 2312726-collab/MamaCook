@@ -1,35 +1,30 @@
 package com.example.mamacook;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -100,8 +95,14 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (btnCamera != null) {
             btnCamera.setOnClickListener(v -> Toast.makeText(this, "Tính năng ảnh đang cập nhật", Toast.LENGTH_SHORT).show());
         }
+
+        // BƯỚC 1: Bắt sự kiện bấm nút "Xem tất cả"
         if (tvSummaryRating != null) {
-            tvSummaryRating.setOnClickListener(v -> Toast.makeText(this, "Xem tất cả đánh giá", Toast.LENGTH_SHORT).show());
+            tvSummaryRating.setOnClickListener(v -> {
+                Intent intent = new Intent(DetailMonAnActivity.this, TatCaBinhLuanActivity.class);
+                intent.putExtra("ID_MON_AN", currentDishId);
+                startActivity(intent);
+            });
         }
     }
 
@@ -139,6 +140,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void fetchCommentsSmartRealtime(String dishId) {
+        // NHÁ HÀNG ĐÚNG 5 CÁI MỚI NHẤT
         db.collection("danh_gia")
                 .whereEqualTo("id_mon_an", dishId)
                 .whereEqualTo("trang_thai", "hien_thi") 
@@ -149,16 +151,23 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     }
                     if (value == null) return;
                     
-                    danhSachBinhLuan.clear();
+                    List<DanhGia> listAll = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : value) {
                         DanhGia dg = doc.toObject(DanhGia.class);
-                        if (dg != null) danhSachBinhLuan.add(dg);
+                        if (dg != null) listAll.add(dg);
                     }
                     
-                    Collections.sort(danhSachBinhLuan, (o1, o2) -> {
+                    // Sắp xếp mới nhất lên đầu trong Java
+                    Collections.sort(listAll, (o1, o2) -> {
                         if (o1.getNgay_danh_gia() == null || o2.getNgay_danh_gia() == null) return 0;
                         return o2.getNgay_danh_gia().compareTo(o1.getNgay_danh_gia());
                     });
+
+                    // Chỉ lấy tối đa 5 cái để hiển thị ở màn hình chi tiết
+                    danhSachBinhLuan.clear();
+                    for (int i = 0; i < Math.min(5, listAll.size()); i++) {
+                        danhSachBinhLuan.add(listAll.get(i));
+                    }
 
                     adapterBinhLuan.notifyDataSetChanged();
                 });
@@ -166,7 +175,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void postCommentToServerAI() {
         String noiDung = etBinhLuan.getText().toString().trim();
-        float soSao = rbChonSao.getRating(); // Lấy số sao khách chấm
+        float soSao = rbChonSao.getRating();
 
         if (TextUtils.isEmpty(noiDung)) return;
 
@@ -180,13 +189,13 @@ public class DetailMonAnActivity extends AppCompatActivity {
         data.put("ho_ten", name);
         data.put("anh_dai_dien", avatar);
         data.put("noi_dung_danh_gia", noiDung);
-        data.put("so_sao", soSao); // Đẩy sao lên Firebase
+        data.put("so_sao", soSao);
         data.put("trang_thai", "pending"); 
         data.put("ngay_danh_gia", FieldValue.serverTimestamp());
 
         db.collection("danh_gia").add(data);
         etBinhLuan.setText(""); 
-        rbChonSao.setRating(5); // Reset về 5 sao
+        rbChonSao.setRating(5);
         Toast.makeText(this, "Đang gửi bình luận...", Toast.LENGTH_SHORT).show();
     }
 
