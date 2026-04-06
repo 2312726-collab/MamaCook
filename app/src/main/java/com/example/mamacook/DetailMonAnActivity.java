@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -59,7 +60,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
         imgMonAn = findViewById(R.id.img_detail_mon_an);
         tvTen = findViewById(R.id.tv_detail_ten);
-        tvRatingInfo = findViewById(R.id.tv_detail_rating_info); 
+        tvRatingInfo = findViewById(R.id.tv_detail_rating_info);
         tvThoiGian = findViewById(R.id.tv_detail_thoi_gian);
         tvNguyenLieu = findViewById(R.id.tv_detail_nguyen_lieu);
         tvDiemTrungBinh = findViewById(R.id.tvDiemTrungBinh);
@@ -84,8 +85,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
         currentDishId = getIntent().getStringExtra("ID_MON_AN");
         if (currentDishId != null) {
             fetchDishDetailsRealtime(currentDishId);
-            fetchCommentsSmartRealtime(currentDishId); 
+            fetchCommentsSmartRealtime(currentDishId);
             checkIfSaved();
+            addToHistory(currentDishId); // Lưu lịch sử xem (tối đa 15 món)
         }
 
         btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
@@ -98,10 +100,53 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+    }
 
-        if (btnFavoriteDetail != null) {
-            btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
-        }
+    private void addToHistory(String dishId) {
+        if (currentUserId == null) return;
+
+        // 1. Kiểm tra xem món này đã có trong lịch sử chưa
+        db.collection("lich_su_xem")
+                .whereEqualTo("id_nguoi_dung", currentUserId)
+                .whereEqualTo("id_mon_an", dishId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        // Nếu đã có, chỉ cập nhật thời gian xem mới nhất
+                        String docId = querySnapshot.getDocuments().get(0).getId();
+                        db.collection("lich_su_xem").document(docId)
+                                .update("thoi_gian_xem", FieldValue.serverTimestamp());
+                    } else {
+                        // Nếu chưa có, tạo bản ghi mới
+                        Map<String, Object> history = new HashMap<>();
+                        history.put("id_nguoi_dung", currentUserId);
+                        history.put("id_mon_an", dishId);
+                        history.put("thoi_gian_xem", FieldValue.serverTimestamp());
+
+                        db.collection("lich_su_xem").add(history)
+                                .addOnSuccessListener(documentReference -> {
+                                    // Sau khi thêm, kiểm tra số lượng để giới hạn 15 món
+                                    limitHistoryTo15();
+                                });
+                    }
+                });
+    }
+
+    private void limitHistoryTo15() {
+        db.collection("lich_su_xem")
+                .whereEqualTo("id_nguoi_dung", currentUserId)
+                .orderBy("thoi_gian_xem", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.size() > 15) {
+                        // Xóa các bản ghi cũ nhất (từ vị trí 15 trở đi)
+                        for (int i = 15; i < querySnapshot.size(); i++) {
+                            db.collection("lich_su_xem")
+                                    .document(querySnapshot.getDocuments().get(i).getId())
+                                    .delete();
+                        }
+                    }
+                });
     }
 
     private void fetchDishDetailsRealtime(String id) {
