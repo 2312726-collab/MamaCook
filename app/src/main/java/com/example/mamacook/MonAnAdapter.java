@@ -1,14 +1,17 @@
 package com.example.mamacook;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
@@ -79,13 +82,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 v.getContext().startActivity(intent);
             });
         } else if (holder instanceof SeeAllViewHolder) {
-            SeeAllViewHolder seeAllHolder = (SeeAllViewHolder) holder;
-            
-            // Xóa click listener cũ trên toàn bộ item view
-            seeAllHolder.itemView.setOnClickListener(null);
-            
-            // Gán click listener CHỈ cho nút hình tròn trắng
-            seeAllHolder.btnSeeAllCircle.setOnClickListener(v -> {
+            holder.itemView.setOnClickListener(v -> {
                 Intent intent = new Intent(v.getContext(), SeeAllActivity.class);
                 intent.putExtra("SECTION_TYPE", sectionType);
                 intent.putExtra("CATEGORY_ID", categoryId);
@@ -115,10 +112,8 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     }
 
     public static class SeeAllViewHolder extends RecyclerView.ViewHolder {
-        View btnSeeAllCircle;
         public SeeAllViewHolder(@NonNull View itemView) {
             super(itemView);
-            btnSeeAllCircle = itemView.findViewById(R.id.btn_see_all_circle);
         }
     }
 }

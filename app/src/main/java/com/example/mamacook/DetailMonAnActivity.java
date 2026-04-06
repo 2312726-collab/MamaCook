@@ -21,7 +21,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -31,13 +30,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class DetailMonAnActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
     private ImageView imgMonAn, btnCamera, btnFavoriteDetail;
-    private TextView tvTen, tvRatingInfo, tvThoiGian, tvNguyenLieu, tvSummaryRating;
+    private TextView tvTen, tvRatingInfo, tvThoiGian, tvNguyenLieu, tvDiemTrungBinh, tvXemTatCa;
     private LinearLayout layoutBuocNau;
     private RecyclerView rvDanhGia;
     private BinhLuanNgangAdapter adapterBinhLuan;
@@ -45,7 +45,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private EditText etBinhLuan;
     private RatingBar rbChonSao;
     private ImageView btnGuiBinhLuan;
-    private View btnSeeAllCommentsArrow;
     private String currentDishId;
     private String currentUserId;
     private boolean isSaved = false;
@@ -63,7 +62,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
         tvRatingInfo = findViewById(R.id.tv_detail_rating_info); 
         tvThoiGian = findViewById(R.id.tv_detail_thoi_gian);
         tvNguyenLieu = findViewById(R.id.tv_detail_nguyen_lieu);
-        tvSummaryRating = findViewById(R.id.tv_summary_rating);
+        tvDiemTrungBinh = findViewById(R.id.tvDiemTrungBinh);
+        tvXemTatCa = findViewById(R.id.tvXemTatCa); // NODE 2: Ánh xạ ID chuẩn
         layoutBuocNau = findViewById(R.id.layout_buoc_nau);
         rvDanhGia = findViewById(R.id.rv_danh_gia);
         etBinhLuan = findViewById(R.id.et_binh_luan);
@@ -71,13 +71,10 @@ public class DetailMonAnActivity extends AppCompatActivity {
         btnGuiBinhLuan = findViewById(R.id.btn_gui_binh_luan);
         btnFavoriteDetail = findViewById(R.id.btn_favorite_detail);
         btnCamera = findViewById(R.id.btn_camera);
-        btnSeeAllCommentsArrow = findViewById(R.id.btn_see_all_comments_arrow);
 
         adapterBinhLuan = new BinhLuanNgangAdapter(danhSachBinhLuan);
-        if (rvDanhGia != null) {
-            rvDanhGia.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-            rvDanhGia.setAdapter(adapterBinhLuan);
-        }
+        rvDanhGia.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvDanhGia.setAdapter(adapterBinhLuan);
 
         Toolbar toolbar = findViewById(R.id.toolbar_detail);
         setSupportActionBar(toolbar);
@@ -89,65 +86,22 @@ public class DetailMonAnActivity extends AppCompatActivity {
             fetchDishDetailsRealtime(currentDishId);
             fetchCommentsSmartRealtime(currentDishId); 
             checkIfSaved();
-            addToHistory(currentDishId); // Lưu lịch sử xem (tối đa 15 món)
         }
 
-        if (btnGuiBinhLuan != null) btnGuiBinhLuan.setOnClickListener(v -> postCommentToServerAI());
-        if (btnFavoriteDetail != null) btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
-        if (btnSeeAllCommentsArrow != null) {
-            btnSeeAllCommentsArrow.setOnClickListener(v -> {
+        btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
+
+        // NODE 2: Cài đặt sự kiện click chuyển sang TatCaBinhLuanActivity
+        if (tvXemTatCa != null) {
+            tvXemTatCa.setOnClickListener(v -> {
                 Intent intent = new Intent(DetailMonAnActivity.this, TatCaBinhLuanActivity.class);
                 intent.putExtra("ID_MON_AN", currentDishId);
                 startActivity(intent);
             });
         }
-    }
 
-    private void addToHistory(String dishId) {
-        if (currentUserId == null) return;
-
-        // 1. Kiểm tra xem món này đã có trong lịch sử chưa
-        db.collection("lich_su_xem")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("id_mon_an", dishId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (!querySnapshot.isEmpty()) {
-                        // Nếu đã có, chỉ cập nhật thời gian xem mới nhất
-                        String docId = querySnapshot.getDocuments().get(0).getId();
-                        db.collection("lich_su_xem").document(docId)
-                                .update("thoi_gian_xem", FieldValue.serverTimestamp());
-                    } else {
-                        // Nếu chưa có, tạo bản ghi mới
-                        Map<String, Object> history = new HashMap<>();
-                        history.put("id_nguoi_dung", currentUserId);
-                        history.put("id_mon_an", dishId);
-                        history.put("thoi_gian_xem", FieldValue.serverTimestamp());
-                        
-                        db.collection("lich_su_xem").add(history)
-                                .addOnSuccessListener(documentReference -> {
-                                    // Sau khi thêm, kiểm tra số lượng để giới hạn 15 món
-                                    limitHistoryTo15();
-                                });
-                    }
-                });
-    }
-
-    private void limitHistoryTo15() {
-        db.collection("lich_su_xem")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .orderBy("thoi_gian_xem", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (querySnapshot.size() > 15) {
-                        // Xóa các bản ghi cũ nhất (từ vị trí 15 trở đi)
-                        for (int i = 15; i < querySnapshot.size(); i++) {
-                            db.collection("lich_su_xem")
-                                    .document(querySnapshot.getDocuments().get(i).getId())
-                                    .delete();
-                        }
-                    }
-                });
+        if (btnFavoriteDetail != null) {
+            btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
+        }
     }
 
     private void fetchDishDetailsRealtime(String id) {
@@ -158,7 +112,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     tvTen.setText(monAn.getTen_mon());
                     tvThoiGian.setText("⌛ " + monAn.getThoi_gian_nau() + " phút");
                     tvRatingInfo.setText("🕒 " + monAn.getRating() + " ⭐ " + monAn.getTong_luot_danh_gia());
-                    tvSummaryRating.setText("⭐ " + monAn.getRating() + "/" + monAn.getTong_luot_danh_gia());
                     Glide.with(this).load(monAn.getHinh_anh()).placeholder(R.drawable.bg_splash).into(imgMonAn);
 
                     StringBuilder sb = new StringBuilder();
@@ -186,68 +139,126 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private void fetchCommentsSmartRealtime(String dishId) {
         db.collection("danh_gia")
                 .whereEqualTo("id_mon_an", dishId)
-                .whereEqualTo("trang_thai", "hien_thi") 
+                .whereEqualTo("trang_thai", "hien_thi")
                 .addSnapshotListener((value, error) -> {
                     if (error != null || value == null) return;
-                    List<DanhGia> listAll = new ArrayList<>();
+
+                    List<DanhGia> allComments = new ArrayList<>();
+                    float totalStars = 0;
+                    int count = value.size();
+
                     for (QueryDocumentSnapshot doc : value) {
                         DanhGia dg = doc.toObject(DanhGia.class);
-                        if (dg != null) listAll.add(dg);
+                        allComments.add(dg);
+                        totalStars += dg.getSo_sao();
                     }
-                    Collections.sort(listAll, (o1, o2) -> {
+
+                    if (count > 0) {
+                        float average = totalStars / count;
+                        tvDiemTrungBinh.setText(String.format(Locale.getDefault(), "⭐ %.1f (%d đánh giá)", average, count));
+                    } else {
+                        tvDiemTrungBinh.setText("⭐ 0.0 (0 đánh giá)");
+                    }
+
+                    Collections.sort(allComments, (o1, o2) -> {
                         if (o1.getNgay_danh_gia() == null || o2.getNgay_danh_gia() == null) return 0;
                         return o2.getNgay_danh_gia().compareTo(o1.getNgay_danh_gia());
                     });
+
                     danhSachBinhLuan.clear();
-                    for (int i = 0; i < Math.min(5, listAll.size()); i++) danhSachBinhLuan.add(listAll.get(i));
-                    if (adapterBinhLuan != null) adapterBinhLuan.notifyDataSetChanged();
+                    for (int i = 0; i < Math.min(5, allComments.size()); i++) {
+                        danhSachBinhLuan.add(allComments.get(i));
+                    }
+                    adapterBinhLuan.notifyDataSetChanged();
                 });
     }
 
-    private void postCommentToServerAI() {
+    private void guiBinhLuan() {
         String noiDung = etBinhLuan.getText().toString().trim();
-        if (TextUtils.isEmpty(noiDung)) return;
-        Map<String, Object> data = new HashMap<>();
-        data.put("id_mon_an", currentDishId);
-        data.put("id_nguoi_dung", currentUserId);
-        data.put("noi_dung_danh_gia", noiDung);
-        data.put("so_sao", (int)rbChonSao.getRating());
-        data.put("trang_thai", "hien_thi");
-        data.put("ngay_danh_gia", FieldValue.serverTimestamp());
-        db.collection("danh_gia").add(data);
-        etBinhLuan.setText("");
-        Toast.makeText(this, "Gửi bình luận thành công!", Toast.LENGTH_SHORT).show();
+        float soSao = rbChonSao.getRating();
+
+        if (TextUtils.isEmpty(noiDung) || soSao == 0) {
+            Toast.makeText(this, "Vui lòng nhập nội dung và chọn sao!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String name = (user != null && !TextUtils.isEmpty(user.getDisplayName())) ? user.getDisplayName() : "Người dùng";
+
+        Map<String, Object> comment = new HashMap<>();
+        comment.put("id_mon_an", currentDishId);
+        comment.put("noi_dung", noiDung);
+        comment.put("so_sao", soSao);
+        comment.put("trang_thai", "cho_duyet");
+        comment.put("ten_nguoi_dung", name);
+        comment.put("ngay_danh_gia", FieldValue.serverTimestamp());
+
+        db.collection("danh_gia").add(comment).addOnSuccessListener(docRef -> {
+            etBinhLuan.setText("");
+            rbChonSao.setRating(5);
+            Toast.makeText(DetailMonAnActivity.this, "Gửi thành công! Đang chờ AI duyệt bài.", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void checkIfSaved() {
         if (currentUserId == null) return;
         db.collection("mon_da_luu").document(currentUserId + "_" + currentDishId).addSnapshotListener((doc, error) -> {
             if (doc != null) {
-                isSaved = doc.exists();
-                updateSaveButtonUI(false); 
+                boolean newSavedStatus = doc.exists();
+                if (isSaved != newSavedStatus) {
+                    isSaved = newSavedStatus;
+                    updateSaveButtonUI(true);
+                } else {
+                    isSaved = newSavedStatus;
+                    updateSaveButtonUI(false);
+                }
             }
         });
     }
 
     private void updateSaveButtonUI(boolean animate) {
         if (btnFavoriteDetail == null) return;
-        btnFavoriteDetail.setColorFilter(isSaved ? Color.RED : Color.WHITE);
+
+        if (isSaved) {
+            btnFavoriteDetail.setColorFilter(Color.RED);
+        } else {
+            btnFavoriteDetail.setColorFilter(Color.WHITE);
+        }
+
         if (animate) {
-            btnFavoriteDetail.animate().scaleX(1.4f).scaleY(1.4f).setDuration(150)
-                    .withEndAction(() -> btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start())
+            btnFavoriteDetail.animate()
+                    .scaleX(1.4f)
+                    .scaleY(1.4f)
+                    .setDuration(150)
+                    .withEndAction(() -> {
+                        btnFavoriteDetail.animate()
+                                .scaleX(1.0f)
+                                .scaleY(1.0f)
+                                .setDuration(150)
+                                .start();
+                    })
                     .start();
         }
     }
 
     private void toggleSaveRecipe() {
-        if (currentUserId == null) return;
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String idLuu = currentUserId + "_" + currentDishId;
-        if (isSaved) db.collection("mon_da_luu").document(idLuu).delete();
-        else {
+        if (isSaved) {
+            db.collection("mon_da_luu").document(idLuu).delete();
+        } else {
             Map<String, Object> data = new HashMap<>();
             data.put("id_nguoi_dung", currentUserId);
             data.put("id_mon_an", currentDishId);
             db.collection("mon_da_luu").document(idLuu).set(data);
         }
+
+        btnFavoriteDetail.animate().scaleX(0.7f).scaleY(0.7f).setDuration(100).withEndAction(() -> {
+            btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+        }).start();
     }
 }

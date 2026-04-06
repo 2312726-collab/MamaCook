@@ -3,20 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingTop="20dp"
-    android:paddingBottom="20dp"
-    android:background="@drawable/bg_bottom_sheet">
+    android:padding="20dp"
+    android:background="@drawable/bg_top_corner_parchment">
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Lọc đánh giá"
-        android:textSize="22sp"
+        android:text="Sắp xếp &amp; Lọc"
+        android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#000000"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:layout_marginBottom="12dp"/>
+        android:textColor="@color/text_brown"
+        android:layout_marginBottom="15dp"/>
 
     <RadioGroup
         android:id="@+id/radioGroupLoc"
@@ -26,48 +23,41 @@
         <RadioButton
             android:id="@+id/rbMoiNhat"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
+            android:layout_height="50dp"
             android:text="Mới nhất"
-            android:textSize="16sp"
             android:button="@null"
-            android:drawableEnd="?android:attr/listChoiceIndicatorSingle" />
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" android:layout_marginStart="16dp" android:layout_marginEnd="16dp"/>
+            android:checked="true"
+            android:drawableEnd="?android:attr/listChoiceIndicatorSingle"
+            android:textColor="@color/text_brown"/>
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0"/>
 
         <RadioButton
             android:id="@+id/rbCuNhat"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
+            android:layout_height="50dp"
             android:text="Cũ nhất"
-            android:textSize="16sp"
             android:button="@null"
-            android:drawableEnd="?android:attr/listChoiceIndicatorSingle" />
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" android:layout_marginStart="16dp" android:layout_marginEnd="16dp"/>
+            android:drawableEnd="?android:attr/listChoiceIndicatorSingle"
+            android:textColor="@color/text_brown"/>
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0"/>
 
         <RadioButton
             android:id="@+id/rb5Sao"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:text="5 Sao (Đánh giá cao nhất)"
-            android:textSize="16sp"
+            android:layout_height="50dp"
+            android:text="Đánh giá 5 sao"
             android:button="@null"
-            android:drawableEnd="?android:attr/listChoiceIndicatorSingle" />
-
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" android:layout_marginStart="16dp" android:layout_marginEnd="16dp"/>
+            android:drawableEnd="?android:attr/listChoiceIndicatorSingle"
+            android:textColor="@color/text_brown"/>
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0"/>
 
         <RadioButton
-            android:id="@+id/rb1Sao"
+            android:id="@+id/rbThapSao"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:text="Từ 1 - 4 Sao (Cần cải thiện)"
-            android:textSize="16sp"
+            android:layout_height="50dp"
+            android:text="Dưới 5 sao"
             android:button="@null"
-            android:drawableEnd="?android:attr/listChoiceIndicatorSingle" />
-
+            android:drawableEnd="?android:attr/listChoiceIndicatorSingle"
+            android:textColor="@color/text_brown"/>
     </RadioGroup>
 </LinearLayout>

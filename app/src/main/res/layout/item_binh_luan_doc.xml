@@ -56,6 +56,8 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:numStars="5"
+                android:progressTint="#FFC107"
+                android:secondaryProgressTint="#FFC107"
                 android:theme="@style/RatingBarTheme" />
         </RelativeLayout>
 

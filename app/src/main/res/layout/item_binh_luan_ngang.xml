@@ -35,7 +35,8 @@
             android:layout_marginTop="4dp"
             android:numStars="5"
             android:rating="5"
-            android:progressTint="#FFD700" />
+            android:progressTint="#FFC107"
+            android:secondaryProgressTint="#FFC107" />
 
         <TextView
             android:id="@+id/tvNoiDungBinhLuan"

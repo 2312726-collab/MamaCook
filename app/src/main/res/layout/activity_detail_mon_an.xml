@@ -164,6 +164,7 @@
                 android:layout_marginTop="20dp">
 
                 <TextView
+                    android:id="@+id/tv_title_comment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="❤ Đánh giá &amp; bình luận"
@@ -171,41 +172,26 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tvDiemTrungBinh"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/tv_title_comment"
+                    android:layout_marginTop="4dp"
+                    android:text="⭐ 0.0 (0 đánh giá)"
+                    android:textColor="#FF9800"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvXemTatCa"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/tv_summary_rating"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⭐ 0.0"
-                        android:textColor="#F57C00"
-                        android:textStyle="bold" />
-
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/btn_see_all_comments_arrow"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:layout_marginStart="10dp"
-                        app:cardCornerRadius="16dp"
-                        app:cardBackgroundColor="#FFFFFF"
-                        app:cardElevation="2dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackground">
-                        
-                        <ImageView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:padding="8dp"
-                            android:src="@android:drawable/ic_media_play"
-                            app:tint="#4E342E" />
-                    </androidx.cardview.widget.CardView>
-                </LinearLayout>
+                    android:layout_centerVertical="true"
+                    android:text="Xem tất cả >"
+                    android:textColor="#2196F3"
+                    android:textStyle="bold"
+                    android:padding="8dp"/>
             </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
@@ -229,6 +215,8 @@
                     android:numStars="5"
                     android:rating="5"
                     android:stepSize="1.0"
+                    android:progressTint="#FFC107"
+                    android:secondaryProgressTint="#FFC107"
                     style="@android:style/Widget.DeviceDefault.RatingBar" />
 
                 <LinearLayout
@@ -251,7 +239,6 @@
                         android:textColor="@color/text_brown"
                         android:textSize="14sp" />
 
-                    <!-- ĐÃ THÊM LẠI NÚT CAMERA -->
                     <ImageView
                         android:id="@+id/btn_camera"
                         android:layout_width="24dp"

@@ -9,23 +9,18 @@
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar_see_all"
         android:layout_width="match_parent"
-        android:layout_height="90dp"
-        android:paddingTop="35dp"
-        android:paddingBottom="10dp"
-        android:background="@drawable/bg_wood_header"
-        app:navigationIcon="?attr/homeAsUpIndicator"
-        app:navigationIconTint="@android:color/white"
-        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
-
+        android:layout_height="?attr/actionBarSize"
+        android:background="#F5F5DC"
+        app:navigationIcon="?attr/homeAsUpIndicator">
         <TextView
             android:id="@+id/tv_see_all_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="serif"
             android:text="Danh sách món ăn"
-            android:textColor="@android:color/white"
+            android:textColor="#4E342E"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:fontFamily="serif" />
     </androidx.appcompat.widget.Toolbar>
 
     <androidx.recyclerview.widget.RecyclerView

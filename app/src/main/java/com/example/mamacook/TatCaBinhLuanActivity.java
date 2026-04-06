@@ -4,19 +4,15 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.RadioGroup;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,8 +20,8 @@ import java.util.List;
 public class TatCaBinhLuanActivity extends AppCompatActivity {
 
     private RecyclerView rvTatCa;
-    private BinhLuanDocAdapter adapter; // Dùng adapter dọc để không bị dính chùm
-    private List<DanhGia> listDanhGia;
+    private BinhLuanDocAdapter adapter;
+    private List<DanhGia> listDanhGia = new ArrayList<>();
     private FirebaseFirestore db;
     private String idMonAn;
     private MaterialButton btnMoBoLoc;
@@ -40,7 +36,7 @@ public class TatCaBinhLuanActivity extends AppCompatActivity {
 
         rvTatCa = findViewById(R.id.rvTatCaBinhLuan);
         rvTatCa.setLayoutManager(new LinearLayoutManager(this));
-        listDanhGia = new ArrayList<>();
+
         adapter = new BinhLuanDocAdapter(listDanhGia); 
         rvTatCa.setAdapter(adapter);
 
@@ -76,8 +72,8 @@ public class TatCaBinhLuanActivity extends AppCompatActivity {
                 } else if (checkedId == R.id.rb5Sao) {
                     btnMoBoLoc.setText("Lọc theo: 5 Sao ▾");
                     loadDuLieuTheoBoLoc("5_sao");
-                } else if (checkedId == R.id.rb1Sao) { // SỬA LỖI: rbThapSao -> rb1Sao
-                    btnMoBoLoc.setText("Lọc theo: Đánh giá thấp ▾");
+                } else if (checkedId == R.id.rbThapSao) {
+                    btnMoBoLoc.setText("Lọc theo: Dưới 5 Sao ▾");
                     loadDuLieuTheoBoLoc("thap_sao");
                 }
                 bottomSheetDialog.dismiss();
@@ -99,26 +95,22 @@ public class TatCaBinhLuanActivity extends AppCompatActivity {
         } else if (theLoai.equals("5_sao")) {
             query = query.whereEqualTo("so_sao", 5.0).orderBy("ngay_danh_gia", Query.Direction.DESCENDING);
         } else if (theLoai.equals("thap_sao")) {
-            // Lọc đánh giá dưới 5 sao (1-4 sao)
             query = query.whereLessThan("so_sao", 5.0).orderBy("so_sao", Query.Direction.ASCENDING);
         }
 
-        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
-                if (error != null) {
-                    Log.e("Loi_Loc", error.getMessage());
-                    return;
-                }
-                if (value == null) return;
-                
-                listDanhGia.clear();
-                for (QueryDocumentSnapshot doc : value) {
-                    DanhGia dg = doc.toObject(DanhGia.class);
-                    if (dg != null) listDanhGia.add(dg);
-                }
-                adapter.notifyDataSetChanged();
+        query.addSnapshotListener((value, error) -> {
+            if (error != null) {
+                Log.e("Loi_Loc", error.getMessage());
+                return;
             }
+            if (value == null) return;
+
+            listDanhGia.clear();
+            for (QueryDocumentSnapshot doc : value) {
+                DanhGia dg = doc.toObject(DanhGia.class);
+                if (dg != null) listDanhGia.add(dg);
+            }
+            adapter.notifyDataSetChanged();
         });
     }
 }

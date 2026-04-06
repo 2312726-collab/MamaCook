@@ -27,11 +27,9 @@ public class BinhLuanNgangAdapter extends RecyclerView.Adapter<BinhLuanNgangAdap
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         DanhGia dg = danhSachBinhLuan.get(position);
         
-        String ten = (dg.getHo_ten() != null && !dg.getHo_ten().isEmpty()) ? dg.getHo_ten() : "Khách hàng ẩn danh";
+        String ten = (dg.getTen_nguoi_dung() != null && !dg.getTen_nguoi_dung().isEmpty()) ? dg.getTen_nguoi_dung() : "Người dùng";
         holder.tvTen.setText(ten);
-        holder.tvNoiDung.setText(dg.getNoi_dung_danh_gia());
-        
-        // Hiển thị số sao người dùng đã chấm
+        holder.tvNoiDung.setText(dg.getNoi_dung());
         holder.rbSao.setRating(dg.getSo_sao());
     }
 

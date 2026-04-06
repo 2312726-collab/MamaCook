@@ -1,5 +1,6 @@
 package com.example.mamacook;
 
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,7 +20,6 @@ public class BinhLuanDocAdapter extends RecyclerView.Adapter<BinhLuanDocAdapter.
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // SỬ DỤNG LAYOUT DÀNH CHO VUỐT DỌC (match_parent width)
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_binh_luan_doc, parent, false);
         return new ViewHolder(view);
     }
@@ -28,13 +28,17 @@ public class BinhLuanDocAdapter extends RecyclerView.Adapter<BinhLuanDocAdapter.
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         DanhGia dg = danhSachBinhLuan.get(position);
         
-        String ten = (dg.getHo_ten() != null && !dg.getHo_ten().isEmpty()) ? dg.getHo_ten() : "Khách hàng ẩn danh";
-        holder.tvTen.setText(ten);
-        holder.tvNoiDung.setText(dg.getNoi_dung_danh_gia());
+        holder.tvTen.setText(dg.getTen_nguoi_dung() != null ? dg.getTen_nguoi_dung() : "Người dùng");
+        holder.tvNoiDung.setText(dg.getNoi_dung());
         holder.rbSao.setRating(dg.getSo_sao());
         
-        // Có thể thêm ngày tháng ở đây nếu cần
-        holder.tvNgay.setText("Vừa xong");
+        if (dg.getNgay_danh_gia() != null) {
+            long time = dg.getNgay_danh_gia().getTime();
+            String timeAgo = (String) DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
+            holder.tvNgay.setText(timeAgo);
+        } else {
+            holder.tvNgay.setText("Vừa xong");
+        }
     }
 
     @Override
