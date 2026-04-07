@@ -34,6 +34,9 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         holder.tvTen.setText(monAn.getTen_mon());
         holder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
         holder.tvRating.setText(String.valueOf(monAn.getRating()));
+        
+        // Hiển thị độ khó từ Firebase
+        holder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
         String hinhAnh = monAn.getHinh_anh();
         if (hinhAnh != null && !hinhAnh.isEmpty()) {
@@ -59,7 +62,7 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView img, btnFav;
-        TextView tvTen, tvThoiGian, tvRating;
+        TextView tvTen, tvThoiGian, tvRating, tvDoKho;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             img = itemView.findViewById(R.id.img_mon_an);
@@ -67,6 +70,7 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
             tvTen = itemView.findViewById(R.id.tv_ten_mon);
             tvThoiGian = itemView.findViewById(R.id.tv_thoi_gian);
             tvRating = itemView.findViewById(R.id.tv_rating);
+            tvDoKho = itemView.findViewById(R.id.tv_do_kho);
         }
     }
 }

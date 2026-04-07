@@ -75,16 +75,17 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/tv_do_kho"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Độ khó: ..."
+                android:textColor="#6D4C41"
+                android:textSize="14sp"
+                android:fontFamily="serif"
+                android:textStyle="italic" />
+
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/btn_favorite"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="12dp"
-            android:src="@drawable/ic_heart_filled"
-            app:tint="#FF0000" />
-
     </LinearLayout>
 </androidx.cardview.widget.CardView>

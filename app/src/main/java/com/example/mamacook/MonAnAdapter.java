@@ -63,6 +63,9 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             itemHolder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
             itemHolder.tvRating.setText(String.valueOf(monAn.getRating()));
             
+            // Gán độ khó từ database
+            itemHolder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
+
             String hinhAnh = monAn.getHinh_anh();
             if (hinhAnh != null && !hinhAnh.isEmpty()) {
                 if (hinhAnh.startsWith("http")) {
@@ -103,7 +106,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     public static class ItemViewHolder extends RecyclerView.ViewHolder {
         ImageView imgMonAn, btnFavorite;
-        TextView tvTenMon, tvThoiGian, tvRating;
+        TextView tvTenMon, tvThoiGian, tvRating, tvDoKho;
         public ItemViewHolder(@NonNull View itemView) {
             super(itemView);
             imgMonAn = itemView.findViewById(R.id.img_mon_an);
@@ -111,6 +114,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             tvTenMon = itemView.findViewById(R.id.tv_ten_mon);
             tvThoiGian = itemView.findViewById(R.id.tv_thoi_gian);
             tvRating = itemView.findViewById(R.id.tv_rating);
+            tvDoKho = itemView.findViewById(R.id.tv_do_kho);
         }
     }
 
