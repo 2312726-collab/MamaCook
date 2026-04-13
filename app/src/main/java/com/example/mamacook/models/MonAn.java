@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.models;
 
 import com.google.firebase.Timestamp;
 import java.util.List;

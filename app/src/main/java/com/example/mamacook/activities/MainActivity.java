@@ -1,10 +1,8 @@
-package com.example.mamacook;
+package com.example.mamacook.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Patterns;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -13,6 +11,8 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mamacook.R;
+import com.example.mamacook.models.User;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -170,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
                 user.setAnh_dai_dien(firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "");
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
-
+                user.setVai_tro("user");
                 db.collection("nguoi_dung").document(uid).set(user);
             }
             startActivity(new Intent(MainActivity.this, HomeActivity.class));

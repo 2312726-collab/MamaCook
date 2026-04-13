@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.models;
 
 import com.google.firebase.Timestamp;
 
@@ -12,7 +12,8 @@ public class User {
     private String gioi_tinh;
     private String so_dien_thoai;
     private Timestamp ngay_tao; // Chuyển sang Timestamp
-    private String trang_thai_tai_khoan; 
+    private String trang_thai_tai_khoan;
+    private String vai_tro;
 
     public User() {}
 
@@ -36,4 +37,6 @@ public class User {
     public void setNgay_tao(Timestamp ngay_tao) { this.ngay_tao = ngay_tao; }
     public String getTrang_thai_tai_khoan() { return trang_thai_tai_khoan; }
     public void setTrang_thai_tai_khoan(String trang_thai_tai_khoan) { this.trang_thai_tai_khoan = trang_thai_tai_khoan; }
+    public String getVai_tro() { return vai_tro; }
+    public void setVai_tro(String vai_tro) { this.vai_tro = vai_tro; }
 }

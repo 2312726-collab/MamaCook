@@ -1,7 +1,6 @@
-package com.example.mamacook;
+package com.example.mamacook.adapters;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +9,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.example.mamacook.R;
+import com.example.mamacook.activities.DetailMonAnActivity;
+import com.example.mamacook.models.MonAn;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.List;

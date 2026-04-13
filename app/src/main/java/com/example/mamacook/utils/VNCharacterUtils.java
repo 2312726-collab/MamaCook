@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.utils;
 
 import java.text.Normalizer;
 import java.util.regex.Pattern;

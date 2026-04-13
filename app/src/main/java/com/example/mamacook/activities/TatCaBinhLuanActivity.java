@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.activities;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -8,6 +8,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mamacook.adapters.BinhLuanDocAdapter;
+import com.example.mamacook.R;
+import com.example.mamacook.models.DanhGia;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;

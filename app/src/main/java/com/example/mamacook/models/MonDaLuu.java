@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.models;
 
 public class MonDaLuu {
     private String id_luu;

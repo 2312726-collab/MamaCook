@@ -1,11 +1,9 @@
-package com.example.mamacook;
+package com.example.mamacook.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.Patterns;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -13,6 +11,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 
+import com.example.mamacook.R;
+import com.example.mamacook.models.User;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthUserCollisionException;
@@ -125,6 +125,7 @@ public class RegisterActivity extends AppCompatActivity {
         user.setMat_khau(password);
         user.setNgay_tao(Timestamp.now());
         user.setTrang_thai_tai_khoan("dang_hoat_dong");
+        user.setVai_tro("user");
 
         db.collection("nguoi_dung").document(uid)
                 .set(user)

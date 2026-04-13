@@ -1,5 +1,6 @@
-package com.example.mamacook;
+package com.example.mamacook.utils;
 
+import com.example.mamacook.models.MonAn;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;

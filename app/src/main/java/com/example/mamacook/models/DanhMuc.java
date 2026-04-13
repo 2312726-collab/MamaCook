@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.models;
 
 public class DanhMuc {
     private String id_danh_muc;

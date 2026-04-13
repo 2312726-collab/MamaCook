@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.adapters;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,6 +7,10 @@ import android.widget.RatingBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.mamacook.R;
+import com.example.mamacook.models.DanhGia;
+
 import java.util.List;
 
 public class BinhLuanNgangAdapter extends RecyclerView.Adapter<BinhLuanNgangAdapter.ViewHolder> {

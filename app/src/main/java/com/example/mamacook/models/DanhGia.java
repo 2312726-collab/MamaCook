@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.models;
 
 import java.util.Date;
 

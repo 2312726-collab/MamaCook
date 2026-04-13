@@ -1,4 +1,4 @@
-package com.example.mamacook;
+package com.example.mamacook.utils;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
