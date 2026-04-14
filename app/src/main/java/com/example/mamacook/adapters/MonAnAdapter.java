@@ -13,34 +13,50 @@ import com.example.mamacook.R;
 import com.example.mamacook.activities.DetailMonAnActivity;
 import com.example.mamacook.activities.SeeAllActivity;
 import com.example.mamacook.models.MonAn;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.List;
 
+/**
+ * Adapter chính hiển thị danh sách món ăn ở màn hình Home (Dạng ngang).
+ * Có tích hợp nút "Xem tất cả" khi danh sách vượt quá 10 món.
+ */
 public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_ITEM = 1;
     private static final int TYPE_SEE_ALL = 2;
     
     private List<MonAn> monAnList;
-    private FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private String userId = FirebaseAuth.getInstance().getUid();
-    private String sectionType = ""; // Loại section (DANH_MUC, MOI, LICH_SU...)
-    private String categoryId = "";   // Dùng nếu là DANH_MUC
+    private String sectionType = ""; // Loại mục (DANH_MUC, MOI, LICH_SU...)
+    private String categoryId = "";   // Dùng để định danh nếu là DANH_MUC
+
+    // Lưu trữ thông tin bộ lọc để gửi sang SeeAllActivity
+    private String filterDifficulty = "Tất cả";
+    private String filterTime = "Tất cả";
+    private String filterRating = "Tất cả";
 
     public MonAnAdapter(List<MonAn> monAnList) {
         this.monAnList = monAnList;
     }
 
-    public void setSectionInfo(String type, String catId) {
+    /**
+     * Cung cấp thông tin để nút "Xem tất cả" biết cần chuyển sang mục nào và mang theo bộ lọc.
+     */
+    public void setSectionInfo(String type, String catId, String difficulty, String time, String rating) {
         this.sectionType = type;
         this.categoryId = catId;
+        this.filterDifficulty = difficulty;
+        this.filterTime = time;
+        this.filterRating = rating;
+    }
+
+    // Overload giữ lại hàm cũ để không làm hỏng các chỗ gọi khác (Featured, New, History)
+    public void setSectionInfo(String type, String catId) {
+        setSectionInfo(type, catId, "Tất cả", "Tất cả", "Tất cả");
     }
 
     @Override
     public int getItemViewType(int position) {
-        // Nếu số lượng món > 10 và đây là vị trí cuối cùng -> Hiện nút Xem tất cả
+        // Hiện nút "Xem tất cả" tại vị trí thứ 11 nếu danh sách > 10 món.
         if (monAnList.size() > 10 && position == 10) {
             return TYPE_SEE_ALL;
         }
@@ -66,8 +82,6 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             itemHolder.tvTenMon.setText(monAn.getTen_mon());
             itemHolder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
             itemHolder.tvRating.setText(String.valueOf(monAn.getRating()));
-            
-            // Gán độ khó từ database
             itemHolder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
             String hinhAnh = monAn.getHinh_anh();
@@ -87,15 +101,14 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             });
         } else if (holder instanceof SeeAllViewHolder) {
             SeeAllViewHolder seeAllHolder = (SeeAllViewHolder) holder;
-
-            // Xóa click listener cũ trên toàn bộ item view
             seeAllHolder.itemView.setOnClickListener(null);
-
-            // Gán click listener CHỈ cho nút hình tròn trắng
             seeAllHolder.btnSeeAllCircle.setOnClickListener(v -> {
                 Intent intent = new Intent(v.getContext(), SeeAllActivity.class);
                 intent.putExtra("SECTION_TYPE", sectionType);
                 intent.putExtra("CATEGORY_ID", categoryId);
+                intent.putExtra("FILTER_DIFFICULTY", filterDifficulty);
+                intent.putExtra("FILTER_TIME", filterTime);
+                intent.putExtra("FILTER_RATING", filterRating);
                 v.getContext().startActivity(intent);
             });
         }
@@ -104,7 +117,6 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     @Override
     public int getItemCount() {
         if (monAnList == null) return 0;
-        // Nếu > 10 món thì chỉ hiện 11 item (10 món + 1 nút Xem tất cả)
         return monAnList.size() > 10 ? 11 : monAnList.size();
     }
 

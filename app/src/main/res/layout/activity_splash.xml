@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".activities.SplashActivity">
 
-    <!-- Ảnh nền giữ nguyên màu gốc -->
     <ImageView
         android:id="@+id/bg_splash"
         android:layout_width="match_parent"
@@ -19,45 +18,45 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingHorizontal="50dp"
+        android:paddingHorizontal="40dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.4">
-
-        <!-- Logo to và nhích lên trên -->
-
-        <!-- Thanh tiến trình to hơn, nổi bật hơn -->
+        app:layout_constraintVertical_bias="0.45">
 
         <ImageView
-            android:layout_width="300dp"
-            android:layout_height="300dp"
+            android:layout_width="250dp"
+            android:layout_height="250dp"
             android:src="@drawable/ic_logo" />
 
-        <ProgressBar
-            style="?android:attr/progressBarStyleHorizontal"
+        <!-- LinearProgressIndicator: To hơn, bo tròn và chuyên nghiệp hơn -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressBarSplash"
             android:layout_width="match_parent"
-            android:layout_height="45dp"
-            android:layout_marginTop="15dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
             android:indeterminate="true"
-            android:indeterminateTint="@color/white"
-            android:progressBackgroundTint="#4DFFFFFF" />
+            app:indicatorColor="@color/white"
+            app:trackColor="#4DFFFFFF"
+            app:trackThickness="12dp"
+            app:trackCornerRadius="10dp" />
 
-        <!-- Dòng chữ đang tải dữ liệu to và nổi bật hơn -->
         <TextView
+            android:id="@+id/tvLoadingStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
+            android:layout_marginTop="20dp"
             android:fontFamily="serif"
-            android:shadowColor="#BF000000"
-            android:shadowDx="3"
-            android:shadowDy="3"
-            android:shadowRadius="6"
-            android:text="Đang tải dữ liệu..."
+            android:gravity="center"
+            android:text="Đang tải dữ liệu của ứng dụng,\nvui lòng chờ trong giây lát"
             android:textColor="@color/white"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:textSize="17sp"
+            android:textStyle="italic"
+            android:shadowColor="#80000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

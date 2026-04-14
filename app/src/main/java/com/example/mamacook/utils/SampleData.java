@@ -7,8 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * LỚP TIỆN ÍCH DÙNG ĐỂ NẠP DỮ LIỆU MẪU LÊN FIREBASE.
+ * Lưu ý: Toàn bộ code đã được comment lại để tránh chạy tự động. 
+ * Khi muốn sử dụng, hãy bỏ comment (Ctrl + /) ở các đoạn code bên trong.
+ */
 public class SampleData {
 
+    /*
     public static void uploadAll(FirebaseFirestore db) {
         List<MonAn> samples = new ArrayList<>();
 
@@ -197,7 +203,13 @@ public class SampleData {
             db.collection("mon_an").add(mon);
         }
     }
+    */
 
+    /**
+     * Hàm tạo đối tượng MonAn mẫu với đầy đủ từ khóa tìm kiếm.
+     * Khi muốn dùng lại, hãy bỏ comment (Ctrl + /) đoạn code bên dưới.
+     */
+    /*
     private static MonAn createSample(String ten, String anh, int tg, String dokho, String danhmuc, int xem, double rate, int danhgia, Object[][] nls, String[] buocs) {
         MonAn mon = new MonAn();
         mon.setTen_mon(ten);
@@ -208,16 +220,15 @@ public class SampleData {
         mon.setLuot_xem(xem);
         mon.setRating(rate);
         mon.setTong_luot_danh_gia(danhgia);
-        mon.setTrang_thai("hiển thị");
+        mon.setTrang_thai("hien_thi");
         mon.setNgay_tao(Timestamp.now());
         
         List<MonAn.ChiTietNguyenLieu> nguyenLieuList = new ArrayList<>();
         List<String> keywords = new ArrayList<>();
         
-        // TỐI ƯU TÌM KIẾM: Lưu cả có dấu và KHÔNG DẤU
+        // Tạo từ khóa tìm kiếm thông minh (Có dấu và không dấu)
         String cleanTen = ten.toLowerCase(Locale.getDefault());
         String noToneTen = VNCharacterUtils.removeAccents(cleanTen);
-        
         for(String w : cleanTen.split("\\s+")) if(!keywords.contains(w)) keywords.add(w);
         for(String w : noToneTen.split("\\s+")) if(!keywords.contains(w)) keywords.add(w);
 
@@ -227,11 +238,6 @@ public class SampleData {
             nl.so_luong = ((Number) nlData[1]).intValue();
             nl.don_vi = (String) nlData[2];
             nguyenLieuList.add(nl);
-            
-            String cleanNL = nl.ten_nguyen_lieu.toLowerCase(Locale.getDefault());
-            String noToneNL = VNCharacterUtils.removeAccents(cleanNL);
-            for(String w : cleanNL.split("\\s+")) if(!keywords.contains(w)) keywords.add(w);
-            for(String w : noToneNL.split("\\s+")) if(!keywords.contains(w)) keywords.add(w);
         }
         mon.setDanh_sach_nguyen_lieu(nguyenLieuList);
 
@@ -243,8 +249,9 @@ public class SampleData {
             buocNauList.add(bn);
         }
         mon.setDanh_sach_buoc_nau(buocNauList);
-        
         mon.setTu_khoa_tim_kiem(keywords);
+        
         return mon;
     }
+    */
 }

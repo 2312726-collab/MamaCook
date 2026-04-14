@@ -71,7 +71,6 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // --- GIẢI PHÁP DỨT ĐIỂM KHOẢNG ĐEN ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = getWindow();
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
@@ -246,13 +245,17 @@ public class HomeActivity extends AppCompatActivity {
 
     private void applyFilters() {
         if (spnDifficulty.getSelectedItem() == null) return;
+
         String difficulty = spnDifficulty.getSelectedItem().toString();
         String timeRange = spnTime.getSelectedItem().toString();
         String ratingRange = spnRating.getSelectedItem().toString();
 
         List<MonAn> filteredList = new ArrayList<>();
+
         for (MonAn mon : listFullCurrentCategory) {
-            boolean matchDifficulty = difficulty.equals("Tất cả") || mon.getDo_kho().equals(difficulty);
+            boolean matchDifficulty = difficulty.equals("Tất cả") ||
+                    (mon.getDo_kho() != null && mon.getDo_kho().equals(difficulty));
+
             boolean matchTime = false;
             int time = mon.getThoi_gian_nau();
             if (timeRange.equals("Tất cả")) matchTime = true;
@@ -268,13 +271,19 @@ public class HomeActivity extends AppCompatActivity {
             else if (ratingRange.equals("3★ trở lên") && rating >= 3.0) matchRating = true;
             else if (ratingRange.equals("2★ trở lên") && rating >= 2.0) matchRating = true;
 
-            if (matchDifficulty && matchTime && matchRating) filteredList.add(mon);
+            if (matchDifficulty && matchTime && matchRating) {
+                filteredList.add(mon);
+            }
         }
+
         listCategory.clear();
         listCategory.addAll(filteredList);
-        adapterCategory.setSectionInfo("DANH_MUC", lastCategoryId);
+
+        // CẬP NHẬT: Gửi kèm thông tin bộ lọc sang Adapter
+        adapterCategory.setSectionInfo("DANH_MUC", lastCategoryId, difficulty, timeRange, ratingRange);
         adapterCategory.notifyDataSetChanged();
     }
+
 
     private int calculateRelevance(MonAn mon, String query, String queryNoTone) {
         int score = 0;
@@ -355,17 +364,18 @@ public class HomeActivity extends AppCompatActivity {
 
     private void loadRecipesByCategory(String categoryId, String title) {
         if (tvCategoryTitle != null) tvCategoryTitle.setText(title);
-        Query query = (categoryId.equals("all")) ? db.collection("mon_an") : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
-        query.limit(11).get().addOnSuccessListener(queryDocumentSnapshots -> {
-            listCategory.clear();
+
+        Query query = (categoryId.equals("all"))
+                ? db.collection("mon_an")
+                : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
+
+        query.limit(100).get().addOnSuccessListener(queryDocumentSnapshots -> {
             listFullCurrentCategory.clear();
             for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                 MonAn mon = doc.toObject(MonAn.class);
                 mon.setId_mon_an(doc.getId());
-                listCategory.add(mon);
                 listFullCurrentCategory.add(mon);
             }
-            adapterCategory.setSectionInfo("DANH_MUC", categoryId);
             applyFilters();
         });
     }
