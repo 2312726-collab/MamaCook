@@ -200,7 +200,7 @@ public class HomeActivity extends AppCompatActivity {
         spnTime.setOnItemSelectedListener(filterListener);
         spnRating.setOnItemSelectedListener(filterListener);
     }
-
+//quan oi
     private static class LabelSpinnerAdapter extends ArrayAdapter<String> {
         private final String label;
         public LabelSpinnerAdapter(Context context, String label, String[] items) {
