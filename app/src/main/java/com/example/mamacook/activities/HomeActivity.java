@@ -1,6 +1,7 @@
 package com.example.mamacook.activities;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,6 +33,7 @@ import com.example.mamacook.utils.VNCharacterUtils;
 import com.example.mamacook.models.MonAn;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -82,6 +84,7 @@ public class HomeActivity extends AppCompatActivity {
             window.getDecorView().setSystemUiVisibility(flags);
             window.setStatusBarColor(Color.TRANSPARENT);
         }
+
         setContentView(R.layout.activity_home);
 
         db = FirebaseFirestore.getInstance();
@@ -103,6 +106,19 @@ public class HomeActivity extends AppCompatActivity {
         setupSearchAction();
         setupSpinners();
         
+        // nam làm cái này: Fix lỗi nhấn Yêu thích không chuyển màn hình
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
+        bottomNavigationView.setSelectedItemId(R.id.nav_home);
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_favorites) {
+                // nam làm cái này: Chuyển sang FavoriteActivity thực sự
+                startActivity(new Intent(HomeActivity.this, FavoriteActivity.class));
+                return true;
+            }
+            return false;
+        });
+
         btnFilter.setOnClickListener(v -> toggleFilterLayout());
         
         loadFeaturedRecipes();

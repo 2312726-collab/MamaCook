@@ -1,6 +1,7 @@
 package com.example.mamacook.adapters;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,24 +14,20 @@ import com.example.mamacook.R;
 import com.example.mamacook.activities.DetailMonAnActivity;
 import com.example.mamacook.activities.SeeAllActivity;
 import com.example.mamacook.models.MonAn;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Adapter chính hiển thị danh sách món ăn ở màn hình Home (Dạng ngang).
- * Có tích hợp nút "Xem tất cả" khi danh sách vượt quá 10 món.
- */
 public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_ITEM = 1;
     private static final int TYPE_SEE_ALL = 2;
     
     private List<MonAn> monAnList;
-    private String sectionType = ""; // Loại mục (DANH_MUC, MOI, LICH_SU...)
-    private String categoryId = "";   // Dùng để định danh nếu là DANH_MUC
-
-    // Lưu trữ thông tin bộ lọc để gửi sang SeeAllActivity
+    private String sectionType = "";
+    private String categoryId = "";
     private String filterDifficulty = "Tất cả";
     private String filterTime = "Tất cả";
     private String filterRating = "Tất cả";
@@ -39,9 +36,6 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         this.monAnList = monAnList;
     }
 
-    /**
-     * Cung cấp thông tin để nút "Xem tất cả" biết cần chuyển sang mục nào và mang theo bộ lọc.
-     */
     public void setSectionInfo(String type, String catId, String difficulty, String time, String rating) {
         this.sectionType = type;
         this.categoryId = catId;
@@ -50,17 +44,13 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         this.filterRating = rating;
     }
 
-    // Overload giữ lại hàm cũ để không làm hỏng các chỗ gọi khác (Featured, New, History)
     public void setSectionInfo(String type, String catId) {
         setSectionInfo(type, catId, "Tất cả", "Tất cả", "Tất cả");
     }
 
     @Override
     public int getItemViewType(int position) {
-        // Hiện nút "Xem tất cả" tại vị trí thứ 11 nếu danh sách > 10 món.
-        if (monAnList.size() > 10 && position == 10) {
-            return TYPE_SEE_ALL;
-        }
+        if (monAnList.size() > 10 && position == 10) return TYPE_SEE_ALL;
         return TYPE_ITEM;
     }
 
@@ -89,6 +79,9 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             
             itemHolder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
+            // nam làm cái này: Đồng bộ trạng thái Tim ngoài màn hình danh sách
+            checkIsFavorite(monAn.getId_mon_an(), itemHolder.btnFavorite);
+
             String hinhAnh = monAn.getHinh_anh();
             if (hinhAnh != null && !hinhAnh.isEmpty()) {
                 if (hinhAnh.startsWith("http")) {
@@ -102,21 +95,26 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             itemHolder.itemView.setOnClickListener(v -> {
                 Intent intent = new Intent(v.getContext(), DetailMonAnActivity.class);
                 intent.putExtra("ID_MON_AN", monAn.getId_mon_an());
-                v.getContext().startActivity(intent);
-            });
-        } else if (holder instanceof SeeAllViewHolder) {
-            SeeAllViewHolder seeAllHolder = (SeeAllViewHolder) holder;
-            seeAllHolder.itemView.setOnClickListener(null);
-            seeAllHolder.btnSeeAllCircle.setOnClickListener(v -> {
-                Intent intent = new Intent(v.getContext(), SeeAllActivity.class);
-                intent.putExtra("SECTION_TYPE", sectionType);
-                intent.putExtra("CATEGORY_ID", categoryId);
-                intent.putExtra("FILTER_DIFFICULTY", filterDifficulty);
-                intent.putExtra("FILTER_TIME", filterTime);
-                intent.putExtra("FILTER_RATING", filterRating);
+                intent.putExtra("HINH_ANH", monAn.getHinh_anh());
                 v.getContext().startActivity(intent);
             });
         }
+    }
+
+    // nam làm cái này: Hàm kiểm tra món ăn có trong danh sách yêu thích không
+    private void checkIsFavorite(String dishId, ImageView btnFavorite) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        FirebaseFirestore.getInstance().collection("mon_da_luu")
+                .document(uid + "_" + dishId)
+                .addSnapshotListener((doc, error) -> {
+                    if (doc != null && doc.exists()) {
+                        btnFavorite.setColorFilter(Color.RED);
+                    } else {
+                        btnFavorite.setColorFilter(Color.GRAY);
+                    }
+                });
     }
 
     @Override

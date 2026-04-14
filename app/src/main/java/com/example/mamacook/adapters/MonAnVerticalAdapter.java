@@ -1,17 +1,22 @@
 package com.example.mamacook.adapters;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.mamacook.R;
 import com.example.mamacook.activities.DetailMonAnActivity;
 import com.example.mamacook.models.MonAn;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.List;
@@ -40,6 +45,14 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         // Hiển thị độ khó từ Firebase
         holder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
+        // nam làm cái này: Đồng bộ trạng thái Tim ngoài màn hình danh sách dọc
+        checkIsFavorite(monAn.getId_mon_an(), holder.btnFav);
+
+        // nam làm cái này: Click vào nút Tim để xóa yêu thích (có Dialog xác nhận)
+        holder.btnFav.setOnClickListener(v -> {
+            toggleFavorite(monAn, holder.itemView.getContext());
+        });
+
         String hinhAnh = monAn.getHinh_anh();
         if (hinhAnh != null && !hinhAnh.isEmpty()) {
             if (hinhAnh.startsWith("http")) {
@@ -53,8 +66,61 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), DetailMonAnActivity.class);
             intent.putExtra("ID_MON_AN", monAn.getId_mon_an());
+            intent.putExtra("HINH_ANH", monAn.getHinh_anh());
             v.getContext().startActivity(intent);
         });
+    }
+
+    // nam làm cái này: Hàm xử lý Thêm/Xóa yêu thích kèm AlertDialog
+    private void toggleFavorite(MonAn monAn, android.content.Context context) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        String idLuu = uid + "_" + monAn.getId_mon_an();
+        
+        // Kiểm tra xem đã có trong danh sách chưa
+        FirebaseFirestore.getInstance().collection("mon_da_luu").document(idLuu).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        // nam làm cái này: Hiện Dialog khi muốn bỏ thích
+                        new AlertDialog.Builder(context)
+                                .setTitle("Xác nhận")
+                                .setMessage("Bạn có chắc chắn muốn bỏ yêu thích món ăn này không?")
+                                .setPositiveButton("Có", (dialog, which) -> {
+                                    FirebaseFirestore.getInstance().collection("mon_da_luu").document(idLuu).delete()
+                                            .addOnSuccessListener(aVoid -> {
+                                                Toast.makeText(context, "Đã xóa khỏi món ăn yêu thích!", Toast.LENGTH_SHORT).show();
+                                            });
+                                })
+                                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                                .show();
+                    } else {
+                        // Thêm vào yêu thích
+                        java.util.Map<String, Object> data = new java.util.HashMap<>();
+                        data.put("id_nguoi_dung", uid);
+                        data.put("id_mon_an", monAn.getId_mon_an());
+                        data.put("id_luu", idLuu);
+                        FirebaseFirestore.getInstance().collection("mon_da_luu").document(idLuu).set(data)
+                                .addOnSuccessListener(aVoid -> {
+                                    Toast.makeText(context, "Đã thêm vào yêu thích!", Toast.LENGTH_SHORT).show();
+                                });
+                    }
+                });
+    }
+
+    private void checkIsFavorite(String dishId, ImageView btnFavorite) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null || btnFavorite == null) return;
+
+        FirebaseFirestore.getInstance().collection("mon_da_luu")
+                .document(uid + "_" + dishId)
+                .addSnapshotListener((doc, error) -> {
+                    if (doc != null && doc.exists()) {
+                        btnFavorite.setColorFilter(Color.RED);
+                    } else {
+                        btnFavorite.setColorFilter(Color.GRAY);
+                    }
+                });
     }
 
     @Override
