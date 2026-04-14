@@ -12,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -28,6 +29,8 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,7 +69,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         tvThoiGian = findViewById(R.id.tv_detail_thoi_gian);
         tvNguyenLieu = findViewById(R.id.tv_detail_nguyen_lieu);
         tvDiemTrungBinh = findViewById(R.id.tvDiemTrungBinh);
-        tvXemTatCa = findViewById(R.id.tvXemTatCa); // NODE 2: Ánh xạ ID chuẩn
+        tvXemTatCa = findViewById(R.id.tvXemTatCa); 
         layoutBuocNau = findViewById(R.id.layout_buoc_nau);
         rvDanhGia = findViewById(R.id.rv_danh_gia);
         etBinhLuan = findViewById(R.id.et_binh_luan);
@@ -85,16 +88,28 @@ public class DetailMonAnActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         currentDishId = getIntent().getStringExtra("ID_MON_AN");
+        String intentImage = getIntent().getStringExtra("HINH_ANH");
+
+        if (intentImage != null && !intentImage.isEmpty()) {
+            if (intentImage.startsWith("http")) {
+                Glide.with(this).load(intentImage).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            } else {
+                StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(intentImage);
+                Glide.with(this).load(storageRef).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            }
+        }
+
         if (currentDishId != null) {
             fetchDishDetailsRealtime(currentDishId);
-            fetchCommentsSmartRealtime(currentDishId);
-            checkIfSaved();
-            addToHistory(currentDishId); // Lưu lịch sử xem (tối đa 15 món)
+            fetchCommentsSmartRealtime(currentDishId); 
+            checkIfSaved(); 
+            addToHistory(currentDishId);
         }
+
+        btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
 
         btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
 
-        // NODE 2: Cài đặt sự kiện click chuyển sang TatCaBinhLuanActivity
         if (tvXemTatCa != null) {
             tvXemTatCa.setOnClickListener(v -> {
                 Intent intent = new Intent(DetailMonAnActivity.this, TatCaBinhLuanActivity.class);
@@ -106,30 +121,23 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void addToHistory(String dishId) {
         if (currentUserId == null) return;
-
-        // 1. Kiểm tra xem món này đã có trong lịch sử chưa
         db.collection("lich_su_xem")
                 .whereEqualTo("id_nguoi_dung", currentUserId)
                 .whereEqualTo("id_mon_an", dishId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
-                        // Nếu đã có, chỉ cập nhật thời gian xem mới nhất
                         String docId = querySnapshot.getDocuments().get(0).getId();
                         db.collection("lich_su_xem").document(docId)
                                 .update("thoi_gian_xem", FieldValue.serverTimestamp());
                     } else {
-                        // Nếu chưa có, tạo bản ghi mới
                         Map<String, Object> history = new HashMap<>();
                         history.put("id_nguoi_dung", currentUserId);
                         history.put("id_mon_an", dishId);
                         history.put("thoi_gian_xem", FieldValue.serverTimestamp());
-
-                        db.collection("lich_su_xem").add(history)
-                                .addOnSuccessListener(documentReference -> {
-                                    // Sau khi thêm, kiểm tra số lượng để giới hạn 15 món
-                                    limitHistoryTo15();
-                                });
+                        db.collection("lich_su_xem").add(history).addOnSuccessListener(documentReference -> {
+                            limitHistoryTo15();
+                        });
                     }
                 });
     }
@@ -141,7 +149,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (querySnapshot.size() > 15) {
-                        // Xóa các bản ghi cũ nhất (từ vị trí 15 trở đi)
                         for (int i = 15; i < querySnapshot.size(); i++) {
                             db.collection("lich_su_xem")
                                     .document(querySnapshot.getDocuments().get(i).getId())
@@ -158,8 +165,16 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 if (monAn != null) {
                     tvTen.setText(monAn.getTen_mon());
                     tvThoiGian.setText("⌛ " + monAn.getThoi_gian_nau() + " phút");
-                    tvRatingInfo.setText("🕒 " + monAn.getRating() + " ⭐ " + monAn.getTong_luot_danh_gia());
-                    Glide.with(this).load(monAn.getHinh_anh()).placeholder(R.drawable.bg_splash).into(imgMonAn);
+                    
+                    String hinhAnh = monAn.getHinh_anh();
+                    if (hinhAnh != null && !hinhAnh.isEmpty()) {
+                        if (hinhAnh.startsWith("http")) {
+                            Glide.with(this).load(hinhAnh).into(imgMonAn);
+                        } else {
+                            StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                            Glide.with(this).load(storageRef).into(imgMonAn);
+                        }
+                    }
 
                     StringBuilder sb = new StringBuilder();
                     if (monAn.getDanh_sach_nguyen_lieu() != null) {
@@ -190,48 +205,34 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 .addSnapshotListener((value, error) -> {
                     if (error != null || value == null) return;
 
-                    List<DanhGia> allComments = new ArrayList<>();
                     float totalStars = 0;
                     int count = value.size();
-
                     for (QueryDocumentSnapshot doc : value) {
                         DanhGia dg = doc.toObject(DanhGia.class);
-                        allComments.add(dg);
                         totalStars += dg.getSo_sao();
                     }
 
                     if (count > 0) {
                         float average = totalStars / count;
-                        tvDiemTrungBinh.setText(String.format(Locale.getDefault(), "⭐ %.1f (%d đánh giá)", average, count));
+                        String info = String.format(Locale.getDefault(), "⭐ %.1f (%d đánh giá)", average, count);
+                        tvDiemTrungBinh.setText(info);
+                        tvRatingInfo.setText(info);
                     } else {
                         tvDiemTrungBinh.setText("⭐ 0.0 (0 đánh giá)");
+                        tvRatingInfo.setText("⭐ 0.0 (0 đánh giá)");
                     }
-
-                    Collections.sort(allComments, (o1, o2) -> {
-                        if (o1.getNgay_danh_gia() == null || o2.getNgay_danh_gia() == null) return 0;
-                        return o2.getNgay_danh_gia().compareTo(o1.getNgay_danh_gia());
-                    });
-
-                    danhSachBinhLuan.clear();
-                    for (int i = 0; i < Math.min(5, allComments.size()); i++) {
-                        danhSachBinhLuan.add(allComments.get(i));
-                    }
-                    adapterBinhLuan.notifyDataSetChanged();
                 });
     }
 
     private void guiBinhLuan() {
         String noiDung = etBinhLuan.getText().toString().trim();
         float soSao = rbChonSao.getRating();
-
         if (TextUtils.isEmpty(noiDung) || soSao == 0) {
             Toast.makeText(this, "Vui lòng nhập nội dung và chọn sao!", Toast.LENGTH_SHORT).show();
             return;
         }
-
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String name = (user != null && !TextUtils.isEmpty(user.getDisplayName())) ? user.getDisplayName() : "Người dùng";
-
         Map<String, Object> comment = new HashMap<>();
         comment.put("id_mon_an", currentDishId);
         comment.put("noi_dung", noiDung);
@@ -239,7 +240,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         comment.put("trang_thai", "cho_duyet");
         comment.put("ten_nguoi_dung", name);
         comment.put("ngay_danh_gia", FieldValue.serverTimestamp());
-
         db.collection("danh_gia").add(comment).addOnSuccessListener(docRef -> {
             etBinhLuan.setText("");
             rbChonSao.setRating(5);
@@ -251,57 +251,55 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (currentUserId == null) return;
         db.collection("mon_da_luu").document(currentUserId + "_" + currentDishId).addSnapshotListener((doc, error) -> {
             if (doc != null) {
-                boolean newSavedStatus = doc.exists();
-                if (isSaved != newSavedStatus) {
-                    isSaved = newSavedStatus;
-                    updateSaveButtonUI(true);
-                } else {
-                    isSaved = newSavedStatus;
-                    updateSaveButtonUI(false);
-                }
+                isSaved = doc.exists();
+                updateSaveButtonUI(false);
             }
         });
     }
 
     private void updateSaveButtonUI(boolean animate) {
         if (btnFavoriteDetail == null) return;
-
         if (isSaved) {
             btnFavoriteDetail.setColorFilter(Color.RED);
         } else {
             btnFavoriteDetail.setColorFilter(Color.WHITE);
         }
-
         if (animate) {
-            btnFavoriteDetail.animate()
-                    .scaleX(1.4f)
-                    .scaleY(1.4f)
-                    .setDuration(150)
-                    .withEndAction(() -> {
-                        btnFavoriteDetail.animate()
-                                .scaleX(1.0f)
-                                .scaleY(1.0f)
-                                .setDuration(150)
-                                .start();
-                    })
-                    .start();
+            btnFavoriteDetail.animate().scaleX(1.4f).scaleY(1.4f).setDuration(150).withEndAction(() -> {
+                btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+            }).start();
         }
     }
 
     private void toggleSaveRecipe() {
         if (currentUserId == null) {
-            Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng đăng nhập để lưu món ăn!", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String idLuu = currentUserId + "_" + currentDishId;
+
         if (isSaved) {
-            db.collection("mon_da_luu").document(idLuu).delete();
+            new AlertDialog.Builder(this)
+                    .setTitle("Xác nhận")
+                    .setMessage("Bạn có chắc chắn muốn bỏ yêu thích món ăn này không?")
+                    .setPositiveButton("Có", (dialog, which) -> {
+                        db.collection("mon_da_luu").document(idLuu).delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    Toast.makeText(this, "Đã xóa khỏi món ăn yêu thích!", Toast.LENGTH_SHORT).show();
+                                });
+                    })
+                    .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                    .show();
         } else {
             Map<String, Object> data = new HashMap<>();
             data.put("id_nguoi_dung", currentUserId);
             data.put("id_mon_an", currentDishId);
-            db.collection("mon_da_luu").document(idLuu).set(data);
+            data.put("id_luu", idLuu);
+            db.collection("mon_da_luu").document(idLuu).set(data)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Đã thêm vào yêu thích!", Toast.LENGTH_SHORT).show();
+                    });
         }
 
         btnFavoriteDetail.animate().scaleX(0.7f).scaleY(0.7f).setDuration(100).withEndAction(() -> {

@@ -12,7 +12,6 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MamaCook">
 
-        <!-- Cấu hình Facebook SDK -->
         <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
         <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
 
@@ -42,19 +41,12 @@
         <activity android:name=".activities.MainActivity" android:exported="true" />
         <activity android:name=".activities.HomeActivity" android:exported="false" />
         <activity android:name=".activities.RegisterActivity" android:exported="false" />
-
-        <!-- QUAN TRỌNG: Khai báo màn hình Chi tiết để không bị văng App -->
         <activity android:name=".activities.DetailMonAnActivity" android:exported="false" />
+        <activity android:name=".activities.TatCaBinhLuanActivity" android:exported="false" />
+        <activity android:name=".activities.SeeAllActivity" android:exported="false" />
 
-        <!-- KHAI BÁO MÀN HÌNH TẤT CẢ BÌNH LUẬN -->
-        <activity
-            android:name=".activities.TatCaBinhLuanActivity"
-            android:exported="false" />
-
-        <!-- Khai báo Activity Xem tất cả -->
-        <activity android:name=".activities.SeeAllActivity" android:exported="false"
-            android:label="Xem tất cả"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+        <!-- nam làm cái này: Khai báo FavoriteActivity để không bị crash khi mở -->
+        <activity android:name=".activities.FavoriteActivity" android:exported="false" />
 
     </application>
 
