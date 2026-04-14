@@ -82,7 +82,7 @@ public class HomeActivity extends AppCompatActivity {
             window.getDecorView().setSystemUiVisibility(flags);
             window.setStatusBarColor(Color.TRANSPARENT);
         }
-
+// kasdckdskvdskfjs
         setContentView(R.layout.activity_home);
 
         db = FirebaseFirestore.getInstance();
