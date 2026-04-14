@@ -16,6 +16,7 @@ import com.example.mamacook.models.MonAn;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Adapter chính hiển thị danh sách món ăn ở màn hình Home (Dạng ngang).
@@ -81,7 +82,11 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             ItemViewHolder itemHolder = (ItemViewHolder) holder;
             itemHolder.tvTenMon.setText(monAn.getTen_mon());
             itemHolder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
-            itemHolder.tvRating.setText(String.valueOf(monAn.getRating()));
+            
+            // ĐỒNG BỘ SỐ SAO: Định dạng 1 chữ số thập phân (Ví dụ: 4.5)
+            double rating = monAn.getRating();
+            itemHolder.tvRating.setText(String.format(Locale.getDefault(), "%.1f", rating));
+            
             itemHolder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
             String hinhAnh = monAn.getHinh_anh();

@@ -82,7 +82,6 @@ public class HomeActivity extends AppCompatActivity {
             window.getDecorView().setSystemUiVisibility(flags);
             window.setStatusBarColor(Color.TRANSPARENT);
         }
-// kasdckdskvdskfjs
         setContentView(R.layout.activity_home);
 
         db = FirebaseFirestore.getInstance();
@@ -200,7 +199,7 @@ public class HomeActivity extends AppCompatActivity {
         spnTime.setOnItemSelectedListener(filterListener);
         spnRating.setOnItemSelectedListener(filterListener);
     }
-/// aloNam
+
     private static class LabelSpinnerAdapter extends ArrayAdapter<String> {
         private final String label;
         public LabelSpinnerAdapter(Context context, String label, String[] items) {
