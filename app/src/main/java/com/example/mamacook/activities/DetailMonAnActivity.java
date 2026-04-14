@@ -154,28 +154,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
                 int tongLuotMoi = tongLuotHienTai + 1;
                 double ratingMoi = ((ratingHienTai * tongLuotHienTai) + soSaoMoi) / tongLuotMoi;
-    private void addToHistory(String dishId) {
-        if (currentUserId == null) return;
-        db.collection("lich_su_xem")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("id_mon_an", dishId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (!querySnapshot.isEmpty()) {
-                        String docId = querySnapshot.getDocuments().get(0).getId();
-                        db.collection("lich_su_xem").document(docId)
-                                .update("thoi_gian_xem", FieldValue.serverTimestamp());
-                    } else {
-                        Map<String, Object> history = new HashMap<>();
-                        history.put("id_nguoi_dung", currentUserId);
-                        history.put("id_mon_an", dishId);
-                        history.put("thoi_gian_xem", FieldValue.serverTimestamp());
-                        db.collection("lich_su_xem").add(history).addOnSuccessListener(documentReference -> {
-                            limitHistoryTo15();
-                        });
-                    }
-                });
-    }
 
                 Map<String, Object> comment = new HashMap<>();
                 comment.put("id_mon_an", currentDishId);
@@ -282,29 +260,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     }
                     adapterBinhLuan.notifyDataSetChanged();
                 });
-    }
-
-    private void guiBinhLuan() {
-        String noiDung = etBinhLuan.getText().toString().trim();
-        float soSao = rbChonSao.getRating();
-        if (TextUtils.isEmpty(noiDung) || soSao == 0) {
-            Toast.makeText(this, "Vui lòng nhập nội dung và chọn sao!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String name = (user != null && !TextUtils.isEmpty(user.getDisplayName())) ? user.getDisplayName() : "Người dùng";
-        Map<String, Object> comment = new HashMap<>();
-        comment.put("id_mon_an", currentDishId);
-        comment.put("noi_dung", noiDung);
-        comment.put("so_sao", soSao);
-        comment.put("trang_thai", "cho_duyet");
-        comment.put("ten_nguoi_dung", name);
-        comment.put("ngay_danh_gia", FieldValue.serverTimestamp());
-        db.collection("danh_gia").add(comment).addOnSuccessListener(docRef -> {
-            etBinhLuan.setText("");
-            rbChonSao.setRating(5);
-            Toast.makeText(DetailMonAnActivity.this, "Gửi thành công! Đang chờ AI duyệt bài.", Toast.LENGTH_SHORT).show();
-        });
     }
 
     private void checkIfSaved() {

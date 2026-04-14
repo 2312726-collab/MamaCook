@@ -21,13 +21,19 @@ import com.google.firebase.storage.StorageReference;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter chính hiển thị danh sách món ăn ở màn hình Home (Dạng ngang).
+ * Có tích hợp nút "Xem tất cả" khi danh sách vượt quá 10 món.
+ */
 public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_ITEM = 1;
     private static final int TYPE_SEE_ALL = 2;
     
     private List<MonAn> monAnList;
-    private String sectionType = "";
-    private String categoryId = "";
+    private String sectionType = ""; // Loại mục (DANH_MUC, MOI, LICH_SU...)
+    private String categoryId = "";   // Dùng để định danh nếu là DANH_MUC
+
+    // Lưu trữ thông tin bộ lọc để gửi sang SeeAllActivity
     private String filterDifficulty = "Tất cả";
     private String filterTime = "Tất cả";
     private String filterRating = "Tất cả";
@@ -36,6 +42,9 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         this.monAnList = monAnList;
     }
 
+    /**
+     * Cung cấp thông tin để nút "Xem tất cả" biết cần chuyển sang mục nào và mang theo bộ lọc.
+     */
     public void setSectionInfo(String type, String catId, String difficulty, String time, String rating) {
         this.sectionType = type;
         this.categoryId = catId;
@@ -44,13 +53,17 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         this.filterRating = rating;
     }
 
+    // Overload giữ lại hàm cũ để không làm hỏng các chỗ gọi khác (Featured, New, History)
     public void setSectionInfo(String type, String catId) {
         setSectionInfo(type, catId, "Tất cả", "Tất cả", "Tất cả");
     }
 
     @Override
     public int getItemViewType(int position) {
-        if (monAnList.size() > 10 && position == 10) return TYPE_SEE_ALL;
+        // Hiện nút "Xem tất cả" tại vị trí thứ 11 nếu danh sách > 10 món.
+        if (monAnList.size() > 10 && position == 10) {
+            return TYPE_SEE_ALL;
+        }
         return TYPE_ITEM;
     }
 
@@ -95,7 +108,18 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             itemHolder.itemView.setOnClickListener(v -> {
                 Intent intent = new Intent(v.getContext(), DetailMonAnActivity.class);
                 intent.putExtra("ID_MON_AN", monAn.getId_mon_an());
-                intent.putExtra("HINH_ANH", monAn.getHinh_anh());
+                v.getContext().startActivity(intent);
+            });
+        } else if (holder instanceof SeeAllViewHolder) {
+            SeeAllViewHolder seeAllHolder = (SeeAllViewHolder) holder;
+            seeAllHolder.itemView.setOnClickListener(null);
+            seeAllHolder.btnSeeAllCircle.setOnClickListener(v -> {
+                Intent intent = new Intent(v.getContext(), SeeAllActivity.class);
+                intent.putExtra("SECTION_TYPE", sectionType);
+                intent.putExtra("CATEGORY_ID", categoryId);
+                intent.putExtra("FILTER_DIFFICULTY", filterDifficulty);
+                intent.putExtra("FILTER_TIME", filterTime);
+                intent.putExtra("FILTER_RATING", filterRating);
                 v.getContext().startActivity(intent);
             });
         }
