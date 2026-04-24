@@ -56,12 +56,21 @@ public class AccountFragment extends Fragment {
         });
 
         btnEditProfile.setOnClickListener(v -> {
-            // Chuyển sang màn hình sửa (Giữ nguyên Activity vì đây là luồng phụ)
-            Toast.makeText(getContext(), "Chức năng đang được cập nhật", Toast.LENGTH_SHORT).show();
+            // Hiếu: Mở màn hình chỉnh sửa thông tin với hiệu ứng trượt
+            Intent intent = new Intent(getActivity(), com.example.mamacook.activities.EditAccountActivity.class);
+            startActivity(intent);
+            if (getActivity() != null) {
+                getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            }
         });
 
         btnChangePassword.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Chức năng đang được cập nhật", Toast.LENGTH_SHORT).show();
+            // Hiếu: Mở màn hình đổi mật khẩu với hiệu ứng trượt
+            Intent intent = new Intent(getActivity(), com.example.mamacook.activities.ChangePasswordActivity.class);
+            startActivity(intent);
+            if (getActivity() != null) {
+                getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            }
         });
 
         imgAvatar.setOnClickListener(v -> showAvatarOptions());
@@ -130,7 +139,7 @@ public class AccountFragment extends Fragment {
         tvInfoEmail.setText(user.getEmail());
         tvInfoPhone.setText(user.getSo_dien_thoai() != null ? user.getSo_dien_thoai() : "Chưa cập nhật");
         
-        String role = user.getRole();
+        String role = user.getVai_tro();
         tvInfoRole.setText("admin".equals(role) ? "Quản trị viên" : "Người dùng");
 
         if (user.getNgay_tao() != null) {

@@ -45,6 +45,8 @@
         <activity android:name=".activities.TatCaBinhLuanActivity" android:exported="false" />
         <activity android:name=".activities.SeeAllActivity" android:exported="false" />
         <activity android:name=".activities.ForgotPasswordActivity" android:exported="false" />
+        <activity android:name=".activities.EditAccountActivity" android:exported="false" />
+        <activity android:name=".activities.ChangePasswordActivity" android:exported="false" />
 
     </application>
 

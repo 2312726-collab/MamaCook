@@ -13,6 +13,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.example.mamacook.R;
+import com.example.mamacook.fragments.AccountFragment;
 import com.example.mamacook.fragments.FavoriteFragment;
 import com.example.mamacook.fragments.HomeFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -23,14 +24,14 @@ import java.util.Map;
 public class HomeActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigationView;
-    private int currentTabPosition = -1;
-    private Fragment activeFragment;
-    private final Map<Integer, Fragment> fragmentMap = new HashMap<>();
+    private Map<Integer, Fragment> fragmentMap = new HashMap<>();
+    private int currentId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Hiếu: Làm trong suốt thanh trạng thái
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = getWindow();
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
@@ -47,69 +48,54 @@ public class HomeActivity extends AppCompatActivity {
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
 
+        // Đăng ký các Fragment vào Map
+        fragmentMap.put(R.id.nav_home, new HomeFragment());
+        fragmentMap.put(R.id.nav_favorites, new FavoriteFragment());
+        fragmentMap.put(R.id.nav_profile, new AccountFragment());
+
+        // Lắng nghe sự kiện click Menu
         bottomNavigationView.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            int newPosition = getTabPosition(id);
-
-            if (newPosition == currentTabPosition) return true;
-
-            showFragment(id, newPosition > currentTabPosition);
-            currentTabPosition = newPosition;
+            showFragment(item.getItemId());
             return true;
         });
 
+        // Mặc định hiển thị Trang chủ khi vừa vào
         if (savedInstanceState == null) {
-            // Mặc định ban đầu
-            showFragment(R.id.nav_home, true);
             bottomNavigationView.setSelectedItemId(R.id.nav_home);
         }
     }
 
-    private int getTabPosition(int id) {
-        if (id == R.id.nav_home) return 0;
-        if (id == R.id.nav_recipes) return 1;
-        if (id == R.id.nav_favorites) return 2;
-        if (id == R.id.nav_profile) return 3;
-        return -1;
-    }
-
-    private void showFragment(int navId, boolean isNext) {
-        FragmentManager fm = getSupportFragmentManager();
-        FragmentTransaction transaction = fm.beginTransaction();
-
-        // Thiết lập hiệu ứng chuyển động mượt mà
-        if (currentTabPosition != -1) {
-            if (isNext) {
+    private void showFragment(int id) {
+        if (currentId == id) return;
+        
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        
+        // Hiệu ứng trượt Slide
+        if (currentId != -1) {
+            if (id > currentId) {
                 transaction.setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left);
             } else {
                 transaction.setCustomAnimations(R.anim.slide_in_left, R.anim.slide_out_right);
             }
         }
 
-        // Ẩn fragment hiện tại (nếu có)
-        if (activeFragment != null) {
-            transaction.hide(activeFragment);
+        // Ẩn Fragment hiện tại
+        Fragment currentFragment = fragmentManager.findFragmentByTag(String.valueOf(currentId));
+        if (currentFragment != null) {
+            transaction.hide(currentFragment);
         }
 
-        // Lấy hoặc tạo mới fragment cần hiển thị
-        Fragment targetFragment = fragmentMap.get(navId);
-        if (targetFragment == null) {
-            if (navId == R.id.nav_home) targetFragment = new HomeFragment();
-            else if (navId == R.id.nav_favorites) targetFragment = new FavoriteFragment();
-            // else if (navId == R.id.nav_recipes) targetFragment = new RecipeFragment();
-            // else if (navId == R.id.nav_profile) targetFragment = new AccountFragment();
-
-            if (targetFragment != null) {
-                fragmentMap.put(navId, targetFragment);
-                transaction.add(R.id.fragment_container, targetFragment);
-            }
+        // Hiển thị hoặc Thêm mới Fragment được chọn
+        Fragment nextFragment = fragmentManager.findFragmentByTag(String.valueOf(id));
+        if (nextFragment == null) {
+            nextFragment = fragmentMap.get(id);
+            transaction.add(R.id.fragment_container, nextFragment, String.valueOf(id));
         } else {
-            transaction.show(targetFragment);
+            transaction.show(nextFragment);
         }
 
-        if (targetFragment != null) {
-            activeFragment = targetFragment;
-            transaction.commit();
-        }
+        transaction.commit();
+        currentId = id;
     }
 }
