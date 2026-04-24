@@ -42,33 +42,47 @@ public class MainActivity extends AppCompatActivity {
     private GoogleSignInClient mGoogleSignInClient;
     private CallbackManager mCallbackManager;
     
-    private TextView btnNavRegister;
-    private Button btnLoginMain, btnLoginFacebook, btnLoginGoogle; // Khôi phục lại kiểu Button
+    private TextView btnNavRegister, tvForgot;
+    private Button btnLoginMain, btnLoginFacebook, btnLoginGoogle;
     private EditText etLoginUser, etLoginPassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         
         mAuth = FirebaseAuth.getInstance();
+        // 1. Tự động đăng nhập
+        if (mAuth.getCurrentUser() != null) {
+            startActivity(new Intent(MainActivity.this, HomeActivity.class));
+            finish();
+            return;
+        }
+
+        setContentView(R.layout.activity_main);
+        
         db = FirebaseFirestore.getInstance();
         mCallbackManager = CallbackManager.Factory.create();
         
-        // Ánh xạ thêm các trường nhập liệu
+        // 2. Ánh xạ View
         etLoginUser = findViewById(R.id.et_login_user);
         etLoginPassword = findViewById(R.id.et_login_password);
-        btnNavRegister = findViewById(R.id.btn_nav_register);
+        tvForgot = findViewById(R.id.tv_forgot_password);
         btnLoginMain = findViewById(R.id.btn_login_main);
         btnLoginFacebook = findViewById(R.id.btn_login_facebook);
         btnLoginGoogle = findViewById(R.id.btn_login_google);
+        btnNavRegister = findViewById(R.id.btn_nav_register);
 
-        // Cấu hình Google Sign-In
+        // 3. Cấu hình Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        // 4. Sự kiện Click
+        if (tvForgot != null) {
+            tvForgot.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, ForgotPasswordActivity.class)));
+        }
 
         if (btnLoginMain != null) {
             btnLoginMain.setOnClickListener(v -> loginUser());
@@ -87,20 +101,21 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        if (btnNavRegister != null) {
+            btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
+        }
+
+        // Callback Facebook
         LoginManager.getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
-                handleFacebookAccessToken(loginResult.getAccessToken().getToken());
+                handleAuth(FacebookAuthProvider.getCredential(loginResult.getAccessToken().getToken()));
             }
             @Override public void onCancel() {}
             @Override public void onError(FacebookException error) {
                 Toast.makeText(MainActivity.this, "Lỗi Facebook: " + error.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
-
-        if (btnNavRegister != null) {
-            btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
-        }
     }
 
     private void loginUser() {
@@ -108,17 +123,27 @@ public class MainActivity extends AppCompatActivity {
         String password = etLoginPassword.getText().toString().trim();
 
         if (TextUtils.isEmpty(input) || TextUtils.isEmpty(password)) {
-            Toast.makeText(this, "Vui lòng nhập email và mật khẩu", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng nhập tài khoản và mật khẩu", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        mAuth.signInWithEmailAndPassword(input, password)
+        if (input.matches("\\d+")) {
+            // Nếu là số điện thoại, dùng email ảo để login vào Firebase Auth
+            performFirebaseAuth(input + "@mamacook.com", password);
+        } else {
+            // Đăng nhập Email truyền thống
+            performFirebaseAuth(input, password);
+        }
+    }
+
+    private void performFirebaseAuth(String email, String password) {
+        mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         startActivity(new Intent(MainActivity.this, HomeActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(MainActivity.this, "Sai tài khoản hoặc mật khẩu!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Tài khoản hoặc mật khẩu không đúng!", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -132,24 +157,14 @@ public class MainActivity extends AppCompatActivity {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
-                firebaseAuthWithGoogle(account.getIdToken());
+                handleAuth(GoogleAuthProvider.getCredential(account.getIdToken(), null));
             } catch (ApiException e) {
                 Toast.makeText(this, "Lỗi Google: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    private void firebaseAuthWithGoogle(String idToken) {
-        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
-        mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
-            if (task.isSuccessful()) {
-                saveUserToFirestore(mAuth.getCurrentUser());
-            }
-        });
-    }
-
-    private void handleFacebookAccessToken(String token) {
-        AuthCredential credential = FacebookAuthProvider.getCredential(token);
+    private void handleAuth(AuthCredential credential) {
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
                 saveUserToFirestore(mAuth.getCurrentUser());

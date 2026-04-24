@@ -44,9 +44,7 @@
         <activity android:name=".activities.DetailMonAnActivity" android:exported="false" />
         <activity android:name=".activities.TatCaBinhLuanActivity" android:exported="false" />
         <activity android:name=".activities.SeeAllActivity" android:exported="false" />
-
-        <!-- nam làm cái này: Khai báo FavoriteActivity để không bị crash khi mở -->
-        <activity android:name=".activities.FavoriteActivity" android:exported="false" />
+        <activity android:name=".activities.ForgotPasswordActivity" android:exported="false" />
 
     </application>
 

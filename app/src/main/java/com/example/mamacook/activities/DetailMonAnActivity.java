@@ -71,7 +71,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         tvThoiGian = findViewById(R.id.tv_detail_thoi_gian);
         tvNguyenLieu = findViewById(R.id.tv_detail_nguyen_lieu);
         tvDiemTrungBinh = findViewById(R.id.tvDiemTrungBinh);
-        tvXemTatCa = findViewById(R.id.tvXemTatCa); // NODE 2: Ánh xạ ID chuẩn
+        tvXemTatCa = findViewById(R.id.tvXemTatCa);
         layoutBuocNau = findViewById(R.id.layout_buoc_nau);
         rvDanhGia = findViewById(R.id.rv_danh_gia);
         etBinhLuan = findViewById(R.id.et_binh_luan);
@@ -107,14 +107,12 @@ public class DetailMonAnActivity extends AppCompatActivity {
             addToHistory(currentDishId);
         }
 
-        btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
-
-        btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
         if (btnFavoriteDetail != null) {
             btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
         }
 
-        // NODE 2: Cài đặt sự kiện click chuyển sang TatCaBinhLuanActivity
+        btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
+
         if (tvXemTatCa != null) {
             tvXemTatCa.setOnClickListener(v -> {
                 Intent intent = new Intent(DetailMonAnActivity.this, TatCaBinhLuanActivity.class);
@@ -179,7 +177,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void fetchDishDetailsRealtime(String id) {
-        // Thêm tham số 'this' vào addSnapshotListener để tự động hủy lắng nghe khi Activity đóng
         db.collection("mon_an").document(id).addSnapshotListener(this, (doc, error) -> {
             if (isFinishing() || isDestroyed()) return;
             if (doc != null && doc.exists()) {
@@ -189,19 +186,15 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", monAn.getThoi_gian_nau()));
                     tvRatingInfo.setText(String.format(Locale.getDefault(), "🕒 %.1f ⭐ (%d)", monAn.getRating(), monAn.getTong_luot_danh_gia()));
 
-                    // Kiểm tra an toàn trước khi gọi Glide
                     if (!isFinishing() && !isDestroyed()) {
-                        Glide.with(this).load(monAn.getHinh_anh()).placeholder(R.drawable.bg_splash).into(imgMonAn);
-                    }
-                    tvThoiGian.setText("⌛ " + monAn.getThoi_gian_nau() + " phút");
-
-                    String hinhAnh = monAn.getHinh_anh();
-                    if (hinhAnh != null && !hinhAnh.isEmpty()) {
-                        if (hinhAnh.startsWith("http")) {
-                            Glide.with(this).load(hinhAnh).into(imgMonAn);
-                        } else {
-                            StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(hinhAnh);
-                            Glide.with(this).load(storageRef).into(imgMonAn);
+                        String hinhAnh = monAn.getHinh_anh();
+                        if (hinhAnh != null && !hinhAnh.isEmpty()) {
+                            if (hinhAnh.startsWith("http")) {
+                                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+                            } else {
+                                StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                                Glide.with(this).load(storageRef).placeholder(R.drawable.bg_splash).into(imgMonAn);
+                            }
                         }
                     }
 
@@ -245,10 +238,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
                         float average = totalStars / count;
                         String info = String.format(Locale.getDefault(), "⭐ %.1f (%d đánh giá)", average, count);
                         tvDiemTrungBinh.setText(info);
-                        tvRatingInfo.setText(info);
                     } else {
                         tvDiemTrungBinh.setText("⭐ 0.0 (0 đánh giá)");
-                        tvRatingInfo.setText("⭐ 0.0 (0 đánh giá)");
                     }
                     Collections.sort(allComments, (o1, o2) -> {
                         if (o1.getNgay_danh_gia() == null || o2.getNgay_danh_gia() == null) return 0;
@@ -282,7 +273,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
         }
         if (animate) {
             btnFavoriteDetail.animate().scaleX(1.4f).scaleY(1.4f).setDuration(150).withEndAction(() -> {
-                btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                if (!isFinishing() && !isDestroyed()) {
+                    btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                }
             }).start();
         }
     }
@@ -292,30 +285,23 @@ public class DetailMonAnActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng đăng nhập để lưu món ăn!", Toast.LENGTH_SHORT).show();
             return;
         }
-
         String idLuu = currentUserId + "_" + currentDishId;
-
         if (isSaved) {
             new AlertDialog.Builder(this)
                     .setTitle("Xác nhận")
                     .setMessage("Bạn có chắc chắn muốn bỏ yêu thích món ăn này không?")
                     .setPositiveButton("Có", (dialog, which) -> {
-                        db.collection("mon_da_luu").document(idLuu).delete()
-                                .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(this, "Đã xóa khỏi món ăn yêu thích!", Toast.LENGTH_SHORT).show();
-                                });
+                        db.collection("mon_da_luu").document(idLuu).delete();
+                        Toast.makeText(this, "Đã xóa khỏi danh sách yêu thích!", Toast.LENGTH_SHORT).show();
                     })
-                    .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                    .setNegativeButton("Hủy", null)
                     .show();
         } else {
             Map<String, Object> data = new HashMap<>();
             data.put("id_nguoi_dung", currentUserId);
             data.put("id_mon_an", currentDishId);
-            data.put("id_luu", idLuu);
-            db.collection("mon_da_luu").document(idLuu).set(data)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Đã thêm vào yêu thích!", Toast.LENGTH_SHORT).show();
-                    });
+            db.collection("mon_da_luu").document(idLuu).set(data);
+            Toast.makeText(this, "Đã thêm vào yêu thích!", Toast.LENGTH_SHORT).show();
         }
         updateSaveButtonUI(true);
     }
