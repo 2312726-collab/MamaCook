@@ -207,6 +207,30 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical">
 
+                <RelativeLayout
+                    android:id="@+id/layout_preview_image"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/img_preview_comment"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop" />
+
+                    <ImageView
+                        android:id="@+id/btn_remove_preview"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:background="@drawable/bg_circle_dark"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        app:tint="@color/white" />
+                </RelativeLayout>
+
                 <RatingBar
                     android:id="@+id/rb_chon_sao"
                     android:layout_width="wrap_content"
@@ -239,12 +263,13 @@
                         android:textColor="@color/text_brown"
                         android:textSize="14sp" />
 
-                    <ImageView
-                        android:id="@+id/btn_camera"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                    <ImageButton
+                        android:id="@+id/btn_add_attachment"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_marginEnd="8dp"
-                        android:src="@android:drawable/ic_menu_camera"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_add"
                         app:tint="#8D6E63" />
 
                     <ImageView

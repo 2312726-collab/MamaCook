@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Background ảnh toàn màn hình (Cần thiết nếu muốn đồng bộ) -->
+    <!-- Background ảnh toàn màn hình -->
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -165,7 +165,7 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
-                <!-- Dynamic Title & Lists -->
+                <!-- Section: Món ăn theo danh mục -->
                 <TextView
                     android:id="@+id/tv_category_display_title"
                     android:layout_width="wrap_content"
@@ -182,6 +182,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" />
 
+                <!-- Món ăn nổi bật -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -197,6 +198,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" />
 
+                <!-- Công thức mới -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -212,6 +214,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" />
 
+                <!-- Vừa xem gần đây -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
