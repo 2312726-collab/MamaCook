@@ -44,6 +44,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
+
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -52,17 +55,19 @@ public class HomeActivity extends AppCompatActivity {
     private TextView tvGreeting, tvCategoryTitle;
     private EditText etSearch;
     private ImageButton btnFilter;
+
     private LinearLayout layoutFilters;
     private Spinner spnDifficulty, spnTime, spnRating;
-    
-    private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory;
-    private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory;
-    
+
+    private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory, rvWeeklyAttention;
+    private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory, adapterWeeklyAttention;
+
     private List<MonAn> listCategory = new ArrayList<>();
     private List<MonAn> listFeatured = new ArrayList<>();
     private List<MonAn> listNew = new ArrayList<>();
     private List<MonAn> listHistory = new ArrayList<>();
-
+    private List<MonAn> listWeeklyAttention = new ArrayList<>();;
+    private ImageButton btnAdminMenu;
     private TextView currentSelectedCategory;
     private List<MonAn> listFullCurrentCategory = new ArrayList<>();
 
@@ -99,7 +104,8 @@ public class HomeActivity extends AppCompatActivity {
         spnDifficulty = findViewById(R.id.spn_difficulty_main);
         spnTime = findViewById(R.id.spn_time_main);
         spnRating = findViewById(R.id.spn_rating_main);
-
+        btnAdminMenu = findViewById(R.id.btn_admin_menu);
+        checkAdminRole();
         displayUserProfile();
         setupRecyclerViews();
         setupCategoryButtons();
@@ -123,7 +129,8 @@ public class HomeActivity extends AppCompatActivity {
         
         loadFeaturedRecipes();
         loadNewRecipes();
-        loadHistoryRecipes(11); 
+        loadHistoryRecipes(11);
+        loadWeeklyAttentionRecipes();
 
         currentSelectedCategory = findViewById(R.id.btn_cat_all);
         loadRecipesByCategory("all", "Gợi ý cho bạn");
@@ -151,6 +158,62 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
+
+    private void checkAdminRole() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        FirebaseFirestore.getInstance()
+                .collection("nguoi_dung")
+                .document(user.getUid())
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        String role = doc.getString("role");
+
+                        if ("admin".equals(role)) {
+                            btnAdminMenu.setVisibility(View.VISIBLE);
+                            setupAdminMenu();
+                        } else {
+                            btnAdminMenu.setVisibility(View.GONE);
+                        }
+                    }
+                });
+    }
+
+    private void setupAdminMenu() {
+        btnAdminMenu.setOnClickListener(v -> {
+            PopupMenu popupMenu = new PopupMenu(HomeActivity.this, btnAdminMenu);
+            popupMenu.getMenuInflater().inflate(R.menu.menu_admin_popup, popupMenu.getMenu());
+
+            popupMenu.setOnMenuItemClickListener(item -> {
+
+                if (item.getItemId() == R.id.menu_admin_dashboard) {
+                    startActivity(new Intent(this, AdminActivity.class));
+                    return true;
+                }
+
+                if (item.getItemId() == R.id.menu_admin_stats) {
+                    startActivity(new Intent(this, ThongKeAdminActivity.class));
+                    return true;
+                }
+
+                if (item.getItemId() == R.id.menu_admin_users) {
+                    startActivity(new Intent(this, QuanLyTaiKhoanActivity.class));
+                    return true;
+                }
+
+                if (item.getItemId() == R.id.menu_admin_reviews) {
+                    startActivity(new Intent(this, QuanLyDanhGiaActivity.class));
+                    return true;
+                }
+
+                return false;
+            });
+
+            popupMenu.show();
+        });
+    }
     private void setupCategoryButtons() {
         int[] btnIds = {R.id.btn_cat_all, R.id.btn_cat_man, R.id.btn_cat_canh, R.id.btn_cat_chay, R.id.btn_cat_vat, R.id.btn_cat_lau};
         String[] categoryIds = {"all", "mon_man", "mon_canh", "mon_chay", "an_vat", "mon_lau"};
@@ -331,24 +394,33 @@ public class HomeActivity extends AppCompatActivity {
         rvFeatured = findViewById(R.id.rv_featured);
         rvNew = findViewById(R.id.rv_new_recipes);
         rvHistory = findViewById(R.id.rv_history);
-        
+        rvWeeklyAttention = findViewById(R.id.rv_weekly_attention);
+
         rvCategory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvFeatured.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvNew.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvHistory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        
+        rvWeeklyAttention.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
         adapterCategory = new MonAnAdapter(listCategory);
+
         adapterFeatured = new MonAnAdapter(listFeatured);
         adapterFeatured.setSectionInfo("NOI_BAT", "");
+
         adapterNew = new MonAnAdapter(listNew);
         adapterNew.setSectionInfo("MOI", "");
+
         adapterHistory = new MonAnAdapter(listHistory);
         adapterHistory.setSectionInfo("LICH_SU", "");
-        
+
+        adapterWeeklyAttention = new MonAnAdapter(listWeeklyAttention);
+        adapterWeeklyAttention.setSectionInfo("DUOC_DE_Y_TUAN", "");
+
         rvCategory.setAdapter(adapterCategory);
         rvFeatured.setAdapter(adapterFeatured);
         rvNew.setAdapter(adapterNew);
         rvHistory.setAdapter(adapterHistory);
+        rvWeeklyAttention.setAdapter(adapterWeeklyAttention);
     }
 
     private void loadFeaturedRecipes() {
@@ -420,6 +492,26 @@ public class HomeActivity extends AppCompatActivity {
                     });
                 });
     }
+    private void loadFeaturedRecipesFallbackForWeekly() {
+        db.collection("mon_an")
+                .orderBy("luot_xem", Query.Direction.DESCENDING)
+                .limit(10)
+                .get()
+                .addOnSuccessListener(query -> {
+                    listWeeklyAttention.clear();
+
+                    for (QueryDocumentSnapshot doc : query) {
+                        MonAn mon = doc.toObject(MonAn.class);
+                        mon.setId_mon_an(doc.getId());
+
+                        if (mon.getTrang_thai() == null || "hien_thi".equals(mon.getTrang_thai())) {
+                            listWeeklyAttention.add(mon);
+                        }
+                    }
+
+                    adapterWeeklyAttention.notifyDataSetChanged();
+                });
+    }
 
     private void sortHistoryList(List<String> orderIds) {
         List<MonAn> sortedList = new ArrayList<>();
@@ -430,6 +522,104 @@ public class HomeActivity extends AppCompatActivity {
         }
         listHistory.clear();
         listHistory.addAll(sortedList);
+    }
+    private void sortWeekly(List<String> orderIds) {
+        List<MonAn> sorted = new ArrayList<>();
+
+        for (String id : orderIds) {
+            for (MonAn mon : listWeeklyAttention) {
+                if (mon.getId_mon_an() != null && mon.getId_mon_an().equals(id)) {
+                    sorted.add(mon);
+                    break;
+                }
+            }
+        }
+
+        listWeeklyAttention.clear();
+        listWeeklyAttention.addAll(sorted);
+    }
+    private void loadWeeklyAttentionRecipes() {
+        long now = System.currentTimeMillis();
+        long sevenDaysAgo = now - 7L * 24 * 60 * 60 * 1000;
+
+        com.google.firebase.Timestamp mocTuan =
+                new com.google.firebase.Timestamp(new java.util.Date(sevenDaysAgo));
+
+        db.collection("lich_su_xem")
+                .whereGreaterThanOrEqualTo("thoi_gian_xem", mocTuan)
+                .get()
+                .addOnSuccessListener(lichSuSnapshot -> {
+
+                    java.util.Map<String, Integer> diemMon = new java.util.HashMap<>();
+
+                    // lượt xem = 1 điểm
+                    for (DocumentSnapshot doc : lichSuSnapshot.getDocuments()) {
+                        String idMon = doc.getString("id_mon_an");
+                        if (idMon != null) {
+                            int diem = diemMon.containsKey(idMon) ? diemMon.get(idMon) : 0;
+                            diemMon.put(idMon, diem + 1);
+                        }
+                    }
+
+                    db.collection("danh_gia")
+                            .whereGreaterThanOrEqualTo("ngay_danh_gia", mocTuan)
+                            .whereEqualTo("trang_thai", "hien_thi")
+                            .get()
+                            .addOnSuccessListener(danhGiaSnapshot -> {
+
+                                // đánh giá = 3 điểm
+                                for (DocumentSnapshot doc : danhGiaSnapshot.getDocuments()) {
+                                    String idMon = doc.getString("id_mon_an");
+                                    if (idMon != null) {
+                                        int diem = diemMon.containsKey(idMon) ? diemMon.get(idMon) : 0;
+                                        diemMon.put(idMon, diem + 3);
+                                    }
+                                }
+
+                                if (diemMon.isEmpty()) {
+                                    loadFeaturedRecipesFallbackForWeekly();
+                                    return;
+                                }
+
+                                java.util.List<java.util.Map.Entry<String, Integer>> sorted =
+                                        new java.util.ArrayList<>(diemMon.entrySet());
+
+                                java.util.Collections.sort(sorted, (a, b) -> b.getValue() - a.getValue());
+
+                                java.util.List<String> topIds = new java.util.ArrayList<>();
+                                int limit = Math.min(10, sorted.size());
+
+                                for (int i = 0; i < limit; i++) {
+                                    topIds.add(sorted.get(i).getKey());
+                                }
+
+                                java.util.List<Task<DocumentSnapshot>> tasks = new java.util.ArrayList<>();
+                                for (String id : topIds) {
+                                    tasks.add(db.collection("mon_an").document(id).get());
+                                }
+
+                                Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
+                                    listWeeklyAttention.clear();
+
+                                    for (Object result : results) {
+                                        DocumentSnapshot doc = (DocumentSnapshot) result;
+                                        if (doc.exists()) {
+                                            MonAn mon = doc.toObject(MonAn.class);
+                                            if (mon != null) {
+                                                mon.setId_mon_an(doc.getId());
+
+                                                if (mon.getTrang_thai() == null || "hien_thi".equals(mon.getTrang_thai())) {
+                                                    listWeeklyAttention.add(mon);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    sortWeekly(topIds);
+                                    adapterWeeklyAttention.notifyDataSetChanged();
+                                });
+                            });
+                });
     }
 
     @Override

@@ -6,25 +6,26 @@ public class DanhGia {
     private String id_mon_an;
     private String noi_dung;
     private float so_sao;
-    private String trang_thai; // "cho_duyet" hoặc "hien_thi"
+    private String trang_thai;
     private String ten_nguoi_dung;
+    private String id_nguoi_dung; // 🔥 thêm
     private Date ngay_danh_gia;
 
-    // Constructor rỗng cho Firebase
-    public DanhGia() {
-    }
+    public DanhGia() {}
 
-    // Constructor đầy đủ
-    public DanhGia(String id_mon_an, String noi_dung, float so_sao, String trang_thai, String ten_nguoi_dung, Date ngay_danh_gia) {
+    public DanhGia(String id_mon_an, String noi_dung, float so_sao,
+                   String trang_thai, String ten_nguoi_dung,
+                   String id_nguoi_dung, Date ngay_danh_gia) {
+
         this.id_mon_an = id_mon_an;
         this.noi_dung = noi_dung;
         this.so_sao = so_sao;
         this.trang_thai = trang_thai;
         this.ten_nguoi_dung = ten_nguoi_dung;
+        this.id_nguoi_dung = id_nguoi_dung;
         this.ngay_danh_gia = ngay_danh_gia;
     }
 
-    // Getter và Setter
     public String getId_mon_an() { return id_mon_an; }
     public void setId_mon_an(String id_mon_an) { this.id_mon_an = id_mon_an; }
 
@@ -39,6 +40,9 @@ public class DanhGia {
 
     public String getTen_nguoi_dung() { return ten_nguoi_dung; }
     public void setTen_nguoi_dung(String ten_nguoi_dung) { this.ten_nguoi_dung = ten_nguoi_dung; }
+
+    public String getId_nguoi_dung() { return id_nguoi_dung; }
+    public void setId_nguoi_dung(String id_nguoi_dung) { this.id_nguoi_dung = id_nguoi_dung; }
 
     public Date getNgay_danh_gia() { return ngay_danh_gia; }
     public void setNgay_danh_gia(Date ngay_danh_gia) { this.ngay_danh_gia = ngay_danh_gia; }

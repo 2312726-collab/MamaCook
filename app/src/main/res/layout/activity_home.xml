@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".activities.HomeActivity">
 
-    <!-- 1. Background ảnh toàn màn hình -->
+        <!-- 1. Background ảnh toàn màn hình -->
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -51,28 +51,48 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:id="@+id/tv_greeting"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:fontFamily="serif"
-                        android:text="Xin chào!"
-                        android:textColor="#4E342E"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:fontFamily="serif"
-                        android:text="Hôm nay mệt rồi, nấu gì ngon để ăn nhé !"
-                        android:textColor="#6D4C41"
-                        android:textSize="15sp"
-                        android:textStyle="italic" />
+                        <TextView
+                            android:id="@+id/tv_greeting"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="serif"
+                            android:text="Xin chào!"
+                            android:textColor="#4E342E"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="serif"
+                            android:text="Hôm nay mệt rồi, nấu gì ngon để ăn nhé !"
+                            android:textColor="#6D4C41"
+                            android:textSize="15sp"
+                            android:textStyle="italic" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btn_admin_menu"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_marginStart="8dp"
+                        android:background="#FF0000"
+                        android:src="@android:drawable/ic_menu_more"
+                        android:visibility="visible"
+                        android:contentDescription="Admin menu"
+                        app:tint="#FFFFFF" />
+
                 </LinearLayout>
 
                 <!-- Tìm kiếm và Nút Lọc -->
@@ -189,7 +209,23 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" />
+                <!-- Món ăn được xem nhiều nhất -->
+                <TextView
+                    android:id="@+id/tv_weekly_attention_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:fontFamily="serif"
+                    android:text="Được xem nhiều nhất tuần"
+                    android:textColor="#4E342E"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_weekly_attention"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" />
                 <!-- Món ăn nổi bật -->
                 <TextView
                     android:layout_width="wrap_content"

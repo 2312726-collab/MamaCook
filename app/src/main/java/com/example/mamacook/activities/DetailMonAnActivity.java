@@ -156,11 +156,15 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 double ratingMoi = ((ratingHienTai * tongLuotHienTai) + soSaoMoi) / tongLuotMoi;
 
                 Map<String, Object> comment = new HashMap<>();
+
                 comment.put("id_mon_an", currentDishId);
                 comment.put("noi_dung", noiDung);
                 comment.put("so_sao", soSaoMoi);
+
                 comment.put("trang_thai", "hien_thi");
+
                 comment.put("ten_nguoi_dung", name);
+
                 comment.put("ngay_danh_gia", FieldValue.serverTimestamp());
 
                 WriteBatch batch = db.batch();
