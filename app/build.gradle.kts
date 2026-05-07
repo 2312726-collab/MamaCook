@@ -53,6 +53,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
+    implementation("com.google.firebase:firebase-functions")
     implementation(libs.play.services.auth)
 
     // Thêm App Check ở đây:
@@ -94,6 +95,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     // Luban - Nén ảnh siêu tốc độ
     implementation("com.github.Curzibn:Luban:1.1.8")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

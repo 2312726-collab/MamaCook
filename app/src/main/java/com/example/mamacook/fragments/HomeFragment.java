@@ -332,9 +332,9 @@ public class HomeFragment extends Fragment {
 
     private void callGemini(List<MonAn> candidates, String weather, String location) {
         if (candidates.isEmpty()) { onGeminiFailed(candidates, "empty"); return; }
-        
-        String apiKey = "AIzaSyB98STC_84bt0XdZ6FPOdyUw5bj95lsGrQ";
-        GenerativeModel gm = new GenerativeModel("gemini-1.5-flash", apiKey);
+
+        String apiKey = getString(R.string.gemini_api_key);
+        GenerativeModel gm = new GenerativeModel("gemini-2.0-flash", apiKey);
         GenerativeModelFutures mdl = GenerativeModelFutures.from(gm);
         
         StringBuilder menuStr = new StringBuilder();

@@ -6,12 +6,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,16 +23,21 @@ import com.example.mamacook.activities.ChuanBiNauActivity;
 import com.example.mamacook.activities.GioHangActivity;
 import com.example.mamacook.adapters.CookingPlanHorizontalAdapter;
 import com.example.mamacook.models.CookingPlan;
+import com.example.mamacook.models.MonAn;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.functions.FirebaseFunctions;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ScheduleFragment extends Fragment {
 
@@ -71,7 +78,7 @@ public class ScheduleFragment extends Fragment {
         });
 
         btnAiSuggest.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Tính năng AI đang được phát triển!", Toast.LENGTH_SHORT).show();
+            showAiOptionDialog();
         });
 
         return view;
@@ -107,7 +114,7 @@ public class ScheduleFragment extends Fragment {
                     listSang.clear();
                     listTrua.clear();
                     listToi.clear();
-                    
+
                     int totalBought = 0;
                     int totalIngredients = 0;
 
@@ -136,6 +143,190 @@ public class ScheduleFragment extends Fragment {
                     adapterTrua.notifyDataSetChanged();
                     adapterToi.notifyDataSetChanged();
                 });
+    }
+
+    private void showAiOptionDialog() {
+        String[] options = {
+                "Cân bằng dinh dưỡng",
+                "Món ăn thanh đạm (ít dầu mỡ)",
+                "Tiết kiệm thời gian (dưới 30 phút)",
+                "Giàu Protein cho sức khỏe",
+                "Thực đơn món Việt truyền thống",
+                "Yêu cầu khác..."
+        };
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Hôm nay bạn muốn ăn gì?")
+                .setItems(options, (dialog, which) -> {
+                    if (which == options.length - 1) {
+                        showCustomNoteDialog();
+                    } else {
+                        askAiForSchedule("Gợi ý thực đơn: " + options[which]);
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void showCustomNoteDialog() {
+        EditText input = new EditText(getContext());
+        input.setHint("Ví dụ: Món cay, nhiều rau, ít calo...");
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        input.setPadding(padding, padding, padding, padding);
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Nhập yêu cầu của bạn")
+                .setView(input)
+                .setPositiveButton("Gửi", (dialog, which) -> {
+                    String note = input.getText().toString().trim();
+                    if (!note.isEmpty()) {
+                        askAiForSchedule(note);
+                    }
+                })
+                .setNegativeButton("Quay lại", (dialog, which) -> showAiOptionDialog())
+                .show();
+    }
+
+    private void askAiForSchedule(String userNote) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+
+        btnAiSuggest.setEnabled(false); // Khóa nút tránh spam
+        Toast.makeText(getContext(), "AI đang nghiên cứu thực đơn cho bạn...", Toast.LENGTH_SHORT).show();
+
+        // 1. Lấy danh sách món ăn từ Firestore để AI có dữ liệu chọn
+        db.collection("mon_an").limit(40).get().addOnSuccessListener(queryDocumentSnapshots -> {
+            List<Map<String, String>> dishBrief = new ArrayList<>();
+            List<MonAn> fullDishes = new ArrayList<>();
+
+            for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                MonAn m = doc.toObject(MonAn.class);
+                m.setId_mon_an(doc.getId());
+                fullDishes.add(m);
+
+                Map<String, String> item = new HashMap<>();
+                item.put("id", m.getId_mon_an());
+                item.put("name", m.getTen_mon());
+                dishBrief.add(item);
+            }
+
+            // 2. Gọi Cloud Function
+            callGenerateScheduleFunction(dishBrief, fullDishes, userNote);
+        });
+    }
+
+    private void callGenerateScheduleFunction(List<Map<String, String>> dishBrief, List<MonAn> fullDishes, String userNote) {
+        FirebaseFunctions mFunctions = FirebaseFunctions.getInstance();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("availableDishes", dishBrief);
+        data.put("userNote", userNote);
+
+        mFunctions.getHttpsCallable("generateDailySchedule")
+                .call(data)
+                .addOnSuccessListener(result -> {
+                    btnAiSuggest.setEnabled(true); // Mở lại nút
+                    Map<String, Object> res = (Map<String, Object>) result.getData();
+                    if (res == null) return;
+                    
+                    String reason = (String) res.get("reason");
+                    Map<String, String> schedule = (Map<String, String>) res.get("schedule");
+
+                    if (schedule != null && reason != null) {
+                        showAiPreviewDialog(reason, schedule, fullDishes);
+                    } else {
+                        Toast.makeText(getContext(), "AI không tìm thấy món phù hợp, hãy thử lại!", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    btnAiSuggest.setEnabled(true); // Mở lại nút khi gặp lỗi
+                    Log.e("AI_ERROR", e.getMessage());
+                    Toast.makeText(getContext(), "Lỗi kết nối AI: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void showAiPreviewDialog(String reason, Map<String, String> schedule, List<MonAn> fullDishes) {
+        String sangId = schedule.get("Sang");
+        String truaId = schedule.get("Trua");
+        String toiId = schedule.get("Toi");
+
+        String monSang = getDishNameById(sangId, fullDishes);
+        String monTrua = getDishNameById(truaId, fullDishes);
+        String monToi = getDishNameById(toiId, fullDishes);
+
+        String message = "💡 " + reason + "\n\n" +
+                "🌅 Sáng: " + monSang + "\n" +
+                "☀️ Trưa: " + monTrua + "\n" +
+                "🌙 Tối: " + monToi;
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Thực đơn AI đề xuất")
+                .setMessage(message)
+                .setPositiveButton("Đồng ý & Lưu", (dialog, which) -> {
+                    saveAiScheduleToFirestore(schedule, fullDishes);
+                    Toast.makeText(getContext(), "Đã cập nhật lịch trình của bạn!", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Thử lại", (dialog, which) -> showAiOptionDialog())
+                .setNeutralButton("Hủy", null)
+                .show();
+    }
+
+    private String getDishNameById(String id, List<MonAn> fullDishes) {
+        if (id == null) return "Không tìm thấy món";
+        for (MonAn m : fullDishes) {
+            if (m.getId_mon_an().equals(id)) return m.getTen_mon();
+        }
+        return "Món mới";
+    }
+
+    private void saveAiScheduleToFirestore(Map<String, String> schedule, List<MonAn> fullDishes) {
+        String uid = mAuth.getUid();
+        if (uid == null) return;
+
+        WriteBatch batch = db.batch();
+        Timestamp now = Timestamp.now();
+
+        // Duyệt qua 3 buổi
+        String[] buois = {"Sang", "Trua", "Toi"};
+        for (String buoi : buois) {
+            String targetId = schedule.get(buoi);
+            if (targetId == null) continue;
+
+            // Tìm thông tin chi tiết món ăn trong list đã load
+            for (MonAn m : fullDishes) {
+                if (m.getId_mon_an().equals(targetId)) {
+                    CookingPlan plan = new CookingPlan();
+                    plan.setId_nguoi_dung(uid);
+                    plan.setId_mon_an(m.getId_mon_an());
+                    plan.setTen_mon(m.getTen_mon());
+                    plan.setHinh_anh(m.getHinh_anh());
+                    plan.setNgay_lap_ke_hoach(now);
+                    plan.setTrang_thai("dang_di_cho");
+                    plan.setBuoi(buoi);
+
+                    // Chuyển đổi nguyên liệu
+                    List<CookingPlan.IngredientItem> items = new ArrayList<>();
+                    if (m.getDanh_sach_nguyen_lieu() != null) {
+                        for (MonAn.ChiTietNguyenLieu nl : m.getDanh_sach_nguyen_lieu()) {
+                            CookingPlan.IngredientItem item = new CookingPlan.IngredientItem();
+                            item.setTen_nguyen_lieu(nl.ten_nguyen_lieu);
+                            item.setSo_luong((int) nl.so_luong); // Ép kiểu từ double sang int
+                            item.setDon_vi(nl.don_vi);
+                            item.setDa_mua(false);
+                            items.add(item);
+                        }
+                    }
+                    plan.setDanh_sach_nguyen_lieu(items);
+
+                    batch.set(db.collection("ke_hoach_nau_an").document(), plan);
+                    break;
+                }
+            }
+        }
+
+        batch.commit().addOnSuccessListener(aVoid -> {
+            Log.d("AI_SAVE", "Đã lưu thực đơn AI vào lịch trình");
+        });
     }
 
     private void cleanupOldCookingPlans() {
