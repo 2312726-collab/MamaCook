@@ -7,6 +7,16 @@ android {
     namespace = "com.example.mamacook"
     compileSdk = 36
 
+    // Hiếu: Cố định file signing để tất cả máy tính dùng chung 1 KeyHash/SHA-1
+    signingConfigs {
+        create("sharedDebug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.mamacook"
         minSdk = 29
@@ -18,6 +28,9 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("sharedDebug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

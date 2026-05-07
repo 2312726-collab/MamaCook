@@ -24,7 +24,7 @@ public class RegisterActivity extends AppCompatActivity {
     private static final String TAG = "RegisterActivity";
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-    
+
     private EditText etName, etEmail, etPassword, etConfirmPassword;
     private AppCompatButton btnRegister;
     private TextView btnNavLogin;
@@ -36,7 +36,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        
+
         etName = findViewById(R.id.et_name);
         etEmail = findViewById(R.id.et_email); // Ô này nhập SĐT hoặc Email
         etPassword = findViewById(R.id.et_password);
@@ -58,8 +58,8 @@ public class RegisterActivity extends AppCompatActivity {
         String password = etPassword.getText().toString().trim();
         String confirmPassword = etConfirmPassword.getText().toString().trim();
 
-        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(input) || 
-            TextUtils.isEmpty(password) || TextUtils.isEmpty(confirmPassword)) {
+        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(input) ||
+                TextUtils.isEmpty(password) || TextUtils.isEmpty(confirmPassword)) {
             Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -75,7 +75,6 @@ public class RegisterActivity extends AppCompatActivity {
                 return;
             }
             phoneNumber = input;
-            // Tạo một email ảo để Firebase Auth chấp nhận (vì đăng ký email/pass cần định dạng email)
             finalEmailForAuth = input + "@mamacook.com";
         } else { // Ngược lại coi là Email
             if (!Patterns.EMAIL_ADDRESS.matcher(input).matches()) {
@@ -97,11 +96,12 @@ public class RegisterActivity extends AppCompatActivity {
 
         String finalPhoneNumber = phoneNumber;
         String finalRealEmail = realEmail;
-        
+
         mAuth.createUserWithEmailAndPassword(finalEmailForAuth, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        saveUserToFirestore(mAuth.getCurrentUser(), name, password, finalRealEmail, finalPhoneNumber);
+                        // Hieu bỏ truyền password và email cũ
+                        saveUserToFirestore(mAuth.getCurrentUser(), name, finalPhoneNumber); // Hieu sửa
                     } else {
                         if (task.getException() instanceof FirebaseAuthUserCollisionException) {
                             Toast.makeText(RegisterActivity.this, "Email hoặc số điện thoại này đã được đăng ký!", Toast.LENGTH_LONG).show();
@@ -112,7 +112,8 @@ public class RegisterActivity extends AppCompatActivity {
                 });
     }
 
-    private void saveUserToFirestore(FirebaseUser firebaseUser, String name, String password, String email, String phone) {
+    // Hieu bỏ password và email param
+    private void saveUserToFirestore(FirebaseUser firebaseUser, String name, String phone) { // ✅ sửa
         if (firebaseUser == null) return;
 
         String uid = firebaseUser.getUid();
@@ -120,12 +121,23 @@ public class RegisterActivity extends AppCompatActivity {
         User user = new User();
         user.setId_nguoi_dung(uid);
         user.setHo_ten(name);
-        user.setEmail(email);
+
+        // Hieu luôn lấy email từ FirebaseAuth (tránh bị rỗng)
+        user.setEmail(firebaseUser.getEmail()); // đã sửa
+
         user.setSo_dien_thoai(phone);
-        user.setMat_khau(password);
+
+        // Hieu không lưu password nữa (bảo mật)
+        // user.setMat_khau(password); đã xóa
+
         user.setNgay_tao(Timestamp.now());
         user.setTrang_thai_tai_khoan("dang_hoat_dong");
-        user.setVai_tro("user");
+
+        // Hieu không dùng vai_tro nữa
+        // user.setVai_tro("user"); //  đã xóa
+
+        // Hieu dùng role thay cho vai_tro
+        user.setRole("user"); // thêm
 
         db.collection("nguoi_dung").document(uid)
                 .set(user)

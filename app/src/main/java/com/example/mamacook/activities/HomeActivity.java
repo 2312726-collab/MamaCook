@@ -20,6 +20,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import com.example.mamacook.activities.AccountActivity; // hiếu thêm dòng này
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -114,6 +115,10 @@ public class HomeActivity extends AppCompatActivity {
             if (id == R.id.nav_favorites) {
                 // nam làm cái này: Chuyển sang FavoriteActivity thực sự
                 startActivity(new Intent(HomeActivity.this, FavoriteActivity.class));
+                return true;
+            } else if (id == R.id.nav_profile) {
+                // Hiếu: Chuyển sang AccountActivity
+                startActivity(new Intent(HomeActivity.this, AccountActivity.class));
                 return true;
             }
             return false;
@@ -377,14 +382,38 @@ public class HomeActivity extends AppCompatActivity {
                 });
     }
 
+    private void loadHistoryRecipes(int limit) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+        db.collection("lich_su_xem").document(user.getUid()).collection("mon_an")
+                .orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(limit).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        tasks.add(db.collection("mon_an").document(doc.getId()).get());
+                    }
+                    Tasks.whenAllComplete(tasks).addOnSuccessListener(results -> {
+                        listHistory.clear();
+                        for (Task<DocumentSnapshot> task : tasks) {
+                            if (task.isSuccessful()) {
+                                DocumentSnapshot doc = task.getResult();
+                                if (doc.exists()) {
+                                    MonAn mon = doc.toObject(MonAn.class);
+                                    mon.setId_mon_an(doc.getId());
+                                    listHistory.add(mon);
+                                }
+                            }
+                        }
+                        adapterHistory.notifyDataSetChanged();
+                    });
+                });
+    }
+
     private void loadRecipesByCategory(String categoryId, String title) {
-        if (tvCategoryTitle != null) tvCategoryTitle.setText(title);
-
-        Query query = (categoryId.equals("all"))
-                ? db.collection("mon_an")
-                : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
-
-        query.limit(100).get().addOnSuccessListener(queryDocumentSnapshots -> {
+        tvCategoryTitle.setText(title);
+        Query query = db.collection("mon_an");
+        if (!categoryId.equals("all")) query = query.whereEqualTo("id_danh_muc", categoryId);
+        query.limit(20).get().addOnSuccessListener(queryDocumentSnapshots -> {
             listFullCurrentCategory.clear();
             for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                 MonAn mon = doc.toObject(MonAn.class);
@@ -393,48 +422,5 @@ public class HomeActivity extends AppCompatActivity {
             }
             applyFilters();
         });
-    }
-
-    private void loadHistoryRecipes(int limit) {
-        String uid = mAuth.getUid();
-        if (uid == null) return;
-        db.collection("lich_su_xem").whereEqualTo("id_nguoi_dung", uid).orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(limit).get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<String> dishIds = new ArrayList<>();
-                    for (DocumentSnapshot doc : querySnapshot) dishIds.add(doc.getString("id_mon_an"));
-                    if (dishIds.isEmpty()) { listHistory.clear(); adapterHistory.notifyDataSetChanged(); return; }
-                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
-                    for (String id : dishIds) tasks.add(db.collection("mon_an").document(id).get());
-                    Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
-                        listHistory.clear();
-                        for (Object result : results) {
-                            DocumentSnapshot monDoc = (DocumentSnapshot) result;
-                            if (monDoc.exists()) {
-                                MonAn mon = monDoc.toObject(MonAn.class);
-                                mon.setId_mon_an(monDoc.getId());
-                                listHistory.add(mon);
-                            }
-                        }
-                        sortHistoryList(dishIds);
-                        adapterHistory.notifyDataSetChanged();
-                    });
-                });
-    }
-
-    private void sortHistoryList(List<String> orderIds) {
-        List<MonAn> sortedList = new ArrayList<>();
-        for (String id : orderIds) {
-            for (MonAn mon : listHistory) {
-                if (mon.getId_mon_an().equals(id)) { sortedList.add(mon); break; }
-            }
-        }
-        listHistory.clear();
-        listHistory.addAll(sortedList);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadHistoryRecipes(11); 
     }
 }

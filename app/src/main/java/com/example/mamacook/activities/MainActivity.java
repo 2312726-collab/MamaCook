@@ -112,7 +112,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        mAuth.signInWithEmailAndPassword(input, password)
+        // Hiếu: Xử lý đăng nhập bằng Số điện thoại (tự động chuyển thành email giả)
+        String finalEmail = input;
+        if (input.matches("\\d+")) {
+            finalEmail = input + "@mamacook.com";
+        }
+
+        mAuth.signInWithEmailAndPassword(finalEmail, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         startActivity(new Intent(MainActivity.this, HomeActivity.class));
@@ -170,11 +176,21 @@ public class MainActivity extends AppCompatActivity {
                 user.setAnh_dai_dien(firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "");
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
-                user.setVai_tro("user");
+                user.setRole("user"); // Hiếu: Đảm bảo dùng trường role đồng bộ
                 db.collection("nguoi_dung").document(uid).set(user);
             }
             startActivity(new Intent(MainActivity.this, HomeActivity.class));
             finish();
         });
+    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        // Hiếu: Nếu đã đăng nhập thì tự động vào Home
+        if (mAuth.getCurrentUser() != null) {
+            startActivity(new Intent(MainActivity.this, HomeActivity.class));
+            finish();
+        }
     }
 }

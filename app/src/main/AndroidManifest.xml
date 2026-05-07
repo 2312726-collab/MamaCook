@@ -47,6 +47,13 @@
 
         <!-- nam làm cái này: Khai báo FavoriteActivity để không bị crash khi mở -->
         <activity android:name=".activities.FavoriteActivity" android:exported="false" />
+        <!-- hiếu làm cái này: Khai báo AccountActivity để không bị crash khi mở -->
+        <activity android:name=".activities.AccountActivity" android:exported="false" />
+        <!-- hiếu làm cái này: Khai báo EditAccountActivity để không bị crash khi mở -->
+        <activity android:name=".activities.EditAccountActivity" android:exported="false" />
+        <!-- hiếu làm cái này: Khai báo ChangePasswordActivity để không bị crash khi mở -->
+        <activity android:name=".activities.ChangePasswordActivity" android:exported="false" />
+
 
     </application>
 
