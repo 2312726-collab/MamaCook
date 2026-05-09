@@ -219,7 +219,7 @@ public class SampleData {
         mon.setId_danh_muc(danhmuc);
         mon.setLuot_xem(xem);
         mon.setRating(rate);
-        mon.setTong_luot_danh_gia(danhgia);
+        mon.setReviewCount(danhgia);
         mon.setTrang_thai("hien_thi");
         mon.setNgay_tao(Timestamp.now());
         

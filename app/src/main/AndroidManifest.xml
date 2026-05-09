@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:allowBackup="true"
@@ -41,12 +43,25 @@
         <activity android:name=".activities.MainActivity" android:exported="true" />
         <activity android:name=".activities.HomeActivity" android:exported="false" />
         <activity android:name=".activities.RegisterActivity" android:exported="false" />
-        <activity android:name=".activities.DetailMonAnActivity" android:exported="false" />
+        <activity android:name=".activities.DetailMonAnActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".activities.TatCaBinhLuanActivity" android:exported="false" />
         <activity android:name=".activities.SeeAllActivity" android:exported="false" />
         <activity android:name=".activities.ForgotPasswordActivity" android:exported="false" />
         <activity android:name=".activities.EditAccountActivity" android:exported="false" />
         <activity android:name=".activities.ChangePasswordActivity" android:exported="false" />
+        <activity android:name=".activities.FavoriteActivity" android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.mamacook.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

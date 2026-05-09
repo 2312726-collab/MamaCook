@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -15,11 +16,13 @@ import com.bumptech.glide.Glide;
 import com.example.mamacook.R;
 import com.example.mamacook.activities.DetailMonAnActivity;
 import com.example.mamacook.models.MonAn;
+import com.example.mamacook.utils.RatingUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.List;
+import java.util.Locale;
 
 public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdapter.ViewHolder> {
     private List<MonAn> monAnList;
@@ -40,15 +43,22 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         MonAn monAn = monAnList.get(position);
         holder.tvTen.setText(monAn.getTen_mon());
         holder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
-        holder.tvRating.setText(String.valueOf(monAn.getRating()));
-        
-        // Hiển thị độ khó từ Firebase
+
+        // Gemini: Dùng Utils để đồng bộ hiển thị Rating chuẩn toàn app
+        holder.tvRating.setText(RatingUtils.getRatingString(monAn));
+
+        // Gemini: Hiển thị Badge AI Match Score
+        if (monAn.getMatch_score() >= 50) {
+            holder.layoutBadgeAi.setVisibility(View.VISIBLE);
+            holder.tvMatchScore.setText("🔥 " + monAn.getMatch_score() + "%");
+        } else {
+            holder.layoutBadgeAi.setVisibility(View.GONE);
+        }
+
         holder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
-        // nam làm cái này: Đồng bộ trạng thái Tim ngoài màn hình danh sách dọc
         checkIsFavorite(monAn.getId_mon_an(), holder.btnFav);
 
-        // nam làm cái này: Click vào nút Tim để xóa yêu thích (có Dialog xác nhận)
         holder.btnFav.setOnClickListener(v -> {
             toggleFavorite(monAn, holder.itemView.getContext());
         });
@@ -71,18 +81,15 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         });
     }
 
-    // nam làm cái này: Hàm xử lý Thêm/Xóa yêu thích kèm AlertDialog
     private void toggleFavorite(MonAn monAn, android.content.Context context) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
         String idLuu = uid + "_" + monAn.getId_mon_an();
-        
-        // Kiểm tra xem đã có trong danh sách chưa
+
         FirebaseFirestore.getInstance().collection("mon_da_luu").document(idLuu).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        // nam làm cái này: Hiện Dialog khi muốn bỏ thích
                         new AlertDialog.Builder(context)
                                 .setTitle("Xác nhận")
                                 .setMessage("Bạn có chắc chắn muốn bỏ yêu thích món ăn này không?")
@@ -95,7 +102,6 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
                                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                                 .show();
                     } else {
-                        // Thêm vào yêu thích
                         java.util.Map<String, Object> data = new java.util.HashMap<>();
                         data.put("id_nguoi_dung", uid);
                         data.put("id_mon_an", monAn.getId_mon_an());
@@ -130,7 +136,8 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView img, btnFav;
-        TextView tvTen, tvThoiGian, tvRating, tvDoKho;
+        TextView tvTen, tvThoiGian, tvRating, tvDoKho, tvMatchScore;
+        LinearLayout layoutBadgeAi;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             img = itemView.findViewById(R.id.img_mon_an);
@@ -139,6 +146,8 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
             tvThoiGian = itemView.findViewById(R.id.tv_thoi_gian);
             tvRating = itemView.findViewById(R.id.tv_rating);
             tvDoKho = itemView.findViewById(R.id.tv_do_kho);
+            layoutBadgeAi = itemView.findViewById(R.id.layout_badge_ai);
+            tvMatchScore = itemView.findViewById(R.id.tv_match_score);
         }
     }
 }

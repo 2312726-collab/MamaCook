@@ -20,6 +20,8 @@ import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +33,7 @@ public class FavoriteFragment extends Fragment {
     private MonAnVerticalAdapter adapterFavorite;
     private List<MonAn> listFavorite = new ArrayList<>();
     private TextView tvEmptyMessage;
+    private final List<ListenerRegistration> monAnListeners = new ArrayList<>();
 
     @Nullable
     @Override
@@ -48,6 +51,16 @@ public class FavoriteFragment extends Fragment {
         loadFavoriteRecipes();
 
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Gemini: Hủy tất cả listener để tránh leak memory và cập nhật sai data
+        for (ListenerRegistration lr : monAnListeners) {
+            if (lr != null) lr.remove();
+        }
+        monAnListeners.clear();
     }
 
     private void loadFavoriteRecipes() {
@@ -75,29 +88,43 @@ public class FavoriteFragment extends Fragment {
                         if (idMonAn != null) listIdFavorite.add(idMonAn);
                     }
 
+                    listFavorite.clear(); // Clear để nhận data realtime
+                    
+                    // Hủy listener cũ
+                    for (ListenerRegistration lr : monAnListeners) lr.remove();
+                    monAnListeners.clear();
+
                     tvEmptyMessage.setVisibility(View.GONE);
                     rvFavorite.setVisibility(View.VISIBLE);
 
-                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
                     for (String id : listIdFavorite) {
-                        tasks.add(db.collection("mon_an").document(id).get());
-                    }
-
-                    Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
-                        if (isRemoving() || !isAdded()) return;
-                        listFavorite.clear();
-                        for (Object result : results) {
-                            DocumentSnapshot doc = (DocumentSnapshot) result;
-                            if (doc.exists()) {
-                                MonAn mon = doc.toObject(MonAn.class);
+                        // Gemini: Lắng nghe realtime từng món ăn, lưu reference để hủy sau này
+                        ListenerRegistration lr = db.collection("mon_an").document(id).addSnapshotListener((monDoc, monError) -> {
+                            if (!isAdded() || isRemoving()) return;
+                            if (monDoc != null && monDoc.exists()) {
+                                MonAn mon = monDoc.toObject(MonAn.class);
                                 if (mon != null) {
-                                    mon.setId_mon_an(doc.getId());
-                                    listFavorite.add(mon);
+                                    mon.setId_mon_an(monDoc.getId());
+                                    
+                                    int index = -1;
+                                    for (int i = 0; i < listFavorite.size(); i++) {
+                                        if (listFavorite.get(i).getId_mon_an().equals(mon.getId_mon_an())) {
+                                            index = i;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (index != -1) {
+                                        listFavorite.set(index, mon);
+                                    } else {
+                                        listFavorite.add(mon);
+                                    }
+                                    adapterFavorite.notifyDataSetChanged();
                                 }
                             }
-                        }
-                        adapterFavorite.notifyDataSetChanged();
-                    });
+                        });
+                        monAnListeners.add(lr);
+                    }
                 });
     }
 }

@@ -87,28 +87,37 @@ public class FavoriteActivity extends AppCompatActivity {
                         if (idMonAn != null) listIdFavorite.add(idMonAn);
                     }
 
+                    listFavorite.clear(); // Clear để chuẩn bị nhận data realtime
                     tvEmptyMessage.setVisibility(View.GONE);
                     rvFavorite.setVisibility(View.VISIBLE);
 
-                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
                     for (String id : listIdFavorite) {
-                        tasks.add(db.collection("mon_an").document(id).get());
-                    }
-
-                    Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
-                        listFavorite.clear();
-                        for (Object result : results) {
-                            DocumentSnapshot doc = (DocumentSnapshot) result;
-                            if (doc.exists()) {
-                                MonAn mon = doc.toObject(MonAn.class);
+                        // Gemini: Dùng addSnapshotListener để lắng nghe Rating realtime từng món
+                        db.collection("mon_an").document(id).addSnapshotListener(this, (monDoc, monError) -> {
+                            if (monDoc != null && monDoc.exists()) {
+                                MonAn mon = monDoc.toObject(MonAn.class);
                                 if (mon != null) {
-                                    mon.setId_mon_an(doc.getId());
-                                    listFavorite.add(mon);
+                                    mon.setId_mon_an(monDoc.getId());
+                                    
+                                    // Cập nhật hoặc thêm mới vào list
+                                    int index = -1;
+                                    for (int i = 0; i < listFavorite.size(); i++) {
+                                        if (listFavorite.get(i).getId_mon_an().equals(mon.getId_mon_an())) {
+                                            index = i;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (index != -1) {
+                                        listFavorite.set(index, mon);
+                                    } else {
+                                        listFavorite.add(mon);
+                                    }
+                                    adapterFavorite.notifyDataSetChanged();
                                 }
                             }
-                        }
-                        adapterFavorite.notifyDataSetChanged();
-                    });
+                        });
+                    }
                 });
     }
 
