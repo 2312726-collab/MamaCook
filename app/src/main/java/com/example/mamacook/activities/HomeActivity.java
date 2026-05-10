@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -16,15 +17,12 @@ import com.example.mamacook.R;
 import com.example.mamacook.fragments.AccountFragment;
 import com.example.mamacook.fragments.FavoriteFragment;
 import com.example.mamacook.fragments.HomeFragment;
+import com.example.mamacook.fragments.ScheduleFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class HomeActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigationView;
-    private Map<Integer, Fragment> fragmentMap = new HashMap<>();
     private int currentId = -1;
 
     @Override
@@ -48,21 +46,36 @@ public class HomeActivity extends AppCompatActivity {
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
 
-        // Đăng ký các Fragment vào Map
-        fragmentMap.put(R.id.nav_home, new HomeFragment());
-        fragmentMap.put(R.id.nav_favorites, new FavoriteFragment());
-        fragmentMap.put(R.id.nav_profile, new AccountFragment());
-
         // Lắng nghe sự kiện click Menu
         bottomNavigationView.setOnItemSelectedListener(item -> {
             showFragment(item.getItemId());
             return true;
         });
 
-        // Mặc định hiển thị Trang chủ khi vừa vào
-        if (savedInstanceState == null) {
+        // Khôi phục trạng thái hoặc hiển thị mặc định
+        if (savedInstanceState != null) {
+            currentId = savedInstanceState.getInt("currentId", R.id.nav_home);
+        } else {
             bottomNavigationView.setSelectedItemId(R.id.nav_home);
         }
+
+        // Xử lý nút Back/Cử chỉ vuốt thoát
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (currentId != R.id.nav_home) {
+                    bottomNavigationView.setSelectedItemId(R.id.nav_home);
+                } else {
+                    showExitDialog();
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("currentId", currentId);
     }
 
     private void showFragment(int id) {
@@ -71,31 +84,68 @@ public class HomeActivity extends AppCompatActivity {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         
-        // Hiệu ứng trượt Slide
+        // Hiệu ứng trượt Slide dựa trên vị trí Menu
         if (currentId != -1) {
-            if (id > currentId) {
+            int currentPos = getNavPosition(currentId);
+            int nextPos = getNavPosition(id);
+            if (nextPos > currentPos) {
                 transaction.setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left);
             } else {
                 transaction.setCustomAnimations(R.anim.slide_in_left, R.anim.slide_out_right);
             }
         }
 
-        // Ẩn Fragment hiện tại
-        Fragment currentFragment = fragmentManager.findFragmentByTag(String.valueOf(currentId));
-        if (currentFragment != null) {
-            transaction.hide(currentFragment);
+        String nextTag = String.valueOf(id);
+        Fragment nextFragment = fragmentManager.findFragmentByTag(nextTag);
+
+        // Ẩn tất cả các Fragment đang có để tránh bị đè hoặc kẹt giao diện
+        for (Fragment fragment : fragmentManager.getFragments()) {
+            transaction.hide(fragment);
         }
 
-        // Hiển thị hoặc Thêm mới Fragment được chọn
-        Fragment nextFragment = fragmentManager.findFragmentByTag(String.valueOf(id));
         if (nextFragment == null) {
-            nextFragment = fragmentMap.get(id);
-            transaction.add(R.id.fragment_container, nextFragment, String.valueOf(id));
+            nextFragment = createFragmentById(id);
+            transaction.add(R.id.fragment_container, nextFragment, nextTag);
         } else {
             transaction.show(nextFragment);
         }
 
         transaction.commit();
         currentId = id;
+    }
+
+    private Fragment createFragmentById(int id) {
+        if (id == R.id.nav_home) return new HomeFragment();
+        if (id == R.id.nav_recipes) return new ScheduleFragment();
+        if (id == R.id.nav_favorites) return new FavoriteFragment();
+        if (id == R.id.nav_profile) return new AccountFragment();
+        return new HomeFragment();
+    }
+
+    private int getNavPosition(int id) {
+        if (id == R.id.nav_home) return 0;
+        if (id == R.id.nav_recipes) return 1;
+        if (id == R.id.nav_favorites) return 2;
+        if (id == R.id.nav_profile) return 3;
+        return 0;
+    }
+
+    private void showExitDialog() {
+        View view = getLayoutInflater().inflate(R.layout.dialog_exit_confirm, null);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setView(view)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        view.findViewById(R.id.btn_dialog_cancel).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btn_dialog_exit).setOnClickListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+
+        dialog.show();
     }
 }

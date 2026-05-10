@@ -68,6 +68,9 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
             intent.putExtra("ID_MON_AN", monAn.getId_mon_an());
             intent.putExtra("HINH_ANH", monAn.getHinh_anh());
             v.getContext().startActivity(intent);
+            if (v.getContext() instanceof android.app.Activity) {
+                ((android.app.Activity) v.getContext()).overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            }
         });
     }
 

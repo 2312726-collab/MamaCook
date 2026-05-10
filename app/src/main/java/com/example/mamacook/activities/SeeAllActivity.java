@@ -45,7 +45,7 @@ public class SeeAllActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
-        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         sectionType = getIntent().getStringExtra("SECTION_TYPE");
         categoryId = getIntent().getStringExtra("CATEGORY_ID");
@@ -60,6 +60,12 @@ public class SeeAllActivity extends AppCompatActivity {
         rvSeeAll.setAdapter(adapter);
 
         loadData();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
     }
 
     private void loadData() {

@@ -1,12 +1,17 @@
 <resources>
     <string name="app_name">MamaCook</string>
-    
+
     <!-- 1. Thay ID ứng dụng mới của bạn vào đây -->
     <string name="facebook_app_id">1435559144936955</string>
-    
+
     <!-- 2. Thay ID ứng dụng mới vào sau chữ fb -->
     <string name="fb_login_protocol_scheme">fb1435559144936955</string>
-    
+
     <!-- 3. Dán Client Token mới lấy ở mục Nâng cao vào đây -->
     <string name="facebook_client_token">8055829f5a0bc6f5de94e2c75fb71587</string>
+
+    <!-- Google Web Client ID (Lấy từ google-services.json) -->
+    <string name="default_web_client_id">465869652634-nherujam09rmkno2m783ps2b1g1v68o7.apps.googleusercontent.com</string>
+
+    <string name="gemini_api_key" translatable="false">AIzaSyAoTcMaWnzyBaCtRrzhYManBL-UTcJdraE</string>
 </resources>

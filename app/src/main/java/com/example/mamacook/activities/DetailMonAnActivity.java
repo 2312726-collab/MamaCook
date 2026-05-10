@@ -44,7 +44,7 @@ import java.util.Map;
 public class DetailMonAnActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
-    private ImageView imgMonAn, btnFavoriteDetail;
+    private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan;
     private TextView tvTen, tvRatingInfo, tvThoiGian, tvNguyenLieu, tvDiemTrungBinh, tvXemTatCa;
     private LinearLayout layoutBuocNau;
     private RecyclerView rvDanhGia;
@@ -56,6 +56,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private String currentDishId;
     private String currentUserId;
     private boolean isSaved = false;
+    private boolean isInPlan = false;
+    private MonAn currentMonAn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +80,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         rbChonSao = findViewById(R.id.rb_chon_sao);
         btnGuiBinhLuan = findViewById(R.id.btn_gui_binh_luan);
         btnFavoriteDetail = findViewById(R.id.btn_favorite_detail);
+        btnAddToPlan = findViewById(R.id.btn_add_to_plan);
 
         adapterBinhLuan = new BinhLuanNgangAdapter(danhSachBinhLuan);
         rvDanhGia.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
@@ -86,7 +89,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar_detail);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) getSupportActionBar().setDisplayShowTitleEnabled(false);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         currentDishId = getIntent().getStringExtra("ID_MON_AN");
         String intentImage = getIntent().getStringExtra("HINH_ANH");
@@ -104,11 +107,16 @@ public class DetailMonAnActivity extends AppCompatActivity {
             fetchDishDetailsRealtime(currentDishId);
             fetchCommentsSmartRealtime(currentDishId);
             checkIfSaved();
+            checkIfInPlan();
             addToHistory(currentDishId);
         }
 
         if (btnFavoriteDetail != null) {
             btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
+        }
+
+        if (btnAddToPlan != null) {
+            btnAddToPlan.setOnClickListener(v -> toggleCookingPlan());
         }
 
         btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
@@ -118,8 +126,15 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 Intent intent = new Intent(DetailMonAnActivity.this, TatCaBinhLuanActivity.class);
                 intent.putExtra("ID_MON_AN", currentDishId);
                 startActivity(intent);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
             });
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
     }
 
     private void guiBinhLuan() {
@@ -176,18 +191,97 @@ public class DetailMonAnActivity extends AppCompatActivity {
         });
     }
 
+    private void checkIfInPlan() {
+        if (currentUserId == null) return;
+        db.collection("ke_hoach_nau_an")
+                .document(currentUserId + "_" + currentDishId)
+                .addSnapshotListener(this, (doc, error) -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (doc != null) {
+                        isInPlan = doc.exists();
+                        updatePlanButtonUI();
+                    }
+                });
+    }
+
+    private void updatePlanButtonUI() {
+        if (btnAddToPlan == null) return;
+        if (isInPlan) {
+            btnAddToPlan.setColorFilter(Color.parseColor("#FFEB3B")); // Màu vàng cho món trong kế hoạch
+        } else {
+            btnAddToPlan.setColorFilter(Color.WHITE);
+        }
+    }
+
+    private void toggleCookingPlan() {
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentMonAn == null) return;
+
+        String idPlan = currentUserId + "_" + currentDishId;
+        if (isInPlan) {
+            db.collection("ke_hoach_nau_an").document(idPlan).delete()
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã xóa khỏi kế hoạch!", Toast.LENGTH_SHORT).show());
+        } else {
+            // Hiện Dialog chọn buổi
+            String[] types = {"Sáng", "Trưa", "Tối"};
+            new AlertDialog.Builder(this)
+                    .setTitle("Chọn buổi nấu ăn")
+                    .setItems(types, (dialog, which) -> {
+                        String mealType = "";
+                        if (which == 0) mealType = "Sang";
+                        else if (which == 1) mealType = "Trua";
+                        else mealType = "Toi";
+                        
+                        saveToCookingPlan(idPlan, mealType);
+                    })
+                    .show();
+        }
+    }
+
+    private void saveToCookingPlan(String idPlan, String mealType) {
+        Map<String, Object> plan = new HashMap<>();
+        plan.put("id_nguoi_dung", currentUserId);
+        plan.put("id_mon_an", currentDishId);
+        plan.put("ten_mon", currentMonAn.getTen_mon());
+        plan.put("hinh_anh", currentMonAn.getHinh_anh());
+        plan.put("ngay_lap_ke_hoach", FieldValue.serverTimestamp());
+        plan.put("trang_thai", "dang_di_cho");
+        plan.put("buoi", mealType);
+
+        List<Map<String, Object>> listNL = new ArrayList<>();
+        if (currentMonAn.getDanh_sach_nguyen_lieu() != null) {
+            for (MonAn.ChiTietNguyenLieu nl : currentMonAn.getDanh_sach_nguyen_lieu()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("ten_nguyen_lieu", nl.ten_nguyen_lieu);
+                item.put("so_luong", nl.so_luong);
+                item.put("don_vi", nl.don_vi);
+                item.put("da_mua", false);
+                listNL.add(item);
+            }
+        }
+        plan.put("danh_sach_nguyen_lieu", listNL);
+
+        db.collection("ke_hoach_nau_an").document(idPlan).set(plan)
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã thêm vào kế hoạch " + (mealType.equals("Sang") ? "Sáng" : mealType.equals("Trua") ? "Trưa" : "Tối") + "!", Toast.LENGTH_SHORT).show());
+    }
+
     private void fetchDishDetailsRealtime(String id) {
         db.collection("mon_an").document(id).addSnapshotListener(this, (doc, error) -> {
             if (isFinishing() || isDestroyed()) return;
             if (doc != null && doc.exists()) {
-                MonAn monAn = doc.toObject(MonAn.class);
-                if (monAn != null) {
-                    tvTen.setText(monAn.getTen_mon());
-                    tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", monAn.getThoi_gian_nau()));
-                    tvRatingInfo.setText(String.format(Locale.getDefault(), "🕒 %.1f ⭐ (%d)", monAn.getRating(), monAn.getTong_luot_danh_gia()));
+                currentMonAn = doc.toObject(MonAn.class);
+                if (currentMonAn != null) {
+                    currentMonAn.setId_mon_an(doc.getId());
+                    tvTen.setText(currentMonAn.getTen_mon());
+                    tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", currentMonAn.getThoi_gian_nau()));
+                    tvRatingInfo.setText(String.format(Locale.getDefault(), "🕒 %.1f ⭐ (%d)", currentMonAn.getRating(), currentMonAn.getTong_luot_danh_gia()));
 
                     if (!isFinishing() && !isDestroyed()) {
-                        String hinhAnh = monAn.getHinh_anh();
+                        String hinhAnh = currentMonAn.getHinh_anh();
                         if (hinhAnh != null && !hinhAnh.isEmpty()) {
                             if (hinhAnh.startsWith("http")) {
                                 Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
@@ -199,16 +293,16 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     }
 
                     StringBuilder sb = new StringBuilder();
-                    if (monAn.getDanh_sach_nguyen_lieu() != null) {
-                        for (MonAn.ChiTietNguyenLieu nl : monAn.getDanh_sach_nguyen_lieu()) {
+                    if (currentMonAn.getDanh_sach_nguyen_lieu() != null) {
+                        for (MonAn.ChiTietNguyenLieu nl : currentMonAn.getDanh_sach_nguyen_lieu()) {
                             sb.append("• ").append(nl.so_luong).append(nl.don_vi).append(" ").append(nl.ten_nguyen_lieu).append("\n");
                         }
                     }
                     tvNguyenLieu.setText(sb.toString());
 
                     layoutBuocNau.removeAllViews();
-                    if (monAn.getDanh_sach_buoc_nau() != null) {
-                        for (MonAn.BuocNau buoc : monAn.getDanh_sach_buoc_nau()) {
+                    if (currentMonAn.getDanh_sach_buoc_nau() != null) {
+                        for (MonAn.BuocNau buoc : currentMonAn.getDanh_sach_buoc_nau()) {
                             View stepView = LayoutInflater.from(this).inflate(R.layout.item_step_cook, layoutBuocNau, false);
                             ((TextView) stepView.findViewById(R.id.tv_step_title)).setText(String.format(Locale.getDefault(), "Bước %d", buoc.so_thu_tu));
                             ((TextView) stepView.findViewById(R.id.tv_step_content)).setText(buoc.noi_dung_buoc);
@@ -231,6 +325,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     float totalStars = 0;
                     for (QueryDocumentSnapshot doc : value) {
                         DanhGia dg = doc.toObject(DanhGia.class);
+                        allComments.add(dg);
                         totalStars += dg.getSo_sao();
                     }
                     int count = allComments.size();

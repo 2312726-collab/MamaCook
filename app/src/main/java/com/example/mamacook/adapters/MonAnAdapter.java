@@ -109,6 +109,9 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 Intent intent = new Intent(v.getContext(), DetailMonAnActivity.class);
                 intent.putExtra("ID_MON_AN", monAn.getId_mon_an());
                 v.getContext().startActivity(intent);
+                if (v.getContext() instanceof android.app.Activity) {
+                    ((android.app.Activity) v.getContext()).overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+                }
             });
         } else if (holder instanceof SeeAllViewHolder) {
             SeeAllViewHolder seeAllHolder = (SeeAllViewHolder) holder;
@@ -121,6 +124,9 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 intent.putExtra("FILTER_TIME", filterTime);
                 intent.putExtra("FILTER_RATING", filterRating);
                 v.getContext().startActivity(intent);
+                if (v.getContext() instanceof android.app.Activity) {
+                    ((android.app.Activity) v.getContext()).overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+                }
             });
         }
     }

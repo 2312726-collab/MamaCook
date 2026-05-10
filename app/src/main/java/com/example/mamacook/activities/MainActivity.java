@@ -127,13 +127,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        if (input.matches("\\d+")) {
-            // Nếu là số điện thoại, dùng email ảo để login vào Firebase Auth
-            performFirebaseAuth(input + "@mamacook.com", password);
-        } else {
-            // Đăng nhập Email truyền thống
-            performFirebaseAuth(input, password);
+        // TỰ ĐỘNG XỬ LÝ: Nếu không có dấu @ (là SĐT hoặc Tên đăng nhập) -> Thêm đuôi ảo
+        String finalEmail = input;
+        if (!input.contains("@")) {
+            finalEmail = input.toLowerCase() + "@mamacook.com";
         }
+
+        performFirebaseAuth(finalEmail, password);
     }
 
     private void performFirebaseAuth(String email, String password) {
