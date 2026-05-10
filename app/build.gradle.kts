@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.mamacook"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -29,6 +29,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 }
 
@@ -44,6 +50,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.play.services.auth)
 
+    // Location (Dùng bản 21.0.1 để đảm bảo độ ổn định cao nhất cho demo)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
     // Facebook Login
     implementation(libs.facebook.login)
 
@@ -54,17 +63,16 @@ dependencies {
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
-
-    // Firebase Storage
     implementation("com.google.firebase:firebase-storage")
     implementation("com.firebaseui:firebase-ui-storage:8.0.2")
 
-    // THƯ VIỆN CẦN THIẾT CHO AI VÀ KIỂM DUYỆT
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-    implementation("com.google.guava:guava:33.0.0-android")
-    
-    // OkHttp for REST API
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.google.code.gson:gson:2.10.1")
+    // Thêm AI Gemini vào đây nè:
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation("com.google.guava:guava:31.1-android")
 
+    // Thư viện hỗ trợ Java 8
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
+    // Luban - Nén ảnh siêu tốc độ
+    implementation("com.github.Curzibn:Luban:1.1.8")
 }

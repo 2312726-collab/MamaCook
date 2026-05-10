@@ -1,77 +1,76 @@
-package com.example.mamacook.fragments;
+package com.example.mamacook.activities;
 
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.TextView;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.mamacook.R;
 import com.example.mamacook.adapters.MonAnVerticalAdapter;
 import com.example.mamacook.models.MonAn;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class FavoriteFragment extends Fragment {
+public class FavoriteActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
     private RecyclerView rvFavorite;
     private MonAnVerticalAdapter adapterFavorite;
     private List<MonAn> listFavorite = new ArrayList<>();
     private TextView tvEmptyMessage;
-    private final List<ListenerRegistration> monAnListeners = new ArrayList<>();
+    private BottomNavigationView bottomNavigationView;
 
-    @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_favorite, container, false);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+            window.getDecorView().setSystemUiVisibility(flags);
+            window.setStatusBarColor(Color.TRANSPARENT);
+        }
+
+        setContentView(R.layout.activity_favorite);
 
         db = FirebaseFirestore.getInstance();
-        rvFavorite = view.findViewById(R.id.rv_favorite);
-        tvEmptyMessage = view.findViewById(R.id.tv_empty_favorite);
+        rvFavorite = findViewById(R.id.rv_favorite);
+        tvEmptyMessage = findViewById(R.id.tv_empty_favorite);
+        bottomNavigationView = findViewById(R.id.bottom_navigation);
 
-        rvFavorite.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvFavorite.setLayoutManager(new LinearLayoutManager(this));
         adapterFavorite = new MonAnVerticalAdapter(listFavorite);
         rvFavorite.setAdapter(adapterFavorite);
 
+        setupBottomNavigation();
         loadFavoriteRecipes();
-
-        return view;
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        // Gemini: Hủy tất cả listener để tránh leak memory và cập nhật sai data
-        for (ListenerRegistration lr : monAnListeners) {
-            if (lr != null) lr.remove();
-        }
-        monAnListeners.clear();
     }
 
     private void loadFavoriteRecipes() {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
-        // Sử dụng addSnapshotListener để cập nhật danh sách yêu thích ngay khi có thay đổi
         db.collection("mon_da_luu")
                 .whereEqualTo("id_nguoi_dung", uid)
                 .addSnapshotListener((value, error) -> {
-                    if (isRemoving() || !isAdded()) return; // Kiểm tra Fragment còn tồn tại không
                     if (error != null) return;
 
                     if (value == null || value.isEmpty()) {
@@ -88,24 +87,19 @@ public class FavoriteFragment extends Fragment {
                         if (idMonAn != null) listIdFavorite.add(idMonAn);
                     }
 
-                    listFavorite.clear(); // Clear để nhận data realtime
-                    
-                    // Hủy listener cũ
-                    for (ListenerRegistration lr : monAnListeners) lr.remove();
-                    monAnListeners.clear();
-
+                    listFavorite.clear(); // Clear để chuẩn bị nhận data realtime
                     tvEmptyMessage.setVisibility(View.GONE);
                     rvFavorite.setVisibility(View.VISIBLE);
 
                     for (String id : listIdFavorite) {
-                        // Gemini: Lắng nghe realtime từng món ăn, lưu reference để hủy sau này
-                        ListenerRegistration lr = db.collection("mon_an").document(id).addSnapshotListener((monDoc, monError) -> {
-                            if (!isAdded() || isRemoving()) return;
+                        // Gemini: Dùng addSnapshotListener để lắng nghe Rating realtime từng món
+                        db.collection("mon_an").document(id).addSnapshotListener(this, (monDoc, monError) -> {
                             if (monDoc != null && monDoc.exists()) {
                                 MonAn mon = monDoc.toObject(MonAn.class);
                                 if (mon != null) {
                                     mon.setId_mon_an(monDoc.getId());
                                     
+                                    // Cập nhật hoặc thêm mới vào list
                                     int index = -1;
                                     for (int i = 0; i < listFavorite.size(); i++) {
                                         if (listFavorite.get(i).getId_mon_an().equals(mon.getId_mon_an())) {
@@ -123,8 +117,25 @@ public class FavoriteFragment extends Fragment {
                                 }
                             }
                         });
-                        monAnListeners.add(lr);
                     }
                 });
+    }
+
+    private void setupBottomNavigation() {
+        bottomNavigationView.setSelectedItemId(R.id.nav_favorites);
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(this, HomeActivity.class));
+                overridePendingTransition(0, 0);
+                finish();
+                return true;
+            } else if (id == R.id.nav_favorites) {
+                return true;
+            } else if (id == R.id.nav_profile) {
+                return true;
+            }
+            return false;
+        });
     }
 }

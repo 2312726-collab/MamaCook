@@ -4,13 +4,16 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.mamacook.R;
 import com.example.mamacook.models.DanhGia;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
 
@@ -32,7 +35,7 @@ public class BinhLuanDocAdapter extends RecyclerView.Adapter<BinhLuanDocAdapter.
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         DanhGia dg = danhSachBinhLuan.get(position);
         
-        holder.tvTen.setText(dg.getTen_nguoi_dung() != null ? dg.getTen_nguoi_dung() : "Người dùng");
+        holder.tvTen.setText(dg.getTen_nguoi_dung() != null ? dg.getTen_nguoi_dung() : "Khách hàng");
         holder.tvNoiDung.setText(dg.getNoi_dung());
         holder.rbSao.setRating(dg.getSo_sao());
         
@@ -42,6 +45,32 @@ public class BinhLuanDocAdapter extends RecyclerView.Adapter<BinhLuanDocAdapter.
             holder.tvNgay.setText(timeAgo);
         } else {
             holder.tvNgay.setText("Vừa xong");
+        }
+
+        // Load Avatar thật từ Firestore
+        if (dg.getId_nguoi_dung() != null) {
+            FirebaseFirestore.getInstance().collection("nguoi_dung").document(dg.getId_nguoi_dung())
+                    .get().addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String avatar = doc.getString("anh_dai_dien");
+                            Glide.with(holder.itemView.getContext())
+                                    .load(avatar)
+                                    .placeholder(R.drawable.ic_mama)
+                                    .circleCrop()
+                                    .into(holder.imgAvatar);
+                        }
+                    });
+        }
+
+        // Load ảnh đính kèm nếu có
+        if (dg.getHinh_anh_url() != null && !dg.getHinh_anh_url().isEmpty()) {
+            holder.imgDinhKem.setVisibility(View.VISIBLE);
+            Glide.with(holder.itemView.getContext())
+                    .load(dg.getHinh_anh_url())
+                    .centerCrop()
+                    .into(holder.imgDinhKem);
+        } else {
+            holder.imgDinhKem.setVisibility(View.GONE);
         }
     }
 
@@ -53,6 +82,7 @@ public class BinhLuanDocAdapter extends RecyclerView.Adapter<BinhLuanDocAdapter.
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvTen, tvNoiDung, tvNgay;
         RatingBar rbSao;
+        ImageView imgAvatar, imgDinhKem;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -60,6 +90,8 @@ public class BinhLuanDocAdapter extends RecyclerView.Adapter<BinhLuanDocAdapter.
             tvNoiDung = itemView.findViewById(R.id.tvNoiDungBinhLuan);
             tvNgay = itemView.findViewById(R.id.tvNgayBinhLuan);
             rbSao = itemView.findViewById(R.id.rbSaoBinhLuan);
+            imgAvatar = itemView.findViewById(R.id.imgAvatarBinhLuan);
+            imgDinhKem = itemView.findViewById(R.id.imgBinhLuanDinhKem);
         }
     }
 }

@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/parchment_bg">
+    android:background="@color/parchment_bg"
+    android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -50,6 +51,7 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_detail"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="-35dp"
@@ -137,30 +139,33 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="25dp"
+                android:layout_marginBottom="12dp"
                 android:fontFamily="serif"
                 android:text="Nguyên liệu"
                 android:textColor="@color/text_brown"
-                android:textSize="20sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_detail_nguyen_lieu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_ingredients"
+                android:padding="16dp"
                 android:lineSpacingExtra="6dp"
                 android:text="• Đang tải..."
                 android:textColor="@color/text_brown"
-                android:textSize="16sp" />
+                android:textSize="17sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="12dp"
                 android:fontFamily="serif"
                 android:text="Các bước nấu"
                 android:textColor="@color/text_brown"
-                android:textSize="20sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -185,9 +190,10 @@
                     android:id="@+id/tv_title_comment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
                     android:text="❤ Đánh giá &amp; bình luận"
                     android:textColor="@color/text_brown"
-                    android:textSize="18sp"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -225,6 +231,30 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical">
 
+                <RelativeLayout
+                    android:id="@+id/layout_preview_image"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/img_preview_comment"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop" />
+
+                    <ImageView
+                        android:id="@+id/btn_remove_preview"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:background="@drawable/bg_circle_dark"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        app:tint="@color/white" />
+                </RelativeLayout>
+
                 <RatingBar
                     android:id="@+id/rb_chon_sao"
                     android:layout_width="wrap_content"
@@ -257,12 +287,13 @@
                         android:textColor="@color/text_brown"
                         android:textSize="14sp" />
 
-                    <ImageView
-                        android:id="@+id/btn_camera"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                    <ImageButton
+                        android:id="@+id/btn_add_attachment"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_marginEnd="8dp"
-                        android:src="@android:drawable/ic_menu_camera"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_add"
                         app:tint="#8D6E63" />
 
                     <ImageView

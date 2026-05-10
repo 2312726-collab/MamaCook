@@ -84,15 +84,18 @@ public class SeeAllActivity extends AppCompatActivity {
         tvTitle.setText("Danh mục món ăn");
         Query query = categoryId.equals("all") ? db.collection("mon_an") : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
         
-        query.get().addOnSuccessListener(querySnapshot -> {
+        // Gemini: Dùng SnapshotListener để cập nhật Rating realtime
+        query.addSnapshotListener(this, (querySnapshot, error) -> {
+            if (error != null || querySnapshot == null) return;
+            
             listMonAn.clear();
             for (DocumentSnapshot doc : querySnapshot) {
                 MonAn mon = doc.toObject(MonAn.class);
-                mon.setId_mon_an(doc.getId());
-                
-                // ÁP DỤNG BỘ LỌC TỪ HOME SANG
-                if (applyFilters(mon)) {
-                    listMonAn.add(mon);
+                if (mon != null) {
+                    mon.setId_mon_an(doc.getId());
+                    if (applyFilters(mon)) {
+                        listMonAn.add(mon);
+                    }
                 }
             }
             adapter.notifyDataSetChanged();
@@ -128,13 +131,16 @@ public class SeeAllActivity extends AppCompatActivity {
 
     private void loadNewRecipes() {
         tvTitle.setText("Công thức mới");
-        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(30).get()
-                .addOnSuccessListener(querySnapshot -> {
+        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(30)
+                .addSnapshotListener(this, (querySnapshot, error) -> {
+                    if (error != null || querySnapshot == null) return;
                     listMonAn.clear();
                     for (DocumentSnapshot doc : querySnapshot) {
                         MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        listMonAn.add(mon);
+                        if (mon != null) {
+                            mon.setId_mon_an(doc.getId());
+                            listMonAn.add(mon);
+                        }
                     }
                     adapter.notifyDataSetChanged();
                 });
@@ -142,13 +148,16 @@ public class SeeAllActivity extends AppCompatActivity {
 
     private void loadFeatured() {
         tvTitle.setText("Món ăn nổi bật");
-        db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(30).get()
-                .addOnSuccessListener(querySnapshot -> {
+        db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(30)
+                .addSnapshotListener(this, (querySnapshot, error) -> {
+                    if (error != null || querySnapshot == null) return;
                     listMonAn.clear();
                     for (DocumentSnapshot doc : querySnapshot) {
                         MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        listMonAn.add(mon);
+                        if (mon != null) {
+                            mon.setId_mon_an(doc.getId());
+                            listMonAn.add(mon);
+                        }
                     }
                     adapter.notifyDataSetChanged();
                 });

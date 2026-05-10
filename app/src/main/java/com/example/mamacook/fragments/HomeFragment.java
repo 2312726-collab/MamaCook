@@ -1,7 +1,13 @@
 package com.example.mamacook.fragments;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -10,17 +16,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,129 +36,721 @@ import com.example.mamacook.R;
 import com.example.mamacook.adapters.MonAnAdapter;
 import com.example.mamacook.models.MonAn;
 import com.example.mamacook.utils.VNCharacterUtils;
+import com.google.ai.client.generativeai.GenerativeModel;
+import com.google.ai.client.generativeai.java.GenerativeModelFutures;
+import com.google.ai.client.generativeai.type.Content;
+import com.google.ai.client.generativeai.type.GenerateContentResponse;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class HomeFragment extends Fragment {
 
+    private static final String TAG = "HomeFragment";
+    private static final long AI_TIMEOUT_MS = 15_000L;
+
+    // =========================================================================
+    // AI STATE MACHINE
+    //  IDLE    → chưa có gì, sẵn sàng nhận trigger
+    //  WAITING → đang chờ data (weather/prefs/recipes chưa đủ)
+    //  RUNNING → đang gọi Gemini
+    //  DONE    → đã hiển thị kết quả AI
+    // =========================================================================
+    private enum AiState { IDLE, WAITING, RUNNING, DONE }
+    private AiState aiState = AiState.IDLE;
+
+    private String aiWeather  = null;
+    private String aiLocation = null;
+
+    private boolean weatherReady = false;
+    private boolean prefsReady   = false;
+    private boolean recipesReady = false;
+
+    // Firebase & Location
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
-    private TextView tvGreeting, tvCategoryTitle;
-    private EditText etSearch;
+    private FusedLocationProviderClient fusedLocationClient;
+
+    // Views
+    private TextView    tvGreeting, tvAiInsights;
+    private EditText    etSearch;
     private ImageButton btnFilter;
     private LinearLayout layoutFilters;
-    private Spinner spnDifficulty, spnTime, spnRating;
-    
+    private Spinner     spnDifficulty, spnTime, spnRating;
+    private ProgressBar pbAiLoading;
     private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory;
+
+    // Adapters
     private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory;
-    
-    private List<MonAn> listCategory = new ArrayList<>();
-    private List<MonAn> listFeatured = new ArrayList<>();
-    private List<MonAn> listNew = new ArrayList<>();
-    private List<MonAn> listHistory = new ArrayList<>();
 
+    // Realtime listeners
+    private ListenerRegistration categoryListener, featuredListener,
+            newRecipesListener, historyListener;
+
+    // Data lists
+    private final List<MonAn>  listCategory            = new ArrayList<>();
+    private final List<MonAn>  listFeatured            = new ArrayList<>();
+    private final List<MonAn>  listNew                 = new ArrayList<>();
+    private final List<MonAn>  listHistory             = new ArrayList<>();
+    private final List<MonAn>  listFullCurrentCategory = new ArrayList<>();
+    private final List<String> userPrefs               = new ArrayList<>();
+
+    // Category state
     private TextView currentSelectedCategory;
-    private List<MonAn> listFullCurrentCategory = new ArrayList<>();
+    private String lastCategoryId    = "all";
+    private String lastCategoryTitle = "Goi y cho ban";
 
-    private String lastCategoryId = "all";
-    private String lastCategoryTitle = "Gợi ý cho bạn";
+    // Threading
+    private final Handler  mainHandler     = new Handler(Looper.getMainLooper());
+    private       Runnable aiTimeoutAction = null;
+    private final Executor bgExecutor      = Executors.newCachedThreadPool();
+
+    // =========================================================================
+    // LIFECYCLE
+    // =========================================================================
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
-        
-        tvGreeting = view.findViewById(R.id.tv_greeting);
-        tvCategoryTitle = view.findViewById(R.id.tv_category_display_title);
-        etSearch = view.findViewById(R.id.et_search);
-        btnFilter = view.findViewById(R.id.btn_filter);
-        layoutFilters = view.findViewById(R.id.layout_filters);
-        
-        spnDifficulty = view.findViewById(R.id.spn_difficulty_main);
-        spnTime = view.findViewById(R.id.spn_time_main);
-        spnRating = view.findViewById(R.id.spn_rating_main);
+        db                  = FirebaseFirestore.getInstance();
+        mAuth               = FirebaseAuth.getInstance();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
-        displayUserProfile();
+        bindViews(view);
         setupRecyclerViews(view);
         setupCategoryButtons(view);
         setupSearchAction();
         setupSpinners();
-        
         btnFilter.setOnClickListener(v -> toggleFilterLayout());
-        
+
+        loadUserProfile();
+        loadRecipesByCategory("all", lastCategoryTitle);
+        fetchLocationAndWeather();
+
         loadFeaturedRecipes();
         loadNewRecipes();
-        loadHistoryRecipes(11); 
-
-        currentSelectedCategory = view.findViewById(R.id.btn_cat_all);
-        loadRecipesByCategory("all", "Gợi ý cho bạn");
+        loadHistoryRecipes();
 
         return view;
     }
 
-    private void setupSearchAction() {
-        etSearch.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                String query = etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
-                if (getActivity() != null) {
-                    InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-                }
-                if (!query.isEmpty()) performSearch(query);
-                else loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-                return true;
-            }
-            return false;
-        });
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadHistoryRecipes();
+    }
 
-        etSearch.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable s) {
-                if (s.toString().trim().isEmpty()) loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        cancelAiTimeout();
+        if (categoryListener    != null) categoryListener.remove();
+        if (featuredListener    != null) featuredListener.remove();
+        if (newRecipesListener  != null) newRecipesListener.remove();
+        if (historyListener     != null) historyListener.remove();
+    }
+
+    private void bindViews(View v) {
+        tvGreeting    = v.findViewById(R.id.tv_greeting);
+        tvAiInsights  = v.findViewById(R.id.tvAiInsights);
+        etSearch      = v.findViewById(R.id.et_search);
+        btnFilter     = v.findViewById(R.id.btn_filter);
+        layoutFilters = v.findViewById(R.id.layout_filters);
+        pbAiLoading   = v.findViewById(R.id.pb_ai_loading);
+        spnDifficulty = v.findViewById(R.id.spn_difficulty_main);
+        spnTime       = v.findViewById(R.id.spn_time_main);
+        spnRating     = v.findViewById(R.id.spn_rating_main);
+        currentSelectedCategory = v.findViewById(R.id.btn_cat_all);
+    }
+
+    // =========================================================================
+    // HELPER: Parse MonAn — ưu tiên field id_mon_an, fallback doc.getId()
+    // =========================================================================
+    private MonAn parseMonAn(DocumentSnapshot doc) {
+        MonAn m = doc.toObject(MonAn.class);
+        if (m == null) return null;
+        if (m.getId_mon_an() == null || m.getId_mon_an().isEmpty()) {
+            m.setId_mon_an(doc.getId());
+        }
+        return m;
+    }
+
+    // =========================================================================
+    // AI GATE — điểm hội tụ DUY NHẤT để quyết định có gọi AI không
+    // =========================================================================
+    private void checkAndTriggerAi() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post(this::checkAndTriggerAi);
+            return;
+        }
+        if (!isAdded()) return;
+        if (!lastCategoryId.equals("all")) return;
+
+        if (aiState == AiState.RUNNING || aiState == AiState.DONE) {
+            Log.d(TAG, "[AI-GATE] Skip — state=" + aiState);
+            return;
+        }
+
+        if (!weatherReady || !prefsReady || !recipesReady) {
+            aiState = AiState.WAITING;
+            Log.d(TAG, "[AI-GATE] WAITING — weather=" + weatherReady
+                    + " prefs=" + prefsReady + " recipes=" + recipesReady);
+            return;
+        }
+
+        Log.d(TAG, "[AI-GATE] RUNNING — loc=" + aiLocation + " weather=" + aiWeather);
+        aiState = AiState.RUNNING;
+        showAiLoading(true);
+        scheduleAiTimeout();
+
+        String weather  = aiWeather  != null ? aiWeather  : getWeatherByHour();
+        String location = aiLocation != null ? aiLocation : "Viet Nam";
+        callGemini(new ArrayList<>(listFullCurrentCategory), weather, location);
+    }
+
+    private void resetAi() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post(this::resetAi);
+            return;
+        }
+        if (aiState == AiState.RUNNING) {
+            Log.d(TAG, "[AI-RESET] Skip — RUNNING");
+            return;
+        }
+        cancelAiTimeout();
+        aiState = AiState.IDLE;
+        Log.d(TAG, "[AI-RESET] Back to IDLE");
+    }
+
+    // =========================================================================
+    // LOCATION + WEATHER
+    // =========================================================================
+    private void fetchLocationAndWeather() {
+        if (ActivityCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(),
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 100);
+            aiWeather    = getWeatherByHour();
+            aiLocation   = "Viet Nam";
+            weatherReady = true;
+            updateAiInsightsTitle(null);
+            checkAndTriggerAi();
+            return;
+        }
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(loc -> {
+                    if (loc == null) {
+                        aiWeather    = getWeatherByHour();
+                        aiLocation   = "Viet Nam";
+                        weatherReady = true;
+                        updateAiInsightsTitle(null);
+                        checkAndTriggerAi();
+                        return;
+                    }
+                    bgExecutor.execute(() ->
+                            runGeocodeAndWeather(loc.getLatitude(), loc.getLongitude()));
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "FusedLocation err: " + e.getMessage());
+                    aiWeather    = getWeatherByHour();
+                    aiLocation   = "Viet Nam";
+                    weatherReady = true;
+                    checkAndTriggerAi();
+                });
+    }
+
+    private void runGeocodeAndWeather(double lat, double lon) {
+        String city = null;
+        try {
+            Geocoder gc = new Geocoder(requireContext(), new Locale("vi", "VN"));
+            List<Address> addrs = gc.getFromLocation(lat, lon, 1);
+            if (addrs != null && !addrs.isEmpty()) city = addrs.get(0).getAdminArea();
+        } catch (Exception e) {
+            Log.e(TAG, "Geocoder err: " + e.getMessage());
+        }
+
+        String weather = null;
+        try {
+            String url = "https://api.open-meteo.com/v1/forecast"
+                    + "?latitude=" + lat + "&longitude=" + lon
+                    + "&current_weather=true"
+                    + "&hourly=precipitation_probability&forecast_days=1";
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(6000);
+            conn.setReadTimeout(6000);
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader br =
+                         new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                String ln;
+                while ((ln = br.readLine()) != null) sb.append(ln);
+            }
+            JSONObject root = new JSONObject(sb.toString());
+            JSONObject cw   = root.getJSONObject("current_weather");
+            double temp = cw.getDouble("temperature");
+            int    code = cw.getInt("weathercode");
+            double wind = cw.getDouble("windspeed");
+            int    rain = 0;
+            try {
+                rain = root.getJSONObject("hourly")
+                        .getJSONArray("precipitation_probability")
+                        .getInt(Calendar.getInstance().get(Calendar.HOUR_OF_DAY));
+            } catch (Exception ignored) {}
+            weather = buildWeatherDesc(temp, code, wind, rain);
+        } catch (Exception e) {
+            Log.e(TAG, "Weather API err: " + e.getMessage());
+        }
+
+        final String fw = weather != null ? weather : getWeatherByHour();
+        final String fc = city    != null ? city    : "Viet Nam";
+
+        if (!isAdded()) return;
+        mainHandler.post(() -> {
+            if (!isAdded()) return;
+            boolean cityChanged = !fc.equals(aiLocation);
+            aiWeather    = fw;
+            aiLocation   = fc;
+            weatherReady = true;
+            updateAiInsightsTitle(aiLocation);
+            if (cityChanged && aiState == AiState.DONE) resetAi();
+            checkAndTriggerAi();
+        });
+    }
+
+    private String buildWeatherDesc(double temp, int code, double wind, int rain) {
+        String cond;
+        if      (code == 0)  cond = "troi quang, nang dep";
+        else if (code <= 2)  cond = "it may, nang nhe";
+        else if (code == 3)  cond = "nhieu may, troi u am";
+        else if (code <= 49) cond = "co suong mu";
+        else if (code <= 55) cond = "mua phun nhe";
+        else if (code <= 65) cond = "dang mua" + (rain > 70 ? " to" : "");
+        else if (code <= 75) cond = "co tuyet";
+        else if (code <= 82) cond = "mua rao";
+        else                 cond = "co giong sam set";
+
+        String tdesc;
+        if      (temp < 20) tdesc = "lanh ("     + (int) temp + "°C)";
+        else if (temp < 28) tdesc = "mat me ("   + (int) temp + "°C)";
+        else if (temp < 33) tdesc = "am ap ("    + (int) temp + "°C)";
+        else                tdesc = "nong buc (" + (int) temp + "°C)";
+
+        String wdesc = wind > 30 ? ", gio manh" : "";
+        String rdesc = rain > 60 ? ", kha nang mua " + rain + "%" : "";
+        return cond + ", " + tdesc + wdesc + rdesc;
+    }
+
+    private String getWeatherByHour() {
+        int h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (h >= 5  && h < 9)  return "buoi sang som, troi mat de chiu";
+        if (h >= 9  && h < 12) return "buoi sang, nang len dan";
+        if (h >= 12 && h < 14) return "buoi trua, nang nong";
+        if (h >= 14 && h < 17) return "buoi chieu, hay co mua rao";
+        if (h >= 17 && h < 20) return "buoi chieu toi, mat dan";
+        return "buoi toi muon, troi se lanh";
+    }
+
+    // =========================================================================
+    // USER PROFILE
+    // =========================================================================
+    private void loadUserProfile() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            prefsReady = true;
+            checkAndTriggerAi();
+            return;
+        }
+        db.collection("nguoi_dung").document(user.getUid()).get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+                    if (doc.exists()) {
+                        String name = doc.getString("ho_ten");
+                        if (name != null && !name.isEmpty())
+                            tvGreeting.setText("Xin chao " + name + "!");
+                        @SuppressWarnings("unchecked")
+                        List<String> prefs = (List<String>) doc.get("so_thich");
+                        userPrefs.clear();
+                        if (prefs != null) userPrefs.addAll(prefs);
+                    }
+                    prefsReady = true;
+                    checkAndTriggerAi();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Load profile err: " + e.getMessage());
+                    prefsReady = true;
+                    checkAndTriggerAi();
+                });
+    }
+
+    // =========================================================================
+    // GEMINI CALL
+    // =========================================================================
+    private void callGemini(List<MonAn> candidates, String weather, String location) {
+        if (candidates.isEmpty()) {
+            onGeminiFailed(candidates, "empty candidates");
+            return;
+        }
+
+        List<MonAn> preferred = new ArrayList<>();
+        List<MonAn> others    = new ArrayList<>();
+        for (MonAn m : candidates) {
+            if (matchesPrefs(m)) preferred.add(m);
+            else                 others.add(m);
+        }
+        Collections.shuffle(preferred);
+        Collections.shuffle(others);
+
+        List<MonAn> pool = new ArrayList<>();
+        int pt = Math.min(preferred.size(), 15);
+        int ot = Math.min(others.size(), 25 - pt);
+        pool.addAll(preferred.subList(0, pt));
+        pool.addAll(others.subList(0, ot));
+
+        StringBuilder menu = new StringBuilder();
+        for (MonAn m : pool) {
+            if (m.getId_mon_an() == null || m.getTen_mon() == null) continue;
+            menu.append("- ID:\"").append(m.getId_mon_an())
+                    .append("\" Ten:\"").append(m.getTen_mon()).append("\"\n");
+        }
+        if (menu.length() == 0) { onGeminiFailed(candidates, "menu empty"); return; }
+
+        int    hour     = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String mealTime = getMealTime(hour);
+
+        String prompt =
+                "Ban la chuyen gia am thuc Viet Nam. Chon DUNG 5 mon phu hop nhat.\n\n"
+                        + "THONG TIN THUC TE:\n"
+                        + "- Dia diem: " + location + "\n"
+                        + "- Thoi tiet: " + weather + "\n"
+                        + "- Thoi diem: " + mealTime + " (" + hour + "h)\n"
+                        + "- So thich: " + (userPrefs.isEmpty() ? "chua ro"
+                        : String.join(", ", userPrefs)) + "\n\n"
+                        + "NGUYEN TAC:\n"
+                        + "- Lanh/mua → lau, sup, chao, mon nuoc nong\n"
+                        + "- Nong     → goi, mon nhe, do mat\n"
+                        + "- Sang     → pho, bun, chao, xoi, banh mi\n"
+                        + "- Trua/toi → com, mon man, day du dinh duong\n"
+                        + "- Khuya    → mi, chao, an vat\n"
+                        + "- Uu tien mon khop so thich (neu co)\n\n"
+                        + "DANH SACH MON HOP LE (chi duoc chon trong danh sach nay):\n"
+                        + menu
+                        + "\nQUY TAC BAT BUOC:\n"
+                        + "1. Chi dung ID co trong danh sach. KHONG tu tao ID.\n"
+                        + "2. Tra ve JSON THUAN TUY. KHONG markdown. KHONG ```json.\n"
+                        + "3. Greeting: 1 cau ~15 tu, de cap thoi tiet/dia diem that su.\n\n"
+                        + "{\"greeting\":\"...\",\"ids\":[\"id1\",\"id2\",\"id3\",\"id4\",\"id5\"]}";
+
+        GenerativeModel        gm  = new GenerativeModel("gemini-1.5-flash",
+                getString(R.string.gemini_api_key));
+        GenerativeModelFutures mdl = GenerativeModelFutures.from(gm);
+        Content                cnt = new Content.Builder().addText(prompt).build();
+        ListenableFuture<GenerateContentResponse> fut = mdl.generateContent(cnt);
+
+        final List<MonAn> fCandidates = candidates;
+        final List<MonAn> fPreferred  = preferred;
+
+        Futures.addCallback(fut, new FutureCallback<GenerateContentResponse>() {
+            @Override
+            public void onSuccess(GenerateContentResponse resp) {
+                cancelAiTimeout();
+                try {
+                    String raw = resp.getText();
+                    if (raw == null || raw.trim().isEmpty())
+                        throw new Exception("empty response");
+
+                    String json = raw.replaceAll("(?s)```json\\s*", "")
+                            .replaceAll("(?s)```\\s*", "").trim();
+                    int s = json.indexOf('{'), e = json.lastIndexOf('}');
+                    if (s < 0 || e <= s) throw new Exception("no JSON found");
+                    json = json.substring(s, e + 1);
+
+                    JSONObject obj      = new JSONObject(json);
+                    String     greeting = obj.optString("greeting", "");
+                    JSONArray  idsArr   = obj.optJSONArray("ids");
+
+                    List<MonAn> selected = new ArrayList<>();
+                    if (idsArr != null) {
+                        for (int i = 0; i < idsArr.length(); i++) {
+                            String aiId = idsArr.getString(i).trim();
+                            for (MonAn m : fCandidates) {
+                                if (m.getId_mon_an() != null
+                                        && m.getId_mon_an().trim().equalsIgnoreCase(aiId)) {
+                                    selected.add(m);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (selected.isEmpty()) {
+                        List<MonAn> fb = fPreferred.isEmpty()
+                                ? new ArrayList<>(fCandidates) : new ArrayList<>(fPreferred);
+                        Collections.shuffle(fb);
+                        selected.addAll(fb.subList(0, Math.min(5, fb.size())));
+                    }
+
+                    final List<MonAn> result   = selected;
+                    final String      greetTxt = greeting;
+                    if (!isAdded()) return;
+                    mainHandler.post(() -> {
+                        if (!isAdded() || !lastCategoryId.equals("all")) return;
+                        onGeminiSuccess(result, greetTxt);
+                    });
+
+                } catch (Exception ex) {
+                    Log.e(TAG, "Parse err: " + ex.getMessage());
+                    onGeminiFailed(fCandidates, ex.getMessage());
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Throwable t) {
+                cancelAiTimeout();
+                Log.e(TAG, "Gemini failure: " + t.getMessage());
+                onGeminiFailed(fCandidates, t.getMessage());
+            }
+        }, ContextCompat.getMainExecutor(requireContext()));
+    }
+
+    private void onGeminiSuccess(List<MonAn> selected, String greeting) {
+        aiState = AiState.DONE;
+        if (!greeting.isEmpty() && tvAiInsights != null)
+            tvAiInsights.setText("✨ " + greeting);
+        listCategory.clear();
+        listCategory.addAll(selected);
+        if (adapterCategory != null) adapterCategory.notifyDataSetChanged();
+        showAiLoading(false);
+        Log.d(TAG, "[AI-DONE] " + selected.size() + " mon");
+    }
+
+    private void onGeminiFailed(List<MonAn> candidates, String reason) {
+        if (!isAdded()) return;
+        mainHandler.post(() -> {
+            if (!isAdded()) return;
+            Log.w(TAG, "[AI-FAIL] " + reason + " → fallback");
+            aiState = AiState.DONE;
+
+            List<MonAn> fb = new ArrayList<>();
+            for (MonAn m : candidates) { if (matchesPrefs(m)) fb.add(m); }
+            if (fb.size() < 5) {
+                for (MonAn m : candidates) { if (!fb.contains(m)) fb.add(m); }
+            }
+            Collections.shuffle(fb);
+            List<MonAn> result = new ArrayList<>(fb.subList(0, Math.min(5, fb.size())));
+
+            if (tvAiInsights != null)
+                tvAiInsights.setText("Một số món bạn có thể thích hôm nay");
+            listCategory.clear();
+            listCategory.addAll(result);
+            if (adapterCategory != null) adapterCategory.notifyDataSetChanged();
+            showAiLoading(false);
+        });
+    }
+
+    // =========================================================================
+    // MATCHING
+    // =========================================================================
+    private boolean matchesPrefs(MonAn m) {
+        if (userPrefs.isEmpty()) return false;
+        String ten = m.getTen_mon()     != null
+                ? VNCharacterUtils.removeAccents(m.getTen_mon().toLowerCase())     : "";
+        String cat = m.getId_danh_muc() != null
+                ? VNCharacterUtils.removeAccents(m.getId_danh_muc().toLowerCase()) : "";
+        for (String p : userPrefs) {
+            if (p == null || p.isEmpty()) continue;
+            String np = VNCharacterUtils.removeAccents(p.trim().toLowerCase());
+            if (ten.contains(np) || cat.contains(np)) return true;
+        }
+        return false;
+    }
+
+    // =========================================================================
+    // TIMEOUT
+    // =========================================================================
+    private void scheduleAiTimeout() {
+        cancelAiTimeout();
+        aiTimeoutAction = () -> {
+            if (!isAdded()) return;
+            Log.w(TAG, "AI timeout → fallback");
+            onGeminiFailed(new ArrayList<>(listFullCurrentCategory), "timeout");
+        };
+        mainHandler.postDelayed(aiTimeoutAction, AI_TIMEOUT_MS);
+    }
+
+    private void cancelAiTimeout() {
+        if (aiTimeoutAction != null) {
+            mainHandler.removeCallbacks(aiTimeoutAction);
+            aiTimeoutAction = null;
+        }
+    }
+
+    // =========================================================================
+    // CATEGORY LOADING
+    // =========================================================================
+    private void loadRecipesByCategory(String categoryId, String title) {
+        lastCategoryId    = categoryId;
+        lastCategoryTitle = title;
+
+        if (categoryListener != null) categoryListener.remove();
+
+        Query q = categoryId.equals("all")
+                ? db.collection("mon_an")
+                : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
+
+        categoryListener = q.limit(100).addSnapshotListener((snap, error) -> {
+            if (!isAdded() || snap == null) {
+                if (error != null) Log.e(TAG, "Category listener err: " + error.getMessage());
+                return;
+            }
+
+            listFullCurrentCategory.clear();
+            for (QueryDocumentSnapshot doc : snap) {
+                MonAn m = parseMonAn(doc);
+                if (m != null) listFullCurrentCategory.add(m);
+            }
+            Log.d(TAG, "Loaded " + listFullCurrentCategory.size()
+                    + " recipes, cat=" + categoryId);
+
+            if (categoryId.equals("all")) {
+                recipesReady = true;
+                checkAndTriggerAi();
+            } else {
+                listCategory.clear();
+                listCategory.addAll(listFullCurrentCategory);
+                if (adapterCategory != null) adapterCategory.notifyDataSetChanged();
+                showAiLoading(false);
             }
         });
     }
 
     private void setupCategoryButtons(View view) {
-        int[] btnIds = {R.id.btn_cat_all, R.id.btn_cat_man, R.id.btn_cat_canh, R.id.btn_cat_chay, R.id.btn_cat_vat, R.id.btn_cat_lau};
-        String[] categoryIds = {"all", "mon_man", "mon_canh", "mon_chay", "an_vat", "mon_lau"};
-        String[] titles = {"Gợi ý cho bạn", "Món mặn", "Món canh", "Món chay", "Ăn vặt", "Món lẩu"};
-        for (int i = 0; i < btnIds.length; i++) {
-            final int index = i;
-            TextView btn = view.findViewById(btnIds[i]);
-            if (btn != null) {
-                btn.setOnClickListener(v -> {
-                    lastCategoryId = categoryIds[index];
-                    lastCategoryTitle = titles[index];
-                    if (currentSelectedCategory != null) {
-                        currentSelectedCategory.setBackgroundResource(R.drawable.bg_input_field);
-                        currentSelectedCategory.setTextColor(android.graphics.Color.parseColor("#555555"));
-                    }
-                    btn.setBackgroundResource(R.drawable.bg_register_button);
-                    btn.setTextColor(android.graphics.Color.WHITE);
-                    currentSelectedCategory = btn;
-                    etSearch.setText(""); 
-                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-                });
-            }
+        int[]    ids    = {R.id.btn_cat_all, R.id.btn_cat_man, R.id.btn_cat_canh,
+                R.id.btn_cat_chay, R.id.btn_cat_vat, R.id.btn_cat_lau};
+        String[] catIds = {"all", "mon_man", "mon_canh", "mon_chay", "an_vat", "mon_lau"};
+        String[] titles = {"Goi y cho ban", "Mon man", "Mon canh",
+                "Mon chay", "An vat", "Mon lau"};
+
+        for (int i = 0; i < ids.length; i++) {
+            final int idx = i;
+            TextView btn = view.findViewById(ids[i]);
+            if (btn == null) continue;
+            btn.setOnClickListener(v -> {
+                if (currentSelectedCategory != null) {
+                    currentSelectedCategory.setBackgroundResource(R.drawable.bg_input_field);
+                    currentSelectedCategory.setTextColor(
+                            android.graphics.Color.parseColor("#555555"));
+                }
+                btn.setBackgroundResource(R.drawable.bg_register_button);
+                btn.setTextColor(android.graphics.Color.WHITE);
+                currentSelectedCategory = btn;
+                etSearch.setText("");
+
+                resetAi();
+                recipesReady = false;
+                loadRecipesByCategory(catIds[idx], titles[idx]);
+            });
         }
     }
 
+    // =========================================================================
+    // SEARCH — FIX: dùng parseMonAn thay vì setId_mon_an(doc.getId())
+    // =========================================================================
+    private void setupSearchAction() {
+        etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                String q = etSearch.getText().toString().trim()
+                        .toLowerCase(Locale.getDefault());
+                hideKeyboard();
+                if (!q.isEmpty()) performSearch(q);
+                else              loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
+                return true;
+            }
+            return false;
+        });
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged    (CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                if (s.toString().trim().isEmpty())
+                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
+            }
+        });
+    }
+
+    private void performSearch(String text) {
+        if (tvAiInsights != null) tvAiInsights.setText("Ket qua cho: '" + text + "'");
+        String   noTone = VNCharacterUtils.removeAccents(text);
+        String[] words  = noTone.split("\\s+");
+
+        db.collection("mon_an")
+                .whereArrayContains("tu_khoa_tim_kiem", words[0]).get()
+                .addOnSuccessListener(snap -> {
+                    List<MonAn> res = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : snap) {
+                        // ✅ FIX: dùng parseMonAn thay vì setId_mon_an(doc.getId())
+                        MonAn m = parseMonAn(doc);
+                        if (m == null) continue;
+                        List<String> kw = m.getTu_khoa_tim_kiem();
+                        if (kw == null) continue;
+                        boolean ok = true;
+                        for (String w : words) {
+                            if (!kw.contains(w)) { ok = false; break; }
+                        }
+                        if (ok) res.add(m);
+                    }
+                    res.sort((a, b) -> Integer.compare(
+                            calcRelevance(b, text, noTone),
+                            calcRelevance(a, text, noTone)));
+                    listFullCurrentCategory.clear();
+                    listFullCurrentCategory.addAll(res);
+                    listCategory.clear();
+                    listCategory.addAll(res);
+                    if (adapterCategory != null) adapterCategory.notifyDataSetChanged();
+                    showAiLoading(false);
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Search err: " + e.getMessage()));
+    }
+
+    private void hideKeyboard() {
+        if (getActivity() == null) return;
+        InputMethodManager imm = (InputMethodManager)
+                getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+    }
+
+    // =========================================================================
+    // FILTERS
+    // =========================================================================
     private void toggleFilterLayout() {
         if (layoutFilters.getVisibility() == View.GONE) {
             layoutFilters.setVisibility(View.VISIBLE);
@@ -159,270 +758,208 @@ public class HomeFragment extends Fragment {
             layoutFilters.animate().alpha(1f).setDuration(300).start();
         } else {
             layoutFilters.setVisibility(View.GONE);
-            resetFilters();
+            spnDifficulty.setSelection(0);
+            spnTime.setSelection(0);
+            spnRating.setSelection(0);
         }
-    }
-
-    private void resetFilters() {
-        spnDifficulty.setSelection(0);
-        spnTime.setSelection(0);
-        spnRating.setSelection(0);
-        applyFilters();
     }
 
     private void setupSpinners() {
-        String[] difficulties = {"Tất cả", "Dễ", "Trung bình", "Khó"};
-        String[] times = {"Tất cả", "Dưới 15'", "15-30'", "30-60'", "Trên 60'"};
-        String[] ratings = {"Tất cả", "4★ trở lên", "3★ trở lên", "2★ trở lên"};
-
-        if (getContext() != null) {
-            spnDifficulty.setAdapter(new LabelSpinnerAdapter(getContext(), "Độ khó", difficulties));
-            spnTime.setAdapter(new LabelSpinnerAdapter(getContext(), "Thời gian", times));
-            spnRating.setAdapter(new LabelSpinnerAdapter(getContext(), "Đánh giá", ratings));
-        }
-
-        AdapterView.OnItemSelectedListener filterListener = new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                applyFilters();
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
-        };
-
-        spnDifficulty.setOnItemSelectedListener(filterListener);
-        spnTime.setOnItemSelectedListener(filterListener);
-        spnRating.setOnItemSelectedListener(filterListener);
+        String[] diff  = {"Tat ca", "De", "Trung binh", "Kho"};
+        String[] times = {"Tat ca", "Duoi 15'", "15-30'", "30-60'", "Tren 60'"};
+        String[] rats  = {"Tat ca", "4 sao tro len", "3 sao tro len", "2 sao tro len"};
+        if (getContext() == null) return;
+        spnDifficulty.setAdapter(new LabelSpinnerAdapter(getContext(), "Do kho",    diff));
+        spnTime      .setAdapter(new LabelSpinnerAdapter(getContext(), "Thoi gian", times));
+        spnRating    .setAdapter(new LabelSpinnerAdapter(getContext(), "Danh gia",  rats));
     }
 
     private static class LabelSpinnerAdapter extends ArrayAdapter<String> {
         private final String label;
-        public LabelSpinnerAdapter(Context context, String label, String[] items) {
-            super(context, R.layout.spinner_item_selected, items);
-            this.label = label;
+        LabelSpinnerAdapter(Context ctx, String lbl, String[] items) {
+            super(ctx, R.layout.spinner_item_selected, items);
+            label = lbl;
             setDropDownViewResource(R.layout.spinner_dropdown_item);
         }
-        @NonNull
-        @Override
-        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            TextView view = (TextView) super.getView(position, convertView, parent);
-            String item = getItem(position);
-            if (item != null && item.equals("Tất cả")) view.setText(label);
-            else view.setText(item);
-            return view;
+        @NonNull @Override
+        public View getView(int pos, @Nullable View cv, @NonNull ViewGroup parent) {
+            TextView tv = (TextView) super.getView(pos, cv, parent);
+            String item = getItem(pos);
+            tv.setText("Tat ca".equals(item) ? label : item);
+            return tv;
         }
     }
 
-    private void performSearch(String searchText) {
-        tvCategoryTitle.setText("Kết quả cho: '" + searchText + "'");
-        String searchTextNoTone = VNCharacterUtils.removeAccents(searchText);
-        String[] searchWordsNoTone = searchTextNoTone.split("\\s+");
-        db.collection("mon_an").whereArrayContains("tu_khoa_tim_kiem", searchWordsNoTone[0]).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<MonAn> results = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        List<String> dbKeywords = mon.getTu_khoa_tim_kiem();
-                        if (dbKeywords == null) continue;
-                        boolean matchAll = true;
-                        for (String wordNoTone : searchWordsNoTone) {
-                            if (!dbKeywords.contains(wordNoTone)) { matchAll = false; break; }
-                        }
-                        if (matchAll) results.add(mon);
-                    }
-                    Collections.sort(results, (m1, m2) -> Integer.compare(calculateRelevance(m2, searchText, searchTextNoTone), calculateRelevance(m1, searchText, searchTextNoTone)));
-                    listFullCurrentCategory = new ArrayList<>(results);
-                    applyFilters();
-                })
-                .addOnFailureListener(e -> Log.e("HomeFragment", "Search error: " + e.getMessage()));
-    }
-
-    private void applyFilters() {
-        if (spnDifficulty.getSelectedItem() == null) return;
-
-        String difficulty = spnDifficulty.getSelectedItem().toString();
-        String timeRange = spnTime.getSelectedItem().toString();
-        String ratingRange = spnRating.getSelectedItem().toString();
-
-        List<MonAn> filteredList = new ArrayList<>();
-
-        for (MonAn mon : listFullCurrentCategory) {
-            boolean matchDifficulty = difficulty.equals("Tất cả") ||
-                    (mon.getDo_kho() != null && mon.getDo_kho().equals(difficulty));
-
-            boolean matchTime = false;
-            int time = mon.getThoi_gian_nau();
-            if (timeRange.equals("Tất cả")) matchTime = true;
-            else if (timeRange.equals("Dưới 15'") && time < 15) matchTime = true;
-            else if (timeRange.equals("15-30'") && time >= 15 && time <= 30) matchTime = true;
-            else if (timeRange.equals("30-60'") && time > 30 && time <= 60) matchTime = true;
-            else if (timeRange.equals("Trên 60'") && time > 60) matchTime = true;
-
-            boolean matchRating = false;
-            double rating = mon.getRating();
-            if (ratingRange.equals("Tất cả")) matchRating = true;
-            else if (ratingRange.equals("4★ trở lên") && rating >= 4.0) matchRating = true;
-            else if (ratingRange.equals("3★ trở lên") && rating >= 3.0) matchRating = true;
-            else if (ratingRange.equals("2★ trở lên") && rating >= 2.0) matchRating = true;
-
-            if (matchDifficulty && matchTime && matchRating) {
-                filteredList.add(mon);
-            }
-        }
-
-        listCategory.clear();
-        listCategory.addAll(filteredList);
-
-        if (adapterCategory != null) {
-            adapterCategory.setSectionInfo("DANH_MUC", lastCategoryId, difficulty, timeRange, ratingRange);
-            adapterCategory.notifyDataSetChanged();
-        }
-    }
-
-
-    private int calculateRelevance(MonAn mon, String query, String queryNoTone) {
-        int score = 0;
-        String name = mon.getTen_mon().toLowerCase();
-        String nameNoTone = VNCharacterUtils.removeAccents(name);
-        if (name.equals(query)) score += 1000;
-        else if (nameNoTone.equals(queryNoTone)) score += 900;
-        if (name.startsWith(query)) score += 500;
-        else if (nameNoTone.startsWith(queryNoTone)) score += 450;
-        if (name.contains(query)) score += 200;
-        else if (nameNoTone.contains(queryNoTone)) score += 180;
-        return score;
-    }
-
-    private void displayUserProfile() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user != null) {
-            db.collection("nguoi_dung").document(user.getUid()).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (isAdded() && documentSnapshot.exists()) {
-                        String name = documentSnapshot.getString("ho_ten");
-                        if (name != null && !name.isEmpty()) tvGreeting.setText("Xin chào " + name + "!");
-                    }
-                });
-        }
-    }
-
+    // =========================================================================
+    // RECYCLER + FIREBASE LOADERS
+    // =========================================================================
     private void setupRecyclerViews(View view) {
         rvCategory = view.findViewById(R.id.rv_category_dishes);
         rvFeatured = view.findViewById(R.id.rv_featured);
-        rvNew = view.findViewById(R.id.rv_new_recipes);
-        rvHistory = view.findViewById(R.id.rv_history);
-        
-        rvCategory.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        rvFeatured.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        rvNew.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        rvHistory.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        
+        rvNew      = view.findViewById(R.id.rv_new_recipes);
+        rvHistory  = view.findViewById(R.id.rv_history);
+
+        int H = LinearLayoutManager.HORIZONTAL;
+        rvCategory.setLayoutManager(new LinearLayoutManager(getContext(), H, false));
+        rvFeatured.setLayoutManager(new LinearLayoutManager(getContext(), H, false));
+        rvNew     .setLayoutManager(new LinearLayoutManager(getContext(), H, false));
+        rvHistory .setLayoutManager(new LinearLayoutManager(getContext(), H, false));
+
         adapterCategory = new MonAnAdapter(listCategory);
         adapterFeatured = new MonAnAdapter(listFeatured);
         adapterFeatured.setSectionInfo("NOI_BAT", "");
-        adapterNew = new MonAnAdapter(listNew);
+        adapterNew      = new MonAnAdapter(listNew);
         adapterNew.setSectionInfo("MOI", "");
-        adapterHistory = new MonAnAdapter(listHistory);
+        adapterHistory  = new MonAnAdapter(listHistory);
         adapterHistory.setSectionInfo("LICH_SU", "");
-        
+
         rvCategory.setAdapter(adapterCategory);
         rvFeatured.setAdapter(adapterFeatured);
-        rvNew.setAdapter(adapterNew);
-        rvHistory.setAdapter(adapterHistory);
+        rvNew     .setAdapter(adapterNew);
+        rvHistory .setAdapter(adapterHistory);
     }
 
     private void loadFeaturedRecipes() {
-        db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(11).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!isAdded()) return;
+        if (featuredListener != null) featuredListener.remove();
+        featuredListener = db.collection("mon_an")
+                .orderBy("luot_xem", Query.Direction.DESCENDING)
+                .limit(11)
+                .addSnapshotListener((snap, error) -> {
+                    if (!isAdded() || snap == null) {
+                        if (error != null) Log.e(TAG, "Featured err: " + error.getMessage());
+                        return;
+                    }
                     listFeatured.clear();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        listFeatured.add(mon);
+                    for (QueryDocumentSnapshot doc : snap) {
+                        MonAn m = parseMonAn(doc);
+                        if (m != null) listFeatured.add(m);
                     }
                     adapterFeatured.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> Log.e("HomeFragment", "Featured error: " + e.getMessage()));
+                });
     }
 
+    // ✅ FIX: Bỏ orderBy("ngay_tao") vì document mới không có field này
+    // → Dùng orderBy("rating") để sắp xếp có ý nghĩa
     private void loadNewRecipes() {
-        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(11).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!isAdded()) return;
+        if (newRecipesListener != null) newRecipesListener.remove();
+        newRecipesListener = db.collection("mon_an")
+                .orderBy("rating", Query.Direction.DESCENDING)
+                .limit(11)
+                .addSnapshotListener((snap, error) -> {
+                    if (!isAdded() || snap == null) {
+                        if (error != null) Log.e(TAG, "NewRecipes err: " + error.getMessage());
+                        return;
+                    }
                     listNew.clear();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        listNew.add(mon);
+                    for (QueryDocumentSnapshot doc : snap) {
+                        MonAn m = parseMonAn(doc);
+                        if (m != null) listNew.add(m);
                     }
                     adapterNew.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> Log.e("HomeFragment", "New recipes error: " + e.getMessage()));
+                });
     }
 
-    private void loadRecipesByCategory(String categoryId, String title) {
-        if (tvCategoryTitle != null) tvCategoryTitle.setText(title);
-
-        Query query = (categoryId.equals("all"))
-                ? db.collection("mon_an")
-                : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
-
-        query.limit(100).get().addOnSuccessListener(queryDocumentSnapshots -> {
-            if (!isAdded()) return;
-            listFullCurrentCategory.clear();
-            for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                MonAn mon = doc.toObject(MonAn.class);
-                mon.setId_mon_an(doc.getId());
-                listFullCurrentCategory.add(mon);
-            }
-            applyFilters();
-        }).addOnFailureListener(e -> Log.e("HomeFragment", "Category error: " + e.getMessage()));
-    }
-
-    private void loadHistoryRecipes(int limit) {
+    private void loadHistoryRecipes() {
         String uid = mAuth.getUid();
         if (uid == null) return;
-        db.collection("lich_su_xem").whereEqualTo("id_nguoi_dung", uid).orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(limit).get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (!isAdded()) return;
-                    List<String> dishIds = new ArrayList<>();
-                    for (DocumentSnapshot doc : querySnapshot) dishIds.add(doc.getString("id_mon_an"));
-                    if (dishIds.isEmpty()) { listHistory.clear(); adapterHistory.notifyDataSetChanged(); return; }
+
+        if (historyListener != null) historyListener.remove();
+
+        historyListener = db.collection("lich_su_xem")
+                .whereEqualTo("id_nguoi_dung", uid)
+                .orderBy("thoi_gian_xem", Query.Direction.DESCENDING)
+                .limit(11)
+                .addSnapshotListener((snap, error) -> {
+                    if (!isAdded() || snap == null) {
+                        if (error != null) Log.e(TAG, "History err: " + error.getMessage());
+                        return;
+                    }
+
+                    List<String> ids = new ArrayList<>();
+                    for (DocumentSnapshot d : snap) {
+                        String id = d.getString("id_mon_an");
+                        if (id != null) ids.add(id);
+                    }
+
+                    if (ids.isEmpty()) {
+                        listHistory.clear();
+                        adapterHistory.notifyDataSetChanged();
+                        return;
+                    }
+
                     List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
-                    for (String id : dishIds) tasks.add(db.collection("mon_an").document(id).get());
+                    for (String id : ids)
+                        tasks.add(db.collection("mon_an").document(id).get());
+
                     Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
                         if (!isAdded()) return;
                         listHistory.clear();
-                        for (Object result : results) {
-                            DocumentSnapshot monDoc = (DocumentSnapshot) result;
-                            if (monDoc.exists()) {
-                                MonAn mon = monDoc.toObject(MonAn.class);
-                                mon.setId_mon_an(monDoc.getId());
-                                listHistory.add(mon);
+                        for (Object r : results) {
+                            DocumentSnapshot d = (DocumentSnapshot) r;
+                            if (d.exists()) {
+                                MonAn m = parseMonAn(d);
+                                if (m != null) listHistory.add(m);
                             }
                         }
-                        sortHistoryList(dishIds);
+                        // Giữ đúng thứ tự lịch sử xem
+                        List<MonAn> sorted = new ArrayList<>();
+                        for (String id : ids) {
+                            for (MonAn m : listHistory) {
+                                if (id.equals(m.getId_mon_an())) {
+                                    sorted.add(m);
+                                    break;
+                                }
+                            }
+                        }
+                        listHistory.clear();
+                        listHistory.addAll(sorted);
                         adapterHistory.notifyDataSetChanged();
                     });
-                })
-                .addOnFailureListener(e -> Log.e("HomeFragment", "History error: " + e.getMessage()));
+                });
     }
 
-    private void sortHistoryList(List<String> orderIds) {
-        List<MonAn> sortedList = new ArrayList<>();
-        for (String id : orderIds) {
-            for (MonAn mon : listHistory) {
-                if (mon.getId_mon_an().equals(id)) { sortedList.add(mon); break; }
-            }
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+    private void showAiLoading(boolean show) {
+        if (!isAdded()) return;
+        if (pbAiLoading != null) pbAiLoading.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (rvCategory  != null) rvCategory.setVisibility(show ? View.GONE    : View.VISIBLE);
+    }
+
+    private void updateAiInsightsTitle(@Nullable String city) {
+        if (!isAdded() || tvAiInsights == null) return;
+        if (city != null && !city.isEmpty()) {
+            String c = VNCharacterUtils.removeAccents(city.toLowerCase());
+            if      (c.contains("da lat") || c.contains("lam dong"))
+                tvAiInsights.setText("📍 Đà Lạt mát mẻ - AI đang chọn món...");
+            else if (c.contains("ho chi minh"))
+                tvAiInsights.setText("📍 Sài Gòn - AI đang chọn món cho bạn...");
+            else if (c.contains("ha noi"))
+                tvAiInsights.setText("📍 Hà Nội - AI đang chọn món phù hợp...");
+            else
+                tvAiInsights.setText("📍 " + city + " - AI đang chọn món...");
+        } else {
+            tvAiInsights.setText("✨ AI đang phân tích để gợi ý món ăn...");
         }
-        listHistory.clear();
-        listHistory.addAll(sortedList);
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        loadHistoryRecipes(11); 
+    private String getMealTime(int h) {
+        if (h >= 5  && h < 10) return "bua sang";
+        if (h >= 10 && h < 14) return "bua trua";
+        if (h >= 14 && h < 17) return "bua xe/an vat";
+        if (h >= 17 && h < 21) return "bua toi";
+        return "an khuya";
+    }
+
+    private int calcRelevance(MonAn m, String q, String qnt) {
+        if (m.getTen_mon() == null) return 0;
+        int    s  = 0;
+        String n  = m.getTen_mon().toLowerCase();
+        String nt = VNCharacterUtils.removeAccents(n);
+        if (n.equals(q))         s += 1000; else if (nt.equals(qnt))     s += 900;
+        if (n.startsWith(q))     s += 500;  else if (nt.startsWith(qnt)) s += 450;
+        if (n.contains(q))       s += 200;  else if (nt.contains(qnt))   s += 180;
+        return s;
     }
 }
