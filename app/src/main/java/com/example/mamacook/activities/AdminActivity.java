@@ -13,7 +13,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 public class AdminActivity extends AppCompatActivity {
 
     private TextView tvTongNguoiDung, tvTongMonAn, tvTongDanhGia;
-    private LinearLayout layoutThongKe, layoutQuanLyTaiKhoan, layoutQuanLyDanhGia, layoutQuanLyMonAn;
+    private LinearLayout layoutThongKe, layoutQuanLyTaiKhoan, layoutQuanLyDanhGia,
+            layoutQuanLyMonAn, layoutGuiThongBao, layoutChatNguoiDung;
 
     private FirebaseFirestore db;
 
@@ -32,6 +33,8 @@ public class AdminActivity extends AppCompatActivity {
         layoutQuanLyTaiKhoan = findViewById(R.id.layout_quan_ly_tai_khoan);
         layoutQuanLyDanhGia = findViewById(R.id.layout_quan_ly_danh_gia);
         layoutQuanLyMonAn = findViewById(R.id.layout_quan_ly_mon_an);
+        layoutGuiThongBao = findViewById(R.id.layout_gui_thong_bao);
+        layoutChatNguoiDung = findViewById(R.id.layout_chat_nguoi_dung);
 
         loadThongKeNhanh();
         setupClick();
@@ -49,6 +52,12 @@ public class AdminActivity extends AppCompatActivity {
 
         layoutQuanLyMonAn.setOnClickListener(v ->
                 startActivity(new Intent(AdminActivity.this, QuanLyMonAnActivity.class)));
+
+        layoutGuiThongBao.setOnClickListener(v ->
+                startActivity(new Intent(AdminActivity.this, AdminGuiThongBaoActivity.class)));
+
+        layoutChatNguoiDung.setOnClickListener(v ->
+                startActivity(new Intent(AdminActivity.this, DanhSachChatActivity.class)));
     }
 
     private void loadThongKeNhanh() {

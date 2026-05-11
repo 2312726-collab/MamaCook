@@ -16,6 +16,10 @@
         <activity android:name=".activities.QuanLyTaiKhoanActivity" />
         <activity android:name=".activities.QuanLyDanhGiaActivity" />
         <activity android:name=".activities.QuanLyMonAnActivity" />
+        <activity android:name=".activities.AdminGuiThongBaoActivity"/>
+        <activity android:name=".activities.ThongBaoActivity" />
+        <activity android:name=".activities.DanhSachChatActivity" />
+        <activity android:name=".activities.ChatActivity" />
 
         <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
         <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>

@@ -20,6 +20,8 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -52,12 +54,14 @@ public class HomeActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
+    private String tenNguoiDung = "";
     private TextView tvGreeting, tvCategoryTitle;
     private EditText etSearch;
     private ImageButton btnFilter;
-
+    private FrameLayout layoutThongBao;
     private LinearLayout layoutFilters;
     private Spinner spnDifficulty, spnTime, spnRating;
+    private ImageButton btnChatFloat;
 
     private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory, rvWeeklyAttention;
     private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory, adapterWeeklyAttention;
@@ -105,6 +109,21 @@ public class HomeActivity extends AppCompatActivity {
         spnTime = findViewById(R.id.spn_time_main);
         spnRating = findViewById(R.id.spn_rating_main);
         btnAdminMenu = findViewById(R.id.btn_admin_menu);
+        layoutThongBao = findViewById(R.id.layout_thong_bao);
+
+        layoutThongBao.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, ThongBaoActivity.class);
+            startActivity(intent);
+        });
+        btnChatFloat = findViewById(R.id.btn_chat_float);
+
+        btnChatFloat.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, ChatActivity.class);
+            intent.putExtra("che_do", "user");
+            intent.putExtra("ten_user", tenNguoiDung);
+            startActivity(intent);
+        });
+
         checkAdminRole();
         displayUserProfile();
         setupRecyclerViews();
@@ -383,7 +402,13 @@ public class HomeActivity extends AppCompatActivity {
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String name = documentSnapshot.getString("ho_ten");
-                        if (name != null && !name.isEmpty()) tvGreeting.setText("Xin chào " + name + "!");
+
+                        if (name != null && !name.isEmpty()) {
+
+                            tenNguoiDung = name;
+
+                            tvGreeting.setText("Xin chào " + name + "!");
+                        }
                     }
                 });
         }

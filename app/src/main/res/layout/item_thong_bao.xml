@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/bg_admin_card"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tv_tieu_de_thong_bao"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tiêu đề thông báo"
+            android:textColor="#4E342E"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_cham_do_thong_bao"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_badge_notification"
+            android:text="" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_noi_dung_thong_bao"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Nội dung thông báo"
+        android:textColor="#5D4037"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tv_loai_thong_bao"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📢 Hệ thống"
+            android:textColor="#C14400"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_ngay_tao_thong_bao"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="08/05/2026 13:45"
+            android:textColor="#8D6E63"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_xoa_thong_bao"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:layout_gravity="end"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="#D32F2F"
+        android:minWidth="84dp"
+        android:text="Xóa"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

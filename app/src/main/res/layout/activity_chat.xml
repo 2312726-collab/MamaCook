@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F3EC"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <ImageButton
+        android:id="@+id/btn_back_chat"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:background="@drawable/bg_input_field"
+        android:padding="10dp"
+        android:src="@android:drawable/ic_media_previous" />
+
+    <TextView
+        android:id="@+id/tv_tieu_de_chat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Chat với Admin"
+        android:textColor="#4E342E"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_tin_nhan"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="14dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/edt_tin_nhan"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_input_field"
+            android:hint="Nhập tin nhắn..."
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp" />
+
+        <ImageButton
+            android:id="@+id/btn_gui_tin_nhan"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_notification_circle"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_menu_send" />
+    </LinearLayout>
+
+</LinearLayout>

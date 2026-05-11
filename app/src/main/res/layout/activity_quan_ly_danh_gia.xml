@@ -14,9 +14,54 @@
         android:textSize="24sp"
         android:textStyle="bold" />
 
+    <EditText
+        android:id="@+id/edt_tim_ten_nguoi_dung"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_admin_input"
+        android:hint="Tìm theo tên người dùng..."
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:textColor="#4E342E"
+        android:textColorHint="#9E8D82" />
+
+    <EditText
+        android:id="@+id/edt_tim_binh_luan"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_admin_input"
+        android:hint="Tìm theo nội dung bình luận..."
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:textColor="#4E342E"
+        android:textColorHint="#9E8D82" />
+
+    <Spinner
+        android:id="@+id/spinner_trang_thai_danh_gia"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_admin_input"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp" />
+
+    <TextView
+        android:id="@+id/tv_so_luong_danh_gia"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Tổng: 0 đánh giá"
+        android:textColor="#6D4C41"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_danh_gia_admin"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="16dp" />
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1" />
+
 </LinearLayout>

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.mamacook"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -27,6 +27,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -37,6 +38,9 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+
+    // Khai báo rõ ràng để fix triệt để lỗi NonNull
+    implementation("androidx.annotation:annotation:1.9.1")
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -51,7 +55,7 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 
-    // Glide
+    // Glide (Sửa lại bản chuẩn)
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
@@ -59,7 +63,12 @@ dependencies {
     implementation("com.google.firebase:firebase-storage")
     implementation("com.firebaseui:firebase-ui-storage:8.0.2")
 
-    // THƯ VIỆN CẦN THIẾT CHO AI VÀ KIỂM DUYỆT
+    // AI & Retrofit
     implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
     implementation("com.google.guava:guava:33.0.0-android")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
