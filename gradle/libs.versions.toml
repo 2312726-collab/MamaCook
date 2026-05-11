@@ -10,6 +10,9 @@ constraintlayout = "2.2.1"
 googleServices = "4.4.4"
 firebaseBom = "34.10.0"
 facebookSdk = "17.0.0"
+firebaseAppcheckPlayintegrity = "19.0.2"
+firebaseAppcheckDebug = "19.0.2"
+cameraCamera2Pipe = "1.6.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -24,7 +27,10 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version = "21.0.0" }
 facebook-login = { group = "com.facebook.android", name = "facebook-login", version.ref = "facebookSdk" }
-
+firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity" }
+google-firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity", version.ref = "firebaseAppcheckPlayintegrity" }
+firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug", version.ref = "firebaseAppcheckDebug" }
+camera-camera2-pipe = { group = "androidx.camera", name = "camera-camera2-pipe", version.ref = "cameraCamera2Pipe" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

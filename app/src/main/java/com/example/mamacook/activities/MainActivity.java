@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         mAuth = FirebaseAuth.getInstance();
-        // 1. Tự động đăng nhập
         if (mAuth.getCurrentUser() != null) {
             startActivity(new Intent(MainActivity.this, HomeActivity.class));
             finish();
@@ -63,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mCallbackManager = CallbackManager.Factory.create();
         
-        // 2. Ánh xạ View
         etLoginUser = findViewById(R.id.et_login_user);
         etLoginPassword = findViewById(R.id.et_login_password);
         tvForgot = findViewById(R.id.tv_forgot_password);
@@ -72,49 +70,21 @@ public class MainActivity extends AppCompatActivity {
         btnLoginGoogle = findViewById(R.id.btn_login_google);
         btnNavRegister = findViewById(R.id.btn_nav_register);
 
-        // 3. Cấu hình Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // 4. Sự kiện Click
-        if (tvForgot != null) {
-            tvForgot.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, ForgotPasswordActivity.class)));
-        }
+        tvForgot.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, ForgotPasswordActivity.class)));
+        btnLoginMain.setOnClickListener(v -> loginUser());
+        btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
 
-        if (btnLoginMain != null) {
-            btnLoginMain.setOnClickListener(v -> loginUser());
-        }
-
-        if (btnLoginGoogle != null) {
-            btnLoginGoogle.setOnClickListener(v -> {
-                Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                startActivityForResult(signInIntent, RC_SIGN_IN);
-            });
-        }
-
-        if (btnLoginFacebook != null) {
-            btnLoginFacebook.setOnClickListener(v -> {
-                LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile", "email"));
-            });
-        }
-
-        if (btnNavRegister != null) {
-            btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
-        }
-
-        // Callback Facebook
         LoginManager.getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
             @Override
-            public void onSuccess(LoginResult loginResult) {
-                handleAuth(FacebookAuthProvider.getCredential(loginResult.getAccessToken().getToken()));
-            }
+            public void onSuccess(LoginResult loginResult) { handleAuth(FacebookAuthProvider.getCredential(loginResult.getAccessToken().getToken())); }
             @Override public void onCancel() {}
-            @Override public void onError(FacebookException error) {
-                Toast.makeText(MainActivity.this, "Lỗi Facebook: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onError(FacebookException error) { Toast.makeText(MainActivity.this, "Lỗi: " + error.getMessage(), Toast.LENGTH_SHORT).show(); }
         });
     }
 
@@ -127,17 +97,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // TỰ ĐỘNG XỬ LÝ: Nếu không có dấu @ (là SĐT hoặc Tên đăng nhập) -> Thêm đuôi ảo
+        // TỰ ĐỘNG XỬ LÝ: Nếu là SĐT -> Thêm đuôi ảo để login vào Firebase Auth
         String finalEmail = input;
         if (!input.contains("@")) {
             finalEmail = input.toLowerCase() + "@mamacook.com";
         }
 
-        performFirebaseAuth(finalEmail, password);
-    }
-
-    private void performFirebaseAuth(String email, String password) {
-        mAuth.signInWithEmailAndPassword(email, password)
+        mAuth.signInWithEmailAndPassword(finalEmail, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         startActivity(new Intent(MainActivity.this, HomeActivity.class));
@@ -152,37 +118,28 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         mCallbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
-
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                handleAuth(GoogleAuthProvider.getCredential(account.getIdToken(), null));
-            } catch (ApiException e) {
-                Toast.makeText(this, "Lỗi Google: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            try { handleAuth(GoogleAuthProvider.getCredential(task.getResult(ApiException.class).getIdToken(), null)); }
+            catch (ApiException e) { Toast.makeText(this, "Lỗi Google: " + e.getMessage(), Toast.LENGTH_SHORT).show(); }
         }
     }
 
     private void handleAuth(AuthCredential credential) {
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
-            if (task.isSuccessful()) {
-                saveUserToFirestore(mAuth.getCurrentUser());
-            }
+            if (task.isSuccessful()) saveUserToFirestore(mAuth.getCurrentUser());
         });
     }
 
     private void saveUserToFirestore(FirebaseUser firebaseUser) {
         if (firebaseUser == null) return;
         String uid = firebaseUser.getUid();
-
-        db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(documentSnapshot -> {
-            if (!documentSnapshot.exists()) {
+        db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(doc -> {
+            if (!doc.exists()) {
                 User user = new User();
                 user.setId_nguoi_dung(uid);
                 user.setHo_ten(firebaseUser.getDisplayName());
                 user.setEmail(firebaseUser.getEmail());
-                user.setAnh_dai_dien(firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "");
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
                 user.setVai_tro("user");

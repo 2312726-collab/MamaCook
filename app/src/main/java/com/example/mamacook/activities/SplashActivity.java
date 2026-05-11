@@ -3,10 +3,12 @@ package com.example.mamacook.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.appcheck.FirebaseAppCheck;
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -22,7 +24,14 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
+        // --- KHỞI TẠO APP CHECK DEBUG ---
+        FirebaseApp.initializeApp(this);
+        FirebaseAppCheck firebaseAppCheck = FirebaseAppCheck.getInstance();
+        firebaseAppCheck.installAppCheckProviderFactory(
+                DebugAppCheckProviderFactory.getInstance());
+        // --------------------------------
+
         // Luôn kiểm tra Auth ngay lập tức
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
 

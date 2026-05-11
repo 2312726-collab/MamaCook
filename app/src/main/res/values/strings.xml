@@ -12,6 +12,4 @@
 
     <!-- Google Web Client ID (Lấy từ google-services.json) -->
     <string name="default_web_client_id">465869652634-nherujam09rmkno2m783ps2b1g1v68o7.apps.googleusercontent.com</string>
-
-    <string name="gemini_api_key" translatable="false">AIzaSyAoTcMaWnzyBaCtRrzhYManBL-UTcJdraE</string>
 </resources>
