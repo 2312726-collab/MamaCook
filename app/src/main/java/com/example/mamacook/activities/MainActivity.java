@@ -80,6 +80,20 @@ public class MainActivity extends AppCompatActivity {
         btnLoginMain.setOnClickListener(v -> loginUser());
         btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
 
+        // Xử lý sự kiện click cho Google và Facebook
+        if (btnLoginGoogle != null) {
+            btnLoginGoogle.setOnClickListener(v -> {
+                Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                startActivityForResult(signInIntent, RC_SIGN_IN);
+            });
+        }
+
+        if (btnLoginFacebook != null) {
+            btnLoginFacebook.setOnClickListener(v -> {
+                LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile", "email"));
+            });
+        }
+
         LoginManager.getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) { handleAuth(FacebookAuthProvider.getCredential(loginResult.getAccessToken().getToken())); }
