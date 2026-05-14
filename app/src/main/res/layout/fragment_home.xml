@@ -158,7 +158,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
-                        <TextView android:id="@+id/btn_cat_all" style="@style/CategoryButtonActive" android:text="Tất cả" />
+                        <TextView android:id="@+id/btn_cat_all" style="@style/CategoryButtonActive" android:text="Các món gợi ý" />
                         <TextView android:id="@+id/btn_cat_man" style="@style/CategoryButton" android:text="Món mặn" />
                         <TextView android:id="@+id/btn_cat_canh" style="@style/CategoryButton" android:text="Món canh" />
                         <TextView android:id="@+id/btn_cat_chay" style="@style/CategoryButton" android:text="Món chay" />
