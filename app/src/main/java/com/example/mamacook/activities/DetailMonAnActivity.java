@@ -659,6 +659,17 @@ public class DetailMonAnActivity extends AppCompatActivity {
             Double totalScoreVal  = snapshot.getDouble("totalScore");
             Long   reviewCountVal = snapshot.getLong("reviewCount");
 
+                Map<String, Object> comment = new HashMap<>();
+
+                comment.put("id_mon_an", currentDishId);
+                comment.put("noi_dung", noiDung);
+                comment.put("so_sao", soSaoMoi);
+
+                comment.put("trang_thai", "hien_thi");
+
+                comment.put("ten_nguoi_dung", name);
+
+                comment.put("ngay_danh_gia", FieldValue.serverTimestamp());
             double currentTotalScore  = totalScoreVal  != null ? totalScoreVal  : 0.0;
             long   currentReviewCount = reviewCountVal != null ? reviewCountVal : 0L;
 

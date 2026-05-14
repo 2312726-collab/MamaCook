@@ -12,15 +12,24 @@ public class DanhGia {
     private String hinh_anh_url;
     private String trang_thai;
     private Timestamp ngay_danh_gia;
+    private String trang_thai;
+    private String ten_nguoi_dung;
+    private String id_nguoi_dung; // 🔥 thêm
+    private Date ngay_danh_gia;
 
     public DanhGia() {
     }
+    public DanhGia() {}
 
     public DanhGia(String id_nguoi_dung, String ten_nguoi_dung, String avatar_url, String id_mon_an,
                    String noi_dung, float so_sao, String hinh_anh_url, String trang_thai, Timestamp ngay_danh_gia) {
         this.id_nguoi_dung = id_nguoi_dung;
         this.ten_nguoi_dung = ten_nguoi_dung;
         this.avatar_url = avatar_url;
+    public DanhGia(String id_mon_an, String noi_dung, float so_sao,
+                   String trang_thai, String ten_nguoi_dung,
+                   String id_nguoi_dung, Date ngay_danh_gia) {
+
         this.id_mon_an = id_mon_an;
         this.noi_dung = noi_dung;
         this.so_sao = so_sao;
@@ -43,6 +52,7 @@ public class DanhGia {
 
     public void setTen_nguoi_dung(String ten_nguoi_dung) {
         this.ten_nguoi_dung = ten_nguoi_dung;
+        this.id_nguoi_dung = id_nguoi_dung;
     }
 
     public String getAvatar_url() {
@@ -100,4 +110,25 @@ public class DanhGia {
     public void setNgay_danh_gia(Timestamp ngay_danh_gia) {
         this.ngay_danh_gia = ngay_danh_gia;
     }
+
+    public String getId_mon_an() { return id_mon_an; }
+    public void setId_mon_an(String id_mon_an) { this.id_mon_an = id_mon_an; }
+
+    public String getNoi_dung() { return noi_dung; }
+    public void setNoi_dung(String noi_dung) { this.noi_dung = noi_dung; }
+
+    public float getSo_sao() { return so_sao; }
+    public void setSo_sao(float so_sao) { this.so_sao = so_sao; }
+
+    public String getTrang_thai() { return trang_thai; }
+    public void setTrang_thai(String trang_thai) { this.trang_thai = trang_thai; }
+
+    public String getTen_nguoi_dung() { return ten_nguoi_dung; }
+    public void setTen_nguoi_dung(String ten_nguoi_dung) { this.ten_nguoi_dung = ten_nguoi_dung; }
+
+    public String getId_nguoi_dung() { return id_nguoi_dung; }
+    public void setId_nguoi_dung(String id_nguoi_dung) { this.id_nguoi_dung = id_nguoi_dung; }
+
+    public Date getNgay_danh_gia() { return ngay_danh_gia; }
+    public void setNgay_danh_gia(Date ngay_danh_gia) { this.ngay_danh_gia = ngay_danh_gia; }
 }

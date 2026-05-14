@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F3EC"
+    android:orientation="vertical"
+    android:padding="18dp">
+
+    <ImageButton
+        android:id="@+id/btn_back_danh_sach_chat"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:background="@drawable/bg_input_field"
+        android:padding="10dp"
+        android:src="@android:drawable/ic_media_previous" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Chat với người dùng"
+        android:textColor="#4E342E"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_danh_sach_chat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="18dp" />
+
+</LinearLayout>

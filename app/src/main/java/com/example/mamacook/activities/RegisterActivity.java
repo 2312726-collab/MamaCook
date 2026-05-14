@@ -184,7 +184,7 @@ public class RegisterActivity extends AppCompatActivity {
         user.setMat_khau(pass); // Lưu để demo
         user.setNgay_tao(Timestamp.now());
         user.setTrang_thai_tai_khoan("dang_hoat_dong");
-        user.setVai_tro("user");
+        user.setRole("user");
 
         db.collection("nguoi_dung").document(uid).set(user)
                 .addOnSuccessListener(aVoid -> {

@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
                 user.setEmail(firebaseUser.getEmail());
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
-                user.setVai_tro("user");
+                user.setRole("user");
                 db.collection("nguoi_dung").document(uid).set(user);
             }
             startActivity(new Intent(MainActivity.this, HomeActivity.class));
