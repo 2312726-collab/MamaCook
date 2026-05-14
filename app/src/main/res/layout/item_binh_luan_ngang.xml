@@ -3,27 +3,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="260dp"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="12dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    android:layout_margin="8dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#FFF8F1">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp"
-        android:background="#F8F3EB">
+        android:padding="16dp">
 
         <TextView
             android:id="@+id/tvTenNguoiBinhLuan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Khách hàng ẩn danh"
+            android:text="Tên người dùng"
             android:textStyle="bold"
-            android:textColor="#D84315"
-            android:textSize="15sp"
+            android:textColor="#C62828"
+            android:textSize="14sp"
             android:maxLines="1"
             android:ellipsize="end" />
 
@@ -35,20 +33,36 @@
             android:layout_marginTop="4dp"
             android:numStars="5"
             android:rating="5"
-            android:progressTint="#FFC107"
-            android:secondaryProgressTint="#FFC107" />
+            android:progressTint="#FFB300"
+            android:secondaryProgressTint="#FFB300" />
 
         <TextView
             android:id="@+id/tvNoiDungBinhLuan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Món này ngon quá 10 điểm không có nhưng..."
-            android:textColor="#333333"
-            android:textSize="14sp"
-            android:lineSpacingExtra="3dp"
-            android:maxLines="3"
+            android:layout_marginTop="8dp"
+            android:text="Nội dung bình luận cực kỳ ngon và hấp dẫn..."
+            android:textColor="#4E342E"
+            android:textSize="13sp"
+            android:maxLines="2"
             android:ellipsize="end" />
+
+        <!-- Comment Image (optional, only if exists) -->
+        <ImageView
+            android:id="@+id/imgBinhLuan"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_marginTop="10dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:background="@drawable/bg_ingredient_item" />
+
+        <!-- Hidden Avatar for compatibility with Adapter if needed -->
+        <ImageView
+            android:id="@+id/imgAvatarBinhLuan"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

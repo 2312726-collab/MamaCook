@@ -244,8 +244,8 @@ public class SampleData {
         List<MonAn.BuocNau> buocNauList = new ArrayList<>();
         for (int i = 0; i < buocs.length; i++) {
             MonAn.BuocNau bn = new MonAn.BuocNau();
-            bn.so_thu_tu = i + 1;
-            bn.noi_dung_buoc = buocs[i];
+            bn.so_buoc = i + 1;
+            bn.mo_ta = buocs[i];
             buocNauList.add(bn);
         }
         mon.setDanh_sach_buoc_nau(buocNauList);

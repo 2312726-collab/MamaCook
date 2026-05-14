@@ -59,6 +59,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import androidx.recyclerview.widget.GridLayoutManager;
+import com.example.mamacook.adapters.NguyenLieuAdapter;
+import com.example.mamacook.adapters.BuocNauAdapter;
 
 public class DetailMonAnActivity extends AppCompatActivity {
 
@@ -66,22 +69,20 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     // =========================================================================
     // Keys cho Intent extras
-    // Màn danh sách truyền những key này để DetailMonAnActivity hiển thị NGAY,
-    // không cần chờ Firestore thêm lần nào nữa.
     // =========================================================================
     public static final String EXTRA_ID           = "ID_MON_AN";
     public static final String EXTRA_HINH_ANH     = "HINH_ANH";
     public static final String EXTRA_TEN_MON      = "TEN_MON";
-    public static final String EXTRA_THOI_GIAN    = "THOI_GIAN";       // int, phút
-    public static final String EXTRA_RATING       = "RATING";           // String, vd "4.9"
-    public static final String EXTRA_REVIEW_COUNT = "REVIEW_COUNT";     // int
-    public static final String EXTRA_NGUYEN_LIEU  = "NGUYEN_LIEU";      // String đã format sẵn
+    public static final String EXTRA_THOI_GIAN    = "THOI_GIAN";
+    public static final String EXTRA_RATING       = "RATING";
+    public static final String EXTRA_REVIEW_COUNT = "REVIEW_COUNT";
+    public static final String EXTRA_NGUYEN_LIEU  = "NGUYEN_LIEU";
 
     private FirebaseFirestore db;
     private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment;
-    private TextView tvTen, tvRatingInfo, tvThoiGian, tvNguyenLieu, tvDiemTrungBinh, tvXemTatCa;
-    private LinearLayout layoutBuocNau;
+    private TextView tvTen, tvRatingInfo, tvThoiGian, tvDiemTrungBinh, tvXemTatCa;
     private RelativeLayout layoutPreviewImage;
+    private LinearLayout layoutInputComment;
     private RecyclerView rvDanhGia;
     private BinhLuanNgangAdapter adapterBinhLuan;
     private final List<DanhGia> danhSachBinhLuan = new ArrayList<>();
@@ -98,8 +99,16 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> galleryLauncher;
     private ActivityResultLauncher<Uri> cameraLauncher;
     private ProgressDialog progressDialog;
+    private RecyclerView rvNguyenLieu, rvBuocNau;
+    private NguyenLieuAdapter nguyenLieuAdapter;
+    private BuocNauAdapter buocNauAdapter;
+    private TextView tvDoKho, tvKhauPhan, tvRegion, tvSoDanhGia, tvChuanBi, btnXemThemNguyenLieu;
+    private LinearLayout layoutBuocNauHeader;
+    private ImageView ivBuocNauArrow;
+    private boolean isBuocNauExpanded = false;
+    private List<MonAn.ChiTietNguyenLieu> fullNguyenLieuList = new ArrayList<>();
+    private boolean isShowingAllNguyenLieu = false;
 
-    // ── 1. Thêm 7 constants EXTRA_* để truyền data qua Intent ──
     public static Intent createIntent(Context context, MonAn monAn) {
         Intent intent = new Intent(context, DetailMonAnActivity.class);
         intent.putExtra(EXTRA_ID,           monAn.getId_mon_an());
@@ -112,10 +121,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         return intent;
     }
 
-    /**
-     * Build chuỗi nguyên liệu — static để dùng được từ createIntent().
-     * Ví dụ output: "• 200 g Bánh tráng trắng cắt sợi"
-     */
     public static String buildNguyenLieuTextStatic(MonAn monAn) {
         if (monAn.getDanh_sach_nguyen_lieu() == null) {
             return "";
@@ -133,10 +138,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         return sb.toString().trim();
     }
 
-    /**
-     * Format số lượng — bỏ ".0" nếu là số nguyên.
-     * Ví dụ: 200.0 -> "200", 1.5 -> "1.5"
-     */
     public static String formatSoLuong(double soLuong) {
         if (soLuong == (long) soLuong) {
             return String.valueOf((long) soLuong);
@@ -179,15 +180,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
             return;
         }
 
-        // BƯỚC 1: Hiển thị ngay lập tức từ Intent (0ms, không chờ mạng)
         renderFromIntent();
-
-        // BƯỚC 2: Chỉ load bước nấu từ Firestore (những gì không truyền qua Intent được)
-        loadBuocNauFromFirestore(currentDishId);
-
-        // Rating realtime — cập nhật khi có review mới
         listenRatingRealtime(currentDishId);
-
         fetchLatestReviews(currentDishId);
         checkIfSaved();
         checkIfInPlan();
@@ -201,7 +195,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private void renderFromIntent() {
         Intent i = getIntent();
 
-        // Ảnh
         String hinhAnh = i.getStringExtra(EXTRA_HINH_ANH);
         if (!TextUtils.isEmpty(hinhAnh)) {
             if (hinhAnh.startsWith("http")) {
@@ -220,84 +213,21 @@ public class DetailMonAnActivity extends AppCompatActivity {
             }
         }
 
-        // Tên món
         String tenMon = i.getStringExtra(EXTRA_TEN_MON);
         if (!TextUtils.isEmpty(tenMon)) {
             tvTen.setText(tenMon);
         }
 
-        // Thời gian nấu
         int thoiGian = i.getIntExtra(EXTRA_THOI_GIAN, 0);
         if (thoiGian > 0) {
             tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", thoiGian));
         }
 
-        // Rating và số đánh giá
         String rating      = i.getStringExtra(EXTRA_RATING);
         int    reviewCount = i.getIntExtra(EXTRA_REVIEW_COUNT, 0);
         if (!TextUtils.isEmpty(rating)) {
             updateRatingUI(rating, reviewCount);
         }
-
-        // Nguyên liệu
-        String nguyenLieu = i.getStringExtra(EXTRA_NGUYEN_LIEU);
-        if (!TextUtils.isEmpty(nguyenLieu)) {
-            tvNguyenLieu.setText(nguyenLieu);
-        } else {
-            // Fallback: mở từ lịch sử hoặc nơi không truyền đủ data
-            tvNguyenLieu.setText("Đang tải...");
-        }
-    }
-
-    // =========================================================================
-    // BƯỚC 2 — Firestore: chỉ load bước nấu + fallback nguyên liệu
-    // =========================================================================
-
-    private void loadBuocNauFromFirestore(String id) {
-        db.collection("mon_an").document(id).get()
-                .addOnSuccessListener(doc -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    if (!doc.exists()) {
-                        // Chỉ finish nếu Intent cũng không có tên (mở từ ID bị xóa)
-                        if (TextUtils.isEmpty(getIntent().getStringExtra(EXTRA_TEN_MON))) {
-                            Toast.makeText(this, "Món ăn không còn tồn tại!", Toast.LENGTH_LONG).show();
-                            finish();
-                        }
-                        return;
-                    }
-
-                    MonAn monAn = doc.toObject(MonAn.class);
-                    if (monAn == null) {
-                        return;
-                    }
-
-                    // Render bước nấu
-                    layoutBuocNau.removeAllViews();
-                    if (monAn.getDanh_sach_buoc_nau() != null) {
-                        for (MonAn.BuocNau buoc : monAn.getDanh_sach_buoc_nau()) {
-                            View stepView = LayoutInflater.from(this)
-                                    .inflate(R.layout.item_step_cook, layoutBuocNau, false);
-                            TextView tvTitle   = stepView.findViewById(R.id.tv_step_title);
-                            TextView tvContent = stepView.findViewById(R.id.tv_step_content);
-                            tvTitle.setText(String.format(
-                                    Locale.getDefault(), "Bước %d", buoc.so_thu_tu));
-                            tvContent.setText(buoc.noi_dung_buoc);
-                            layoutBuocNau.addView(stepView);
-                        }
-                    }
-
-                    // Fallback nguyên liệu nếu Intent không có
-                    boolean chuaCoNguyenLieu = TextUtils.isEmpty(
-                            getIntent().getStringExtra(EXTRA_NGUYEN_LIEU));
-                    if (chuaCoNguyenLieu && monAn.getDanh_sach_nguyen_lieu() != null) {
-                        tvNguyenLieu.setText(buildNguyenLieuTextStatic(monAn));
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Lỗi load bước nấu: " + e.getMessage());
-                });
     }
 
     // =========================================================================
@@ -307,8 +237,10 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private void updateRatingUI(String rating, int count) {
         tvRatingInfo.setText(
                 String.format(new Locale("vi", "VN"), "🕒 %s ⭐ (%d)", rating, count));
-        tvDiemTrungBinh.setText(
-                String.format(new Locale("vi", "VN"), "⭐ %s (%d đánh giá)", rating, count));
+        tvDiemTrungBinh.setText("⭐ " + rating);
+        if (tvSoDanhGia != null) {
+            tvSoDanhGia.setText(String.format(new Locale("vi", "VN"), "(%d đánh giá)", count));
+        }
     }
 
     // =========================================================================
@@ -320,19 +252,28 @@ public class DetailMonAnActivity extends AppCompatActivity {
         tvTen              = findViewById(R.id.tv_detail_ten);
         tvRatingInfo       = findViewById(R.id.tv_detail_rating_info);
         tvThoiGian         = findViewById(R.id.tv_detail_thoi_gian);
-        tvNguyenLieu       = findViewById(R.id.tv_detail_nguyen_lieu);
         tvDiemTrungBinh    = findViewById(R.id.tvDiemTrungBinh);
         tvXemTatCa         = findViewById(R.id.tvXemTatCa);
-        layoutBuocNau      = findViewById(R.id.layout_buoc_nau);
         rvDanhGia          = findViewById(R.id.rv_danh_gia);
         etBinhLuan         = findViewById(R.id.et_binh_luan);
         rbChonSao          = findViewById(R.id.rb_chon_sao);
         btnGuiBinhLuan     = findViewById(R.id.btn_gui_binh_luan);
         btnFavoriteDetail  = findViewById(R.id.btn_favorite_detail);
-        btnAddToPlan       = findViewById(R.id.btn_add_to_plan); // Giả sử ID là btn_add_to_plan
-        btnAddAttachment   = findViewById(R.id.btn_comment_attach_img);
-        imgPreviewComment  = findViewById(R.id.img_comment_preview_item);
-        layoutPreviewImage = findViewById(R.id.layout_comment_img_preview);
+        btnAddToPlan       = findViewById(R.id.btn_add_to_plan);
+        btnAddAttachment   = findViewById(R.id.btn_add_attachment);
+        imgPreviewComment  = findViewById(R.id.img_preview_comment);
+        layoutPreviewImage = findViewById(R.id.layout_preview_image);
+        layoutInputComment = findViewById(R.id.layout_input_comment);
+        rvNguyenLieu = findViewById(R.id.rv_nguyen_lieu);
+        rvBuocNau = findViewById(R.id.rv_buoc_nau);
+        tvDoKho = findViewById(R.id.tv_detail_do_kho);
+        tvKhauPhan = findViewById(R.id.tv_detail_khau_phan);
+        tvRegion = findViewById(R.id.tv_detail_region);
+        tvSoDanhGia = findViewById(R.id.tv_so_danh_gia);
+        tvChuanBi = findViewById(R.id.tv_detail_chuan_bi);
+        btnXemThemNguyenLieu = findViewById(R.id.btn_xem_them_nguyen_lieu);
+        layoutBuocNauHeader = findViewById(R.id.layout_buoc_nau_header);
+        ivBuocNauArrow = findViewById(R.id.iv_buoc_nau_arrow);
     }
 
     private void setupToolbar() {
@@ -345,32 +286,48 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
+        // Nguyên liệu Grid 2 cột
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
+        rvNguyenLieu.setLayoutManager(gridLayoutManager);
+        nguyenLieuAdapter = new NguyenLieuAdapter(new ArrayList<>());
+        rvNguyenLieu.setAdapter(nguyenLieuAdapter);
+
+        // Bước nấu Linear
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        rvBuocNau.setLayoutManager(linearLayoutManager);
+        buocNauAdapter = new BuocNauAdapter(new ArrayList<>());
+        rvBuocNau.setAdapter(buocNauAdapter);
+
+        // Comment Horizontal List
+        LinearLayoutManager horizontalLayout = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        rvDanhGia.setLayoutManager(horizontalLayout);
         adapterBinhLuan = new BinhLuanNgangAdapter(danhSachBinhLuan);
-        rvDanhGia.setLayoutManager(
-                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvDanhGia.setAdapter(adapterBinhLuan);
     }
 
     private void setupScrollBehavior() {
-        NestedScrollView scrollDetail = findViewById(R.id.nsv_detail_scroll);
+        NestedScrollView scrollDetail = findViewById(R.id.scroll_detail);
         if (scrollDetail == null || etBinhLuan == null) {
             return;
         }
 
-        // Tự động cuộn xuống khi chạm vào ô nhập liệu
-        etBinhLuan.setOnClickListener(v -> {
-            etBinhLuan.postDelayed(
-                    () -> scrollDetail.fullScroll(View.FOCUS_DOWN), 300);
-        });
+        // Khi khung bao quanh được click -> focus vào ô nhập
+        if (layoutInputComment != null) {
+            layoutInputComment.setOnClickListener(v -> {
+                etBinhLuan.requestFocus();
+                // Hiển thị bàn phím thủ công nếu cần
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.showSoftInput(etBinhLuan, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            });
+        }
 
         etBinhLuan.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
                 etBinhLuan.postDelayed(
-                        () -> scrollDetail.fullScroll(View.FOCUS_DOWN), 300);
+                        () -> scrollDetail.fullScroll(View.FOCUS_DOWN), 400);
             }
         });
 
-        // Lắng nghe bàn phím hiện/ẩn để cuộn trang
         scrollDetail.addOnLayoutChangeListener(
                 (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
                     if (bottom < oldBottom) {
@@ -403,12 +360,22 @@ public class DetailMonAnActivity extends AppCompatActivity {
             });
         }
 
-        View btnRemovePreview = findViewById(R.id.btn_comment_remove_img);
+        View btnRemovePreview = findViewById(R.id.btn_remove_preview);
         if (btnRemovePreview != null) {
             btnRemovePreview.setOnClickListener(v -> {
                 imageUri = null;
                 layoutPreviewImage.setVisibility(View.GONE);
             });
+        }
+
+        // Xem thêm nguyên liệu
+        if (btnXemThemNguyenLieu != null) {
+            btnXemThemNguyenLieu.setOnClickListener(v -> toggleNguyenLieu());
+        }
+
+        // Toggle các bước nấu
+        if (layoutBuocNauHeader != null) {
+            layoutBuocNauHeader.setOnClickListener(v -> toggleBuocNau());
         }
     }
 
@@ -501,6 +468,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 });
     }
 
+    // =========================================================================
+    // THAY ĐỔI: guiBinhLuan — không gọi AI ở đây, chỉ validate và lưu ngay
+    // =========================================================================
     private void guiBinhLuan() {
         if (currentUserId == null) {
             Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
@@ -521,12 +491,14 @@ public class DetailMonAnActivity extends AppCompatActivity {
             return;
         }
 
+        // Hiện loading, chặn nút gửi
         progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Mamacook đang xử lý bình luận...");
+        progressDialog.setMessage("Đang gửi bình luận...");
         progressDialog.setCancelable(false);
         progressDialog.show();
         btnGuiBinhLuan.setEnabled(false);
 
+        // Upload ảnh nếu có, không thì lưu thẳng
         if (imageUri != null) {
             compressAndUploadImage(imageUri, noiDung, soSao);
         } else {
@@ -537,10 +509,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private void compressAndUploadImage(Uri uri, String noiDung, float soSao) {
         progressDialog.setMessage("Đang xử lý và nén ảnh...");
 
-        // Chạy trong thread riêng để không treo giao diện
         new Thread(() -> {
             try {
-                // 1. Đọc ảnh từ URI thành Bitmap
                 java.io.InputStream inputStream = getContentResolver().openInputStream(uri);
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
                 if (inputStream != null) {
@@ -555,7 +525,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     return;
                 }
 
-                // 2. Giảm kích thước ảnh nếu quá lớn (Max 1024px)
                 int   maxSize = 1024;
                 float ratio   = Math.min(
                         (float) maxSize / bitmap.getWidth(),
@@ -568,13 +537,11 @@ public class DetailMonAnActivity extends AppCompatActivity {
                             true);
                 }
 
-                // 3. Nén Bitmap thành mảng Byte (JPEG 75%)
                 java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 75, baos);
                 byte[] data = baos.toByteArray();
                 bitmap.recycle();
 
-                // 4. Upload lên Firebase
                 runOnUiThread(() -> uploadBytesToFirebase(data, noiDung, soSao));
 
             } catch (Exception e) {
@@ -615,6 +582,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 });
     }
 
+    // =========================================================================
+    // THAY ĐỔI: Lưu ngay với "cho_duyet" → toast → gọi AI kiểm duyệt ngầm
+    // =========================================================================
     private void saveReviewToFirestore(String content, float stars, String imageUrl) {
         FirebaseUser user   = FirebaseAuth.getInstance().getCurrentUser();
         String name   = (user != null && !TextUtils.isEmpty(user.getDisplayName()))
@@ -630,7 +600,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         review.put("noi_dung",       content);
         review.put("so_sao",         stars);
         review.put("hinh_anh_url",   imageUrl);
-        review.put("trang_thai",     "hien_thi");
+        review.put("trang_thai",     "cho_duyet"); // Lưu trước, chờ AI duyệt
         review.put("ngay_danh_gia",  FieldValue.serverTimestamp());
 
         db.collection("danh_gia").add(review)
@@ -640,8 +610,26 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     rbChonSao.setRating(0);
                     imageUri = null;
                     layoutPreviewImage.setVisibility(View.GONE);
-                    updateTotalRating(stars);
-                    Toast.makeText(this, "Đã gửi bình luận thành công!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Đã gửi bình luận, đang kiểm duyệt...", Toast.LENGTH_SHORT).show();
+
+                    // Lắng nghe Cloud Function cập nhật trang_thai
+                    String docId = documentReference.getId();
+                    final float finalStars = stars;
+                    documentReference.addSnapshotListener((snap, err) -> {
+                        if (snap == null || !snap.exists()) return;
+                        String trangThai = snap.getString("trang_thai");
+                        if (trangThai == null || trangThai.equals("cho_duyet")) return;
+
+                        // Cloud Function đã duyệt xong
+                        if (trangThai.equals("hien_thi")) {
+                            updateTotalRating(finalStars);
+                            Toast.makeText(this, "Bình luận đã được duyệt!", Toast.LENGTH_SHORT).show();
+                        } else if (trangThai.equals("vi_pham")) {
+                            Toast.makeText(this, "Bình luận bị từ chối do vi phạm nội quy.", Toast.LENGTH_LONG).show();
+                        }
+                        // Hủy listener sau khi đã xử lý xong
+                        documentReference.addSnapshotListener((s, e) -> {}).remove();
+                    });
                 })
                 .addOnFailureListener(e -> {
                     dismissProgress();
@@ -705,8 +693,10 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private void updatePlanButtonUI() {
         if (btnAddToPlan == null) return;
         if (isInPlan) {
-            btnAddToPlan.setColorFilter(Color.parseColor("#FFEB3B")); // Màu vàng cho món trong kế hoạch
+            btnAddToPlan.setBackgroundResource(R.drawable.bg_header_button_plan_selected);
+            btnAddToPlan.setColorFilter(Color.parseColor("#FF6600"));
         } else {
+            btnAddToPlan.setBackgroundResource(R.drawable.bg_header_button_glass);
             btnAddToPlan.setColorFilter(Color.WHITE);
         }
     }
@@ -724,7 +714,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
             db.collection("ke_hoach_nau_an").document(idPlan).delete()
                     .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã xóa khỏi kế hoạch!", Toast.LENGTH_SHORT).show());
         } else {
-            // Hiện Dialog chọn buổi
             String[] types = {"Sáng", "Trưa", "Tối"};
             new AlertDialog.Builder(this)
                     .setTitle("Chọn buổi nấu ăn")
@@ -783,30 +772,49 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     currentMonAn = doc.toObject(MonAn.class);
                     if (currentMonAn != null) {
                         currentMonAn.setId_mon_an(doc.getId());
-                        // Cập nhật Rating UI
                         updateRatingUI(RatingUtils.getRatingOnly(currentMonAn), currentMonAn.getReviewCount());
 
-                        // Cập nhật thông tin cơ bản (Tên, thời gian) nếu có thay đổi từ admin
                         tvTen.setText(currentMonAn.getTen_mon());
-                        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", currentMonAn.getThoi_gian_nau()));
+                        tvThoiGian.setText(String.format(Locale.getDefault(), "%d phút", currentMonAn.getThoi_gian_nau()));
 
-                        // Cập nhật Nguyên liệu
+                        // Cập nhật nguyên liệu - THAY ĐỔI
                         if (currentMonAn.getDanh_sach_nguyen_lieu() != null) {
-                            tvNguyenLieu.setText(buildNguyenLieuTextStatic(currentMonAn));
+                            fullNguyenLieuList = currentMonAn.getDanh_sach_nguyen_lieu();
+                            updateNguyenLieuDisplay();
                         }
 
-                        // Cập nhật các bước nấu
-                        layoutBuocNau.removeAllViews();
+                        // Cập nhật bước nấu
                         if (currentMonAn.getDanh_sach_buoc_nau() != null) {
-                            for (MonAn.BuocNau buoc : currentMonAn.getDanh_sach_buoc_nau()) {
-                                View stepView = LayoutInflater.from(this)
-                                        .inflate(R.layout.item_step_cook, layoutBuocNau, false);
-                                TextView tvTitle   = stepView.findViewById(R.id.tv_step_title);
-                                TextView tvContent = stepView.findViewById(R.id.tv_step_content);
-                                tvTitle.setText(String.format(
-                                        Locale.getDefault(), "Bước %d", buoc.so_thu_tu));
-                                tvContent.setText(buoc.noi_dung_buoc);
-                                layoutBuocNau.addView(stepView);
+                            buocNauAdapter = new BuocNauAdapter(currentMonAn.getDanh_sach_buoc_nau());
+                            rvBuocNau.setAdapter(buocNauAdapter);
+                            rvBuocNau.setVisibility(View.VISIBLE);
+                        }
+
+                        // Cập nhật info card - MỚI
+                        if (tvDoKho != null && currentMonAn.getDo_kho() != null) {
+                            tvDoKho.setText(currentMonAn.getDo_kho());
+                        }
+                        if (tvKhauPhan != null) {
+                            tvKhauPhan.setText(String.format(Locale.getDefault(), "%d người", currentMonAn.getKhau_phan()));
+                        }
+                        if (tvRegion != null && currentMonAn.getVung_mien() != null) {
+                            tvRegion.setText(currentMonAn.getVung_mien());
+                        }
+
+                        // Cập nhật chuẩn bị/sơ chế - MỚI
+                        if (tvChuanBi != null) {
+                            if (currentMonAn.getDanh_sach_so_che() != null && !currentMonAn.getDanh_sach_so_che().isEmpty()) {
+                                StringBuilder sb = new StringBuilder();
+                                for (MonAn.SoChe sc : currentMonAn.getDanh_sach_so_che()) {
+                                    if (sc.tieu_de != null && !sc.tieu_de.isEmpty()) {
+                                        sb.append(sc.tieu_de).append(": ");
+                                    }
+                                    sb.append(sc.noi_dung).append("\n\n");
+                                }
+                                tvChuanBi.setText(sb.toString().trim());
+                                ((View)tvChuanBi.getParent()).setVisibility(View.VISIBLE);
+                            } else {
+                                ((View)tvChuanBi.getParent()).setVisibility(View.GONE);
                             }
                         }
                     }
@@ -835,9 +843,13 @@ public class DetailMonAnActivity extends AppCompatActivity {
             return;
         }
         if (isSaved) {
+            btnFavoriteDetail.setImageResource(R.drawable.ic_heart_filled);
             btnFavoriteDetail.setColorFilter(Color.RED);
+            btnFavoriteDetail.setBackgroundResource(R.drawable.bg_header_button_favorite_selected);
         } else {
+            btnFavoriteDetail.setImageResource(R.drawable.ic_heart_outline);
             btnFavoriteDetail.setColorFilter(Color.WHITE);
+            btnFavoriteDetail.setBackgroundResource(R.drawable.bg_header_button_glass);
         }
         if (animate) {
             btnFavoriteDetail.animate()
@@ -900,12 +912,10 @@ public class DetailMonAnActivity extends AppCompatActivity {
                         return;
                     }
                     if (!querySnapshot.isEmpty()) {
-                        // Cập nhật thời gian xem nếu đã có trong lịch sử
                         db.collection("lich_su_xem")
                                 .document(querySnapshot.getDocuments().get(0).getId())
                                 .update("thoi_gian_xem", FieldValue.serverTimestamp());
                     } else {
-                        // Thêm mới vào lịch sử
                         Map<String, Object> h = new HashMap<>();
                         h.put("id_nguoi_dung", currentUserId);
                         h.put("id_mon_an",     dishId);
@@ -935,5 +945,61 @@ public class DetailMonAnActivity extends AppCompatActivity {
                                 .delete();
                     }
                 });
+    }
+
+    private void updateNguyenLieuDisplay() {
+        if (fullNguyenLieuList == null || fullNguyenLieuList.isEmpty()) {
+            return;
+        }
+
+        List<MonAn.ChiTietNguyenLieu> displayList;
+        if (isShowingAllNguyenLieu || fullNguyenLieuList.size() <= 6) {
+            displayList = fullNguyenLieuList;
+        } else {
+            displayList = fullNguyenLieuList.subList(0, 6);
+        }
+
+        // Cập nhật text của nút xem thêm
+        if (btnXemThemNguyenLieu != null) {
+            if (fullNguyenLieuList.size() <= 6) {
+                btnXemThemNguyenLieu.setVisibility(View.GONE);
+            } else {
+                btnXemThemNguyenLieu.setVisibility(View.VISIBLE);
+                if (isShowingAllNguyenLieu) {
+                    btnXemThemNguyenLieu.setText("- Thu gọn");
+                } else {
+                    int remaining = fullNguyenLieuList.size() - 6;
+                    btnXemThemNguyenLieu.setText(String.format("+ Xem thêm %d nguyên liệu", remaining));
+                }
+            }
+        }
+
+        nguyenLieuAdapter = new NguyenLieuAdapter(displayList);
+        rvNguyenLieu.setAdapter(nguyenLieuAdapter);
+    }
+
+    private void toggleNguyenLieu() {
+        isShowingAllNguyenLieu = !isShowingAllNguyenLieu;
+        updateNguyenLieuDisplay();
+
+        if (isShowingAllNguyenLieu && btnXemThemNguyenLieu != null) {
+            btnXemThemNguyenLieu.setText("- Thu gọn");
+        }
+    }
+
+    private void toggleBuocNau() {
+        isBuocNauExpanded = !isBuocNauExpanded;
+
+        if (isBuocNauExpanded) {
+            rvBuocNau.setVisibility(View.VISIBLE);
+            if (ivBuocNauArrow != null) {
+                ivBuocNauArrow.setRotation(180);
+            }
+        } else {
+            rvBuocNau.setVisibility(View.GONE);
+            if (ivBuocNauArrow != null) {
+                ivBuocNauArrow.setRotation(0);
+            }
+        }
     }
 }

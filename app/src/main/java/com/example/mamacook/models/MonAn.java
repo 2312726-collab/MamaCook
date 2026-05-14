@@ -18,25 +18,37 @@ public class MonAn {
     private double totalScore;
     private double gia_tien;
     private int match_score;
+    private int khau_phan;
+    private String vung_mien;
 
     private List<BuocNau> danh_sach_buoc_nau;
     private List<ChiTietNguyenLieu> danh_sach_nguyen_lieu;
-    
+    private List<SoChe> danh_sach_so_che;    // Thêm trường sơ chế
+
     private List<String> tu_khoa_tim_kiem;
 
     public MonAn() {}
 
+    public static class SoChe {
+        public String tieu_de;
+        public String noi_dung;
+        public SoChe() {}
+    }
+
     public static class BuocNau {
-        public int so_thu_tu;
-        public String noi_dung_buoc;
+        public int so_buoc;              // Đổi từ so_thu_tu thành so_buoc
+        public String tieu_de;
+        public String mo_ta;             // Đổi từ noi_dung_buoc thành mo_ta
         public String hinh_anh_buoc;
+        public int thoi_gian_buoc;
         public BuocNau() {}
     }
 
     public static class ChiTietNguyenLieu {
         public String ten_nguyen_lieu;
-        public double so_luong; // ← Đã đổi từ int thành double (Nam Phước cập nhật)
+        public double so_luong;
         public String don_vi;
+        public String ghi_chu;           // Thêm trường ghi_chu
         public ChiTietNguyenLieu() {}
     }
 
@@ -46,6 +58,12 @@ public class MonAn {
 
     public double getGia_tien() { return gia_tien; }
     public void setGia_tien(double gia_tien) { this.gia_tien = gia_tien; }
+
+    public int getKhau_phan() { return khau_phan; }
+    public void setKhau_phan(int khau_phan) { this.khau_phan = khau_phan; }
+
+    public String getVung_mien() { return vung_mien; }
+    public void setVung_mien(String vung_mien) { this.vung_mien = vung_mien; }
 
     public String getId_mon_an() { return id_mon_an; }
     public void setId_mon_an(String id_mon_an) { this.id_mon_an = id_mon_an; }
@@ -79,6 +97,8 @@ public class MonAn {
     public void setDanh_sach_buoc_nau(List<BuocNau> danh_sach_buoc_nau) { this.danh_sach_buoc_nau = danh_sach_buoc_nau; }
     public List<ChiTietNguyenLieu> getDanh_sach_nguyen_lieu() { return danh_sach_nguyen_lieu; }
     public void setDanh_sach_nguyen_lieu(List<ChiTietNguyenLieu> danh_sach_nguyen_lieu) { this.danh_sach_nguyen_lieu = danh_sach_nguyen_lieu; }
+    public List<SoChe> getDanh_sach_so_che() { return danh_sach_so_che; }
+    public void setDanh_sach_so_che(List<SoChe> danh_sach_so_che) { this.danh_sach_so_che = danh_sach_so_che; }
     public List<String> getTu_khoa_tim_kiem() { return tu_khoa_tim_kiem; }
     public void setTu_khoa_tim_kiem(List<String> tu_khoa_tim_kiem) { this.tu_khoa_tim_kiem = tu_khoa_tim_kiem; }
     

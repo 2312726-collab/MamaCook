@@ -44,7 +44,10 @@
         <activity android:name=".activities.MainActivity" android:exported="true" />
         <activity android:name=".activities.HomeActivity" android:exported="false" />
         <activity android:name=".activities.RegisterActivity" android:exported="false" />
-        <activity android:name=".activities.DetailMonAnActivity" android:exported="false" />
+        <activity
+            android:name=".activities.DetailMonAnActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".activities.TatCaBinhLuanActivity" android:exported="false" />
         <activity android:name=".activities.SeeAllActivity" android:exported="false" />
         <activity android:name=".activities.ForgotPasswordActivity" android:exported="false" />
