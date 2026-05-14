@@ -33,6 +33,7 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity {
     private final List<DocumentSnapshot> filteredList = new ArrayList<>();
 
     private boolean dangLocViPham = false;
+    private String keywordHienTai = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,68 +53,41 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity {
         rvUsers.setLayoutManager(new LinearLayoutManager(this));
         rvUsers.setAdapter(adapter);
 
-        loadUsers();
-
         setupSearch();
-
         setupButtons();
+        loadUsers();
     }
 
     private void loadUsers() {
-
         db.collection("nguoi_dung")
                 .addSnapshotListener((query, error) -> {
 
-                    if (query == null) return;
+                    if (error != null || query == null) {
+                        return;
+                    }
 
                     fullList.clear();
                     fullList.addAll(query.getDocuments());
 
-                    hienThiTatCa();
+                    if (dangLocViPham) {
+                        hienThiTaiKhoanViPham(keywordHienTai);
+                    } else {
+                        hienThiTatCa(keywordHienTai);
+                    }
                 });
     }
 
     private void setupButtons() {
 
         btnTatCa.setOnClickListener(v -> {
-
             dangLocViPham = false;
-
-            hienThiTatCa();
+            hienThiTatCa(keywordHienTai);
         });
 
         btnViPham.setOnClickListener(v -> {
-
             dangLocViPham = true;
-
-            hienThiTaiKhoanViPham();
+            hienThiTaiKhoanViPham(keywordHienTai);
         });
-    }
-
-    private void hienThiTatCa() {
-
-        filteredList.clear();
-
-        filteredList.addAll(fullList);
-
-        adapter.notifyDataSetChanged();
-    }
-
-    private void hienThiTaiKhoanViPham() {
-
-        filteredList.clear();
-
-        for (DocumentSnapshot doc : fullList) {
-
-            Long soLanViPham = doc.getLong("so_lan_vi_pham");
-
-            if (soLanViPham != null && soLanViPham > 0) {
-
-                filteredList.add(doc);
-            }
-        }
-
-        adapter.notifyDataSetChanged();
     }
 
     private void setupSearch() {
@@ -133,11 +107,13 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity {
                                       int before,
                                       int count) {
 
-                filterUser(
-                        s.toString()
-                                .trim()
-                                .toLowerCase()
-                );
+                keywordHienTai = s.toString().trim().toLowerCase();
+
+                if (dangLocViPham) {
+                    hienThiTaiKhoanViPham(keywordHienTai);
+                } else {
+                    hienThiTatCa(keywordHienTai);
+                }
             }
 
             @Override
@@ -146,55 +122,67 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity {
         });
     }
 
-    private void filterUser(String keyword) {
+    private void hienThiTatCa(String keyword) {
 
         filteredList.clear();
 
-        List<DocumentSnapshot> sourceList = new ArrayList<>();
+        for (DocumentSnapshot doc : fullList) {
 
-        if (dangLocViPham) {
-
-            for (DocumentSnapshot doc : fullList) {
-
-                Long soLanViPham = doc.getLong("so_lan_vi_pham");
-
-                if (soLanViPham != null && soLanViPham > 0) {
-
-                    sourceList.add(doc);
-                }
-            }
-
-        } else {
-
-            sourceList.addAll(fullList);
-        }
-
-        if (keyword.isEmpty()) {
-
-            filteredList.addAll(sourceList);
-
-        } else {
-
-            for (DocumentSnapshot doc : sourceList) {
-
-                String ten = doc.getString("ho_ten");
-                String email = doc.getString("email");
-
-                boolean matchTen =
-                        ten != null &&
-                                ten.toLowerCase().contains(keyword);
-
-                boolean matchEmail =
-                        email != null &&
-                                email.toLowerCase().contains(keyword);
-
-                if (matchTen || matchEmail) {
-
-                    filteredList.add(doc);
-                }
+            if (kiemTraTimKiem(doc, keyword)) {
+                filteredList.add(doc);
             }
         }
 
         adapter.notifyDataSetChanged();
+    }
+
+    private void hienThiTaiKhoanViPham(String keyword) {
+
+        filteredList.clear();
+        adapter.notifyDataSetChanged();
+
+        for (DocumentSnapshot doc : fullList) {
+
+            if (!kiemTraTimKiem(doc, keyword)) {
+                continue;
+            }
+
+            String userId = doc.getId();
+
+            db.collection("danh_gia")
+                    .whereEqualTo("id_nguoi_dung", userId)
+                    .whereEqualTo("trang_thai", "vi_pham")
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots -> {
+
+                        if (!queryDocumentSnapshots.isEmpty()) {
+
+                            if (!filteredList.contains(doc)) {
+                                filteredList.add(doc);
+                                adapter.notifyDataSetChanged();
+                            }
+                        }
+                    });
+        }
+    }
+
+    private boolean kiemTraTimKiem(DocumentSnapshot doc, String keyword) {
+
+        if (keyword == null || keyword.isEmpty()) {
+            return true;
+        }
+
+        String ten = doc.getString("ho_ten");
+        String email = doc.getString("email");
+
+        boolean matchTen =
+                ten != null &&
+                        ten.toLowerCase().contains(keyword);
+
+        boolean matchEmail =
+                email != null &&
+                        email.toLowerCase().contains(keyword);
+
+        return matchTen || matchEmail;
     }
 }

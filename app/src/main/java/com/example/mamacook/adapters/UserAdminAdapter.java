@@ -7,8 +7,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.Toast;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -42,29 +42,22 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         DocumentSnapshot doc = userList.get(position);
 
-        String userId = doc.getId();
+        String userId = layUserIdDung(doc);
+
         String hoTen = doc.getString("ho_ten");
         String email = doc.getString("email");
-        String vaiTro = doc.getString("vai_tro");
+        String role = layRoleDung(doc);
         String trangThai = doc.getString("trang_thai_tai_khoan");
-        Long soLanViPham = doc.getLong("so_lan_vi_pham");
 
         holder.tvHoTen.setText(hoTen == null ? "Chưa có tên" : hoTen);
         holder.tvEmail.setText(email == null ? "Chưa có email" : email);
-        holder.tvVaiTro.setText("Vai trò: " + (vaiTro == null ? "user" : vaiTro));
-        holder.tvTrangThai.setText("Trạng thái: " + (trangThai == null ? "hoat_dong" : trangThai));
+        holder.tvVaiTro.setText("Role: " + role);
+        holder.tvTrangThai.setText("Trạng thái: " + (trangThai == null ? "dang_hoat_dong" : trangThai));
 
-        holder.tvSoLanViPham.setText(
-                "Số lần vi phạm: " + (soLanViPham == null ? 0 : soLanViPham)
-        );
+        holder.tvSoLanViPham.setText("Số lần vi phạm: Đang đếm...");
+        holder.tvSoLanViPham.setTextColor(Color.parseColor("#777777"));
 
-        if (soLanViPham != null && soLanViPham > 0) {
-            holder.tvSoLanViPham.setVisibility(View.VISIBLE);
-            holder.tvSoLanViPham.setTextColor(Color.RED);
-        } else {
-            holder.tvSoLanViPham.setVisibility(View.VISIBLE);
-            holder.tvSoLanViPham.setTextColor(Color.parseColor("#777777"));
-        }
+        demSoLanViPham(holder, userId, hoTen);
 
         if ("bi_khoa".equals(trangThai)) {
             holder.tvTrangThai.setTextColor(Color.RED);
@@ -74,7 +67,7 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
             holder.btnKhoaMo.setText("Khóa");
         }
 
-        if ("admin".equals(vaiTro)) {
+        if ("admin".equals(role)) {
             holder.btnDoiVaiTro.setText("Đổi thành user");
         } else {
             holder.btnDoiVaiTro.setText("Đổi thành admin");
@@ -83,8 +76,7 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
         holder.btnKhoaMo.setOnClickListener(v -> {
             int currentPosition = holder.getBindingAdapterPosition();
 
-            if (currentPosition == RecyclerView.NO_POSITION
-                    || currentPosition >= userList.size()) {
+            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= userList.size()) {
                 return;
             }
 
@@ -105,21 +97,20 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
             new AlertDialog.Builder(context)
                     .setTitle("Xác nhận")
                     .setMessage("Bạn có chắc muốn cập nhật trạng thái tài khoản này không?")
-                    .setPositiveButton("Có", (dialog, which) -> db.collection("nguoi_dung")
-                            .document(currentUserId)
-                            .update("trang_thai_tai_khoan", finalTrangThaiMoi)
-                            .addOnSuccessListener(unused -> {
-                                Toast.makeText(context, "Đã cập nhật trạng thái", Toast.LENGTH_SHORT).show();
+                    .setPositiveButton("Có", (dialog, which) ->
+                            db.collection("nguoi_dung")
+                                    .document(currentUserId)
+                                    .update("trang_thai_tai_khoan", finalTrangThaiMoi)
+                                    .addOnSuccessListener(unused -> {
+                                        Toast.makeText(context, "Đã cập nhật trạng thái", Toast.LENGTH_SHORT).show();
 
-                                db.collection("nguoi_dung")
-                                        .document(currentUserId)
-                                        .get()
-                                        .addOnSuccessListener(newDoc -> {
-                                            capNhatUserTheoId(currentUserId, newDoc);
-                                        });
-                            })
-                            .addOnFailureListener(e ->
-                                    Toast.makeText(context, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show()))
+                                        db.collection("nguoi_dung")
+                                                .document(currentUserId)
+                                                .get()
+                                                .addOnSuccessListener(newDoc -> capNhatUserTheoId(currentUserId, newDoc));
+                                    })
+                                    .addOnFailureListener(e ->
+                                            Toast.makeText(context, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show()))
                     .setNegativeButton("Không", null)
                     .show();
         });
@@ -127,46 +118,112 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
         holder.btnDoiVaiTro.setOnClickListener(v -> {
             int currentPosition = holder.getBindingAdapterPosition();
 
-            if (currentPosition == RecyclerView.NO_POSITION
-                    || currentPosition >= userList.size()) {
+            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= userList.size()) {
                 return;
             }
 
             DocumentSnapshot currentDoc = userList.get(currentPosition);
             String currentUserId = currentDoc.getId();
-            String currentVaiTro = currentDoc.getString("vai_tro");
+            String currentRole = layRoleDung(currentDoc);
 
-            String vaiTroMoi;
+            String roleMoi;
 
-            if ("admin".equals(currentVaiTro)) {
-                vaiTroMoi = "user";
+            if ("admin".equals(currentRole)) {
+                roleMoi = "user";
             } else {
-                vaiTroMoi = "admin";
+                roleMoi = "admin";
             }
 
-            final String finalVaiTroMoi = vaiTroMoi;
+            final String finalRoleMoi = roleMoi;
 
             new AlertDialog.Builder(context)
                     .setTitle("Xác nhận")
-                    .setMessage("Bạn có chắc muốn đổi vai trò tài khoản này không?")
-                    .setPositiveButton("Có", (dialog, which) -> db.collection("nguoi_dung")
-                            .document(currentUserId)
-                            .update("vai_tro", finalVaiTroMoi)
-                            .addOnSuccessListener(unused -> {
-                                Toast.makeText(context, "Đã cập nhật vai trò", Toast.LENGTH_SHORT).show();
+                    .setMessage("Bạn có chắc muốn đổi role tài khoản này không?")
+                    .setPositiveButton("Có", (dialog, which) ->
+                            db.collection("nguoi_dung")
+                                    .document(currentUserId)
+                                    .update("role", finalRoleMoi)
+                                    .addOnSuccessListener(unused -> {
+                                        Toast.makeText(context, "Đã cập nhật role", Toast.LENGTH_SHORT).show();
 
-                                db.collection("nguoi_dung")
-                                        .document(currentUserId)
-                                        .get()
-                                        .addOnSuccessListener(newDoc -> {
-                                            capNhatUserTheoId(currentUserId, newDoc);
-                                        });
-                            })
-                            .addOnFailureListener(e ->
-                                    Toast.makeText(context, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show()))
+                                        db.collection("nguoi_dung")
+                                                .document(currentUserId)
+                                                .get()
+                                                .addOnSuccessListener(newDoc -> capNhatUserTheoId(currentUserId, newDoc));
+                                    })
+                                    .addOnFailureListener(e ->
+                                            Toast.makeText(context, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show()))
                     .setNegativeButton("Không", null)
                     .show();
         });
+    }
+
+    private void demSoLanViPham(UserViewHolder holder, String userId, String hoTen) {
+        db.collection("danh_gia")
+                .whereEqualTo("id_nguoi_dung", userId)
+                .whereEqualTo("trang_thai", "vi_pham")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int soLanViPham = queryDocumentSnapshots.size();
+
+                    if (soLanViPham > 0) {
+                        hienThiSoLanViPham(holder, soLanViPham);
+                    } else {
+                        demSoLanViPhamTheoTen(holder, hoTen);
+                    }
+                })
+                .addOnFailureListener(e -> demSoLanViPhamTheoTen(holder, hoTen));
+    }
+
+    private void demSoLanViPhamTheoTen(UserViewHolder holder, String hoTen) {
+        if (hoTen == null || hoTen.trim().isEmpty()) {
+            hienThiSoLanViPham(holder, 0);
+            return;
+        }
+
+        db.collection("danh_gia")
+                .whereEqualTo("ten_nguoi_dung", hoTen)
+                .whereEqualTo("trang_thai", "vi_pham")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int soLanViPham = queryDocumentSnapshots.size();
+                    hienThiSoLanViPham(holder, soLanViPham);
+                })
+                .addOnFailureListener(e -> hienThiSoLanViPham(holder, 0));
+    }
+
+    private void hienThiSoLanViPham(UserViewHolder holder, int soLanViPham) {
+        holder.tvSoLanViPham.setText("Số lần vi phạm: " + soLanViPham);
+
+        if (soLanViPham > 0) {
+            holder.tvSoLanViPham.setTextColor(Color.RED);
+        } else {
+            holder.tvSoLanViPham.setTextColor(Color.parseColor("#777777"));
+        }
+    }
+
+    private String layUserIdDung(DocumentSnapshot doc) {
+        String userId = doc.getString("id_nguoi_dung");
+
+        if (userId == null || userId.trim().isEmpty()) {
+            userId = doc.getId();
+        }
+
+        return userId;
+    }
+
+    private String layRoleDung(DocumentSnapshot doc) {
+        String role = doc.getString("role");
+
+        if (role == null || role.trim().isEmpty()) {
+            role = doc.getString("vai_tro");
+        }
+
+        if (role == null || role.trim().isEmpty()) {
+            role = "user";
+        }
+
+        return role;
     }
 
     private void capNhatUserTheoId(String userId, DocumentSnapshot newDoc) {
