@@ -12,4 +12,28 @@
 
     <!-- Google Web Client ID (Lấy từ google-services.json) -->
     <string name="default_web_client_id">465869652634-nherujam09rmkno2m783ps2b1g1v68o7.apps.googleusercontent.com</string>
+
+    <!-- Filter Strings -->
+    <string name="filter_title">Bộ lọc món ăn</string>
+    <string name="sort_by">Sắp xếp theo</string>
+    <string name="sort_newest">Mới nhất</string>
+    <string name="sort_oldest">Cũ nhất</string>
+    <string name="rating_label">Đánh giá (Sao)</string>
+    <string name="all">Tất cả</string>
+    <string name="rate_5">5 sao</string>
+    <string name="rate_4_plus">4+ sao</string>
+    <string name="rate_3_plus">3+ sao</string>
+    <string name="rate_2_plus">2+ sao</string>
+    <string name="rate_1_plus">1+ sao</string>
+    <string name="cooking_time">Thời gian nấu</string>
+    <string name="time_under_15">&lt; 15 phút</string>
+    <string name="time_15_30">15 - 30 phút</string>
+    <string name="time_30_60">30 - 60 phút</string>
+    <string name="time_above_60">&gt; 60 phút</string>
+    <string name="difficulty">Độ khó</string>
+    <string name="diff_easy">Dễ</string>
+    <string name="diff_medium">Trung bình</string>
+    <string name="diff_hard">Khó</string>
+    <string name="apply_filter">Áp dụng bộ lọc</string>
+    <string name="recipe_unit">%1$d món</string>
 </resources>
