@@ -166,7 +166,6 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
                 danhGiaLocList.add(doc);
             }
         }
-
         adapter.notifyDataSetChanged();
         tvSoLuongDanhGia.setText("Tổng: " + danhGiaLocList.size() + " đánh giá");
     }

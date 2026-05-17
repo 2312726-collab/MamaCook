@@ -52,6 +52,10 @@ public class User {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
 
+    // Alias cho tương thích với code cũ
+    public String getVai_tro() { return role; }
+    public void setVai_tro(String vai_tro) { this.role = vai_tro; }
+
     public int getSo_lan_vi_pham() { return so_lan_vi_pham; }
     public void setSo_lan_vi_pham(int so_lan_vi_pham) { this.so_lan_vi_pham = so_lan_vi_pham; }
 }

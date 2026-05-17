@@ -12,32 +12,33 @@ import android.widget.TextView;
 import android.widget.Button;
 import android.widget.Toast;
 
-
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.mamacook.R;
 import com.example.mamacook.activities.DetailMonAnActivity;
 import com.example.mamacook.models.MonAn;
-import com.example.mamacook.utils.RatingUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
-
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Locale;
 import java.util.Map;
 
 public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdapter.ViewHolder> {
 
-    private List<MonAn> monAnList;
     private final List<MonAn> monAnList;
     private OnItemLongClickListener longClickListener;
+    private boolean isAdminMode = false;
+
+    public void setAdminMode(boolean adminMode) {
+        this.isAdminMode = adminMode;
+    }
 
     public interface OnItemLongClickListener {
         void onLongClick(MonAn monAn);
@@ -64,19 +65,18 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         MonAn monAn = monAnList.get(position);
 
         holder.tvTenMon.setText(monAn.getTen_mon());
-        holder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
-        holder.tvRating.setText(RatingUtils.getRatingOnly(monAn));
-        holder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
+        holder.tvThoiGian.setText(String.format(Locale.getDefault(), "%d phút", monAn.getThoi_gian_nau()));
+        holder.tvRating.setText(String.format(Locale.getDefault(), "%.1f", monAn.getRating()));
+        holder.tvDoKho.setText(String.format("Độ khó: %s", monAn.getDo_kho()));
 
-        if (monAn.getMatch_score() >= 50) {
-            holder.layoutBadgeAi.setVisibility(View.VISIBLE);
-            holder.tvMatchScore.setText("🔥 " + monAn.getMatch_score() + "%");
-        } else {
-            holder.layoutBadgeAi.setVisibility(View.GONE);
-        }
+        // Ẩn badge AI/Hợp gu theo yêu cầu
+        holder.layoutBadgeAi.setVisibility(View.GONE);
 
+        // Kiểm tra yêu thích
         checkIsFavorite(monAn.getId_mon_an(), holder.btnFavorite);
+        holder.btnFavorite.setOnClickListener(v -> toggleFavorite(monAn, holder.itemView.getContext()));
 
+        // Load ảnh
         String hinhAnh = monAn.getHinh_anh();
         if (hinhAnh != null && !hinhAnh.isEmpty()) {
             if (hinhAnh.startsWith("http")) {
@@ -95,6 +95,7 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
             }
         }
 
+        // Chuyển màn hình chi tiết
         holder.itemView.setOnClickListener(v -> {
             Intent intent = DetailMonAnActivity.createIntent(v.getContext(), monAn);
             v.getContext().startActivity(intent);
@@ -103,21 +104,20 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
             }
         });
 
+        // Nút AI: Chỉ hiện khi ở chế độ Quản lý (Admin)
+        holder.btnAI.setVisibility(isAdminMode ? View.VISIBLE : View.GONE);
         holder.btnAI.setOnClickListener(v -> {
-
             if (longClickListener != null) {
                 longClickListener.onLongClick(monAn);
             }
         });
     }
 
-    private void toggleFavorite(MonAn monAn, android.content.Context context) {
     private void toggleFavorite(MonAn monAn, Context context) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
         String idLuu = uid + "_" + monAn.getId_mon_an();
-
 
         FirebaseFirestore.getInstance().collection("mon_da_luu").document(idLuu).get()
                 .addOnSuccessListener(doc -> {
@@ -165,28 +165,22 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView img, btnFav;
-        Button btnAI;
-        TextView tvTen, tvThoiGian, tvRating, tvDoKho;
-        TextView tvTen, tvThoiGian, tvRating, tvDoKho, tvMatchScore;
         ImageView imgMonAn, btnFavorite;
         TextView tvTenMon, tvThoiGian, tvRating, tvDoKho, tvMatchScore;
         LinearLayout layoutBadgeAi;
+        Button btnAI;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            img = itemView.findViewById(R.id.img_mon_an);
-            btnFav = itemView.findViewById(R.id.btn_favorite);
-            btnAI = itemView.findViewById(R.id.btn_ai_review);
-            tvTen = itemView.findViewById(R.id.tv_ten_mon);
             imgMonAn = itemView.findViewById(R.id.img_mon_an);
             btnFavorite = itemView.findViewById(R.id.btn_favorite);
             tvTenMon = itemView.findViewById(R.id.tv_ten_mon);
             tvThoiGian = itemView.findViewById(R.id.tv_thoi_gian);
             tvRating = itemView.findViewById(R.id.tv_rating);
-            tvDoKho = itemView.findViewById(R.id.tv_do_kho);
+            tvDoKho = itemView.findViewById(R.id.tv_do_kho_vertical);
             layoutBadgeAi = itemView.findViewById(R.id.layout_badge_ai);
             tvMatchScore = itemView.findViewById(R.id.tv_match_score);
+            btnAI = itemView.findViewById(R.id.btn_ai_review);
         }
     }
 }

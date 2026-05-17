@@ -97,13 +97,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             itemHolder.tvRating.setText(RatingUtils.getRatingOnly(monAn));
             itemHolder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
 
-            // Hiển thị Badge AI (xử lý lỗi recycle)
-            if (monAn.getMatch_score() >= 50) {
-                itemHolder.layoutBadgeAi.setVisibility(View.VISIBLE);
-                itemHolder.tvMatchScore.setText("🔥 " + monAn.getMatch_score() + "% Hợp gu");
-            } else {
-                itemHolder.layoutBadgeAi.setVisibility(View.GONE);
-            }
+            itemHolder.layoutBadgeAi.setVisibility(View.GONE);
 
             checkIsFavorite(monAn.getId_mon_an(), itemHolder.btnFavorite);
 
