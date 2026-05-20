@@ -40,17 +40,10 @@ import com.example.mamacook.activities.ThongKeAdminActivity;
 import com.example.mamacook.adapters.MonAnAdapter;
 import com.example.mamacook.models.MonAn;
 import com.example.mamacook.utils.VNCharacterUtils;
-import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.GenerativeModelFutures;
-import com.google.ai.client.generativeai.type.Content;
-import com.google.ai.client.generativeai.type.GenerateContentResponse;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -58,6 +51,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.functions.FirebaseFunctions;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -334,19 +328,6 @@ public class HomeFragment extends Fragment {
     private void callGemini(List<MonAn> candidates, String weather, String location) {
         if (candidates.isEmpty()) { onGeminiFailed(candidates, "empty"); return; }
 
-        String apiKey = getString(R.string.gemini_api_key);
-        GenerativeModel gm = new GenerativeModel("gemini-2.5-flash", apiKey);
-        GenerativeModelFutures mdl = GenerativeModelFutures.from(gm);
-
-        StringBuilder menuStr = new StringBuilder();
-        for (int i=0; i<Math.min(20, candidates.size()); i++) {
-            MonAn m = candidates.get(i);
-            menuStr.append("- ID:\"").append(m.getId_mon_an())
-                   .append("\" Tên:\"").append(m.getTen_mon()).append("\"")
-                   .append(" Vùng miền: ").append(m.getVung_mien() != null ? m.getVung_mien() : "Không rõ")
-                   .append("\n");
-        }
-
         // Xác định thời gian trong ngày
         int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         String timeOfDay;
@@ -355,68 +336,65 @@ public class HomeFragment extends Fragment {
         else if (hour >= 14 && hour < 18) timeOfDay = "buổi chiều";
         else timeOfDay = "buổi tối";
 
-        String prompt = "Bạn là chuyên gia dinh dưỡng và ẩm thực Việt Nam với 20 năm kinh nghiệm.\n\n" +
-                "NHIỆM VỤ: Phân tích và chọn 5 món ăn PHÙ HỢP NHẤT từ danh sách dưới đây dựa trên các yếu tố:\n\n" +
+        // Chuẩn bị dữ liệu gửi lên Cloud Function
+        List<Map<String, String>> candidatesList = new ArrayList<>();
+        for (int i = 0; i < Math.min(20, candidates.size()); i++) {
+            MonAn m = candidates.get(i);
+            Map<String, String> dish = new HashMap<>();
+            dish.put("id", m.getId_mon_an());
+            dish.put("name", m.getTen_mon());
+            dish.put("region", m.getVung_mien() != null ? m.getVung_mien() : "Không rõ");
+            candidatesList.add(dish);
+        }
 
-                "📍 ĐỊA ĐIỂM: " + location + "\n" +
-                "🌤️ THỜI TIẾT: " + weather + "\n" +
-                "⏰ THỜI GIAN: " + timeOfDay + " (" + hour + "h)\n" +
-                "❤️ SỞ THÍCH NGƯỜI DÙNG: " + (userPrefs.isEmpty() ? "Chưa có" : String.join(", ", userPrefs)) + "\n\n" +
+        Map<String, Object> data = new HashMap<>();
+        data.put("candidates", candidatesList);
+        data.put("weather", weather);
+        data.put("location", location);
+        data.put("userPrefs", userPrefs);
+        data.put("timeOfDay", timeOfDay);
+        data.put("hour", hour);
 
-                "QUY TẮC CHỌN MÓN (QUAN TRỌNG):\n" +
-                "1. THỜI TIẾT:\n" +
-                "   - Trời nóng (>28°C): Ưu tiên món mát, thanh đạm, canh chua, gỏi, salad\n" +
-                "   - Trời lạnh (<20°C): Ưu tiên món nóng, súp, lẩu, cháo, phở\n" +
-                "   - Trời mưa: Món nóng hổi, có nước dùng, bánh, chè\n" +
-                "   - Trời hanh khô: Món có nước, không quá cay\n\n" +
+        // Gọi Cloud Function thay vì gọi AI trực tiếp
+        FirebaseFunctions.getInstance()
+                .getHttpsCallable("generateHomeRecommendations")
+                .call(data)
+                .addOnSuccessListener(result -> {
+                    try {
+                        Map<String, Object> response = (Map<String, Object>) result.getData();
+                        String greeting = (String) response.get("greeting");
+                        List<String> ids = (List<String>) response.get("ids");
 
-                "2. THỜI GIAN:\n" +
-                "   - Sáng (5-11h): Món nhẹ, dễ tiêu, bổ dưỡng (phở, bánh mì, cháo, xôi)\n" +
-                "   - Trưa (11-14h): Món chính, đầy đủ dinh dưỡng, có rau\n" +
-                "   - Chiều (14-18h): Món nhẹ, ăn vặt, tránh quá no\n" +
-                "   - Tối (18-22h): Món nhẹ, dễ tiêu, tránh món chiên rán nhiều dầu mỡ\n\n" +
+                        if (ids == null || ids.isEmpty()) {
+                            onGeminiFailed(candidates, "No IDs returned");
+                            return;
+                        }
 
-                "3. ĐỊA PHƯƠNG:\n" +
-                "   - Miền Bắc: Ưu tiên món thanh đạm, vị nhẹ\n" +
-                "   - Miền Trung: Món cay, đậm đà\n" +
-                "   - Miền Nam: Món ngọt, nhiều rau sống\n\n" +
+                        // Tìm món ăn theo ID
+                        List<MonAn> selected = new ArrayList<>();
+                        for (String id : ids) {
+                            for (MonAn m : candidates) {
+                                if (m.getId_mon_an().equals(id)) {
+                                    selected.add(m);
+                                    break;
+                                }
+                            }
+                        }
 
-                "4. SỞ THÍCH:\n" +
-                "   - Nếu người dùng có sở thích cụ thể, ƯU TIÊN TUYỆT ĐỐI các món phù hợp\n" +
-                "   - Kết hợp sở thích với thời tiết và thời gian\n\n" +
-
-                "DANH SÁCH MÓN ĂN:\n" + menuStr + "\n" +
-
-                "YÊU CẦU ĐẦU RA:\n" +
-                "- Chọn ĐÚNG 5 món từ danh sách trên\n" +
-                "- Giải thích ngắn gọn (1-2 câu) TẠI SAO chọn những món này dựa trên thời tiết, thời gian, địa điểm\n" +
-                "- Trả về JSON thuần túy (KHÔNG có markdown, KHÔNG có ```json):\n\n" +
-
-                "{\n" +
-                "  \"greeting\": \"Lời chào ngắn gọn giải thích tại sao chọn những món này (tối đa 30 từ)\",\n" +
-                "  \"ids\": [\"id1\", \"id2\", \"id3\", \"id4\", \"id5\"]\n" +
-                "}";
-
-        Content cnt = new Content.Builder().addText(prompt).build();
-        ListenableFuture<GenerateContentResponse> fut = mdl.generateContent(cnt);
-        Futures.addCallback(fut, new FutureCallback<GenerateContentResponse>() {
-            @Override public void onSuccess(GenerateContentResponse resp) {
-                try {
-                    String text = resp.getText();
-                    if (text == null) throw new Exception("Null response");
-                    JSONObject obj = new JSONObject(text.replaceAll("(?s)```json|```", "").trim());
-                    JSONArray ids = obj.getJSONArray("ids");
-                    List<MonAn> res = new ArrayList<>();
-                    for (int i=0; i<ids.length(); i++) {
-                        String aiId = ids.getString(i);
-                        for (MonAn m : candidates) if (m.getId_mon_an().equals(aiId)) { res.add(m); break; }
+                        if (selected.isEmpty()) {
+                            onGeminiFailed(candidates, "No matches found");
+                        } else {
+                            onGeminiSuccess(selected, greeting != null ? greeting : "Gợi ý cho bạn");
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Parse error: " + e.getMessage());
+                        onGeminiFailed(candidates, e.getMessage());
                     }
-                    if (res.isEmpty()) throw new Exception("Match empty");
-                    mainHandler.post(() -> onGeminiSuccess(res, obj.optString("greeting", "Gợi ý cho bạn")));
-                } catch (Exception e) { onGeminiFailed(candidates, e.getMessage()); }
-            }
-            @Override public void onFailure(@NonNull Throwable t) { onGeminiFailed(candidates, t.getMessage()); }
-        }, ContextCompat.getMainExecutor(requireContext()));
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Cloud Function error: " + e.getMessage());
+                    onGeminiFailed(candidates, e.getMessage());
+                });
     }
 
     private boolean matchesPrefs(MonAn m) {

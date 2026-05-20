@@ -14,5 +14,5 @@
 .cxx
 local.properties
 
-# BỎ dòng này để push secrets.xml lên Git (cho người khác clone về chạy ngay)
-# app/src/main/res/values/secrets.xml
+# Bảo mật API key - không push lên Git
+app/src/main/res/values/secrets.xml
