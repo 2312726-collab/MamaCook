@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mamacook.R;
+import com.example.mamacook.BuildConfig;
 import com.example.mamacook.activities.AdminActivity;
 import com.example.mamacook.activities.QuanLyDanhGiaActivity;
 import com.example.mamacook.activities.QuanLyTaiKhoanActivity;

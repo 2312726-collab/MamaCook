@@ -45,11 +45,18 @@ public class FilterFragment extends Fragment {
     private int timeRange = 0; // 0: All, 1: <15, 2: 15-30, 3: 30-60, 4: >60
     private String currentDifficulty = "Tất cả";
 
+    private String preSelectedDate, preSelectedMeal;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_filter_all, container, false);
         db = FirebaseFirestore.getInstance();
+
+        if (getArguments() != null) {
+            preSelectedDate = getArguments().getString("PRE_SELECTED_DATE");
+            preSelectedMeal = getArguments().getString("PRE_SELECTED_MEAL");
+        }
 
         bindViews(view);
         setupRecyclerView();
@@ -71,6 +78,7 @@ public class FilterFragment extends Fragment {
 
     private void setupRecyclerView() {
         adapter = new MonAnVerticalAdapter(displayList);
+        adapter.setPreSelectedData(preSelectedDate, preSelectedMeal);
         rvResults.setLayoutManager(new LinearLayoutManager(getContext()));
         rvResults.setAdapter(adapter);
     }

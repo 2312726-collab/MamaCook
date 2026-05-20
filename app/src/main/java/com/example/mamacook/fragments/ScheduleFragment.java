@@ -1,6 +1,7 @@
 package com.example.mamacook.fragments;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -29,14 +30,18 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.functions.FirebaseFunctions;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ScheduleFragment extends Fragment {
@@ -45,11 +50,16 @@ public class ScheduleFragment extends Fragment {
     private FirebaseAuth mAuth;
     private TextView tvTotalDishes, tvShoppingProgress;
     private ImageButton btnAiSuggest;
-    private RecyclerView rvSang, rvTrua, rvToi;
+    private RecyclerView rvSang, rvTrua, rvToi, rvDays;
     private CookingPlanHorizontalAdapter adapterSang, adapterTrua, adapterToi;
+    private DayAdapter dayAdapter;
     private List<CookingPlan> listSang = new ArrayList<>();
     private List<CookingPlan> listTrua = new ArrayList<>();
     private List<CookingPlan> listToi = new ArrayList<>();
+    private List<DayItem> dayList = new ArrayList<>();
+    private String selectedDate;
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+    private ListenerRegistration planListener;
 
     @Nullable
     @Override
@@ -62,18 +72,26 @@ public class ScheduleFragment extends Fragment {
         tvTotalDishes = view.findViewById(R.id.tv_total_dishes);
         tvShoppingProgress = view.findViewById(R.id.tv_shopping_progress);
         btnAiSuggest = view.findViewById(R.id.btn_ai_suggest);
+        rvDays = view.findViewById(R.id.rv_days_of_week);
+
+        selectedDate = sdf.format(new Date());
 
         setupRecyclerViews(view);
+        setupDaySelector();
         cleanupOldCookingPlans();
         loadCookingPlans();
 
         view.findViewById(R.id.btn_shopping_list_schedule).setOnClickListener(v -> {
-            startActivity(new Intent(getActivity(), GioHangActivity.class));
+            Intent intent = new Intent(getActivity(), GioHangActivity.class);
+            intent.putExtra("SELECTED_DATE", selectedDate);
+            startActivity(intent);
             getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
 
         view.findViewById(R.id.btn_ready_to_cook_schedule).setOnClickListener(v -> {
-            startActivity(new Intent(getActivity(), ChuanBiNauActivity.class));
+            Intent intent = new Intent(getActivity(), ChuanBiNauActivity.class);
+            intent.putExtra("SELECTED_DATE", selectedDate);
+            startActivity(intent);
             getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
 
@@ -81,7 +99,26 @@ public class ScheduleFragment extends Fragment {
             showAiOptionDialog();
         });
 
+        // Xử lý nút thêm món (+) cho từng buổi
+        view.findViewById(R.id.btn_add_sang).setOnClickListener(v -> openFilterFragment("Sang"));
+        view.findViewById(R.id.btn_add_trua).setOnClickListener(v -> openFilterFragment("Trua"));
+        view.findViewById(R.id.btn_add_toi).setOnClickListener(v -> openFilterFragment("Toi"));
+
         return view;
+    }
+
+    private void openFilterFragment(String mealType) {
+        FilterFragment filterFragment = new FilterFragment();
+        Bundle args = new Bundle();
+        args.putString("PRE_SELECTED_DATE", selectedDate);
+        args.putString("PRE_SELECTED_MEAL", mealType);
+        filterFragment.setArguments(args);
+
+        requireActivity().getSupportFragmentManager().beginTransaction()
+                .add(R.id.fragment_container, filterFragment)
+                .hide(this)
+                .addToBackStack(null)
+                .commit();
     }
 
     private void setupRecyclerViews(View view) {
@@ -102,12 +139,55 @@ public class ScheduleFragment extends Fragment {
         rvToi.setAdapter(adapterToi);
     }
 
+    private void setupDaySelector() {
+        rvDays.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        loadDaysOfWeek();
+        dayAdapter = new DayAdapter(dayList, day -> {
+            selectedDate = day.date;
+            for (DayItem item : dayList) {
+                item.isSelected = item.date.equals(selectedDate);
+            }
+            dayAdapter.notifyDataSetChanged();
+            loadCookingPlans(); // Tải lại dữ liệu cho ngày mới
+        });
+        rvDays.setAdapter(dayAdapter);
+    }
+
+    private void loadDaysOfWeek() {
+        dayList.clear();
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek()); // Bắt đầu từ đầu tuần (thường là CN hoặc T2 tùy locale)
+        
+        // Điều chỉnh để bắt đầu từ Thứ 2 nếu cần
+        if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        } else if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+            cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        }
+
+        SimpleDateFormat dayNameSdf = new SimpleDateFormat("EEE", new Locale("vi", "VN"));
+        SimpleDateFormat dayNumberSdf = new SimpleDateFormat("dd", Locale.getDefault());
+
+        for (int i = 0; i < 7; i++) {
+            DayItem item = new DayItem();
+            item.date = sdf.format(cal.getTime());
+            item.dayName = dayNameSdf.format(cal.getTime());
+            item.dayNumber = dayNumberSdf.format(cal.getTime());
+            item.isSelected = item.date.equals(selectedDate);
+            dayList.add(item);
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+    }
+
     private void loadCookingPlans() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
-        db.collection("ke_hoach_nau_an")
+        if (planListener != null) planListener.remove();
+
+        planListener = db.collection("ke_hoach_nau_an")
                 .whereEqualTo("id_nguoi_dung", user.getUid())
+                .whereEqualTo("ngay_chi_tiet", selectedDate)
                 .addSnapshotListener((value, error) -> {
                     if (error != null || value == null) return;
 
@@ -121,7 +201,7 @@ public class ScheduleFragment extends Fragment {
                     for (DocumentSnapshot doc : value) {
                         CookingPlan plan = doc.toObject(CookingPlan.class);
                         if (plan == null) continue;
-                        plan.setId_plan(doc.getId()); // Gán ID document để xóa
+                        plan.setId_plan(doc.getId());
 
                         String buoi = plan.getBuoi();
                         if ("Sang".equals(buoi)) listSang.add(plan);
@@ -255,9 +335,9 @@ public class ScheduleFragment extends Fragment {
         String monToi = getDishNameById(toiId, fullDishes);
 
         String message = "💡 " + reason + "\n\n" +
-                "🌅 Sáng: " + monSang + "\n" +
-                "☀️ Trưa: " + monTrua + "\n" +
-                "🌙 Tối: " + monToi;
+                "Sáng: " + monSang + "\n" +
+                "Trưa: " + monTrua + "\n" +
+                "Tối: " + monToi;
 
         new AlertDialog.Builder(requireContext())
                 .setTitle("Thực đơn AI đề xuất")
@@ -285,6 +365,7 @@ public class ScheduleFragment extends Fragment {
 
         WriteBatch batch = db.batch();
         Timestamp now = Timestamp.now();
+        String dateStr = selectedDate; // Lưu cho ngày đang được chọn
 
         // Duyệt qua 3 buổi
         String[] buois = {"Sang", "Trua", "Toi"};
@@ -301,6 +382,7 @@ public class ScheduleFragment extends Fragment {
                     plan.setTen_mon(m.getTen_mon());
                     plan.setHinh_anh(m.getHinh_anh());
                     plan.setNgay_lap_ke_hoach(now);
+                    plan.setNgay_chi_tiet(dateStr);
                     plan.setTrang_thai("dang_di_cho");
                     plan.setBuoi(buoi);
 
@@ -333,8 +415,10 @@ public class ScheduleFragment extends Fragment {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
-        long oneDayAgo = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
-        Timestamp threshold = new Timestamp(new Date(oneDayAgo));
+        // Xóa các kế hoạch của tuần trước
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, -7);
+        Timestamp threshold = new Timestamp(cal.getTime());
 
         db.collection("ke_hoach_nau_an")
                 .whereEqualTo("id_nguoi_dung", user.getUid())
@@ -351,8 +435,76 @@ public class ScheduleFragment extends Fragment {
                     }
                     if (hasSomethingToDelete) {
                         batch.commit();
-                        Log.d("Cleanup", "Đã xóa các kế hoạch cũ hơn 24 giờ");
+                        Log.d("Cleanup", "Đã xóa các kế hoạch cũ hơn 7 ngày");
                     }
                 });
+    }
+
+    // --- Inner Classes for Day Selector ---
+    private static class DayItem {
+        String date;
+        String dayName;
+        String dayNumber;
+        boolean isSelected;
+    }
+
+    private interface OnDayClickListener {
+        void onDayClick(DayItem day);
+    }
+
+    private static class DayAdapter extends RecyclerView.Adapter<DayAdapter.ViewHolder> {
+        private List<DayItem> list;
+        private OnDayClickListener listener;
+
+        public DayAdapter(List<DayItem> list, OnDayClickListener listener) {
+            this.list = list;
+            this.listener = listener;
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_day_selector, parent, false);
+            return new ViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            DayItem item = list.get(position);
+            holder.tvName.setText(item.dayName);
+            holder.tvNumber.setText(item.dayNumber);
+
+            if (item.isSelected) {
+                holder.card.setCardBackgroundColor(Color.parseColor("#9B4F4F"));
+                holder.tvName.setTextColor(Color.WHITE);
+                holder.tvNumber.setTextColor(Color.WHITE);
+            } else {
+                holder.card.setCardBackgroundColor(Color.WHITE);
+                holder.tvName.setTextColor(Color.GRAY);
+                holder.tvNumber.setTextColor(Color.BLACK);
+            }
+
+            holder.itemView.setOnClickListener(v -> listener.onDayClick(item));
+        }
+
+        @Override
+        public int getItemCount() { return list.size(); }
+
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            TextView tvName, tvNumber;
+            androidx.cardview.widget.CardView card;
+            public ViewHolder(@NonNull View itemView) {
+                super(itemView);
+                tvName = itemView.findViewById(R.id.tv_day_name);
+                tvNumber = itemView.findViewById(R.id.tv_day_number);
+                card = itemView.findViewById(R.id.card_day);
+            }
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (planListener != null) planListener.remove();
     }
 }
