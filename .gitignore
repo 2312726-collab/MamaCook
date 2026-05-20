@@ -14,5 +14,5 @@
 .cxx
 local.properties
 
-# QUAN TRỌNG: Không push API keys lên Git
-app/src/main/res/values/secrets.xml
+# BỎ dòng này để push secrets.xml lên Git (cho người khác clone về chạy ngay)
+# app/src/main/res/values/secrets.xml
