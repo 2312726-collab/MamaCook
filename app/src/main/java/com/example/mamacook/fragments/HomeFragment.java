@@ -334,19 +334,68 @@ public class HomeFragment extends Fragment {
         if (candidates.isEmpty()) { onGeminiFailed(candidates, "empty"); return; }
 
         String apiKey = getString(R.string.gemini_api_key);
-        GenerativeModel gm = new GenerativeModel("gemini-2.0-flash", apiKey);
+        GenerativeModel gm = new GenerativeModel("gemini-2.5-flash", apiKey);
         GenerativeModelFutures mdl = GenerativeModelFutures.from(gm);
-        
+
         StringBuilder menuStr = new StringBuilder();
         for (int i=0; i<Math.min(20, candidates.size()); i++) {
-            menuStr.append("- ID:\"").append(candidates.get(i).getId_mon_an()).append("\" Tên:\"").append(candidates.get(i).getTen_mon()).append("\"\n");
+            MonAn m = candidates.get(i);
+            menuStr.append("- ID:\"").append(m.getId_mon_an())
+                   .append("\" Tên:\"").append(m.getTen_mon()).append("\"")
+                   .append(" Vùng miền: ").append(m.getVung_mien() != null ? m.getVung_mien() : "Không rõ")
+                   .append("\n");
         }
 
-        String prompt = "Bạn là chuyên gia ẩm thực. Chọn 5 món phù hợp nhất với thời tiết: " + weather 
-                + ", địa điểm: " + location + ", sở thích: " + String.join(", ", userPrefs)
-                + ". Danh sách món:\n" + menuStr
-                + "\nTrả về JSON thuần túy (không markdown): {\"greeting\":\"...\",\"ids\":[\"id1\",...]}";
-        
+        // Xác định thời gian trong ngày
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String timeOfDay;
+        if (hour >= 5 && hour < 11) timeOfDay = "buổi sáng";
+        else if (hour >= 11 && hour < 14) timeOfDay = "buổi trưa";
+        else if (hour >= 14 && hour < 18) timeOfDay = "buổi chiều";
+        else timeOfDay = "buổi tối";
+
+        String prompt = "Bạn là chuyên gia dinh dưỡng và ẩm thực Việt Nam với 20 năm kinh nghiệm.\n\n" +
+                "NHIỆM VỤ: Phân tích và chọn 5 món ăn PHÙ HỢP NHẤT từ danh sách dưới đây dựa trên các yếu tố:\n\n" +
+
+                "📍 ĐỊA ĐIỂM: " + location + "\n" +
+                "🌤️ THỜI TIẾT: " + weather + "\n" +
+                "⏰ THỜI GIAN: " + timeOfDay + " (" + hour + "h)\n" +
+                "❤️ SỞ THÍCH NGƯỜI DÙNG: " + (userPrefs.isEmpty() ? "Chưa có" : String.join(", ", userPrefs)) + "\n\n" +
+
+                "QUY TẮC CHỌN MÓN (QUAN TRỌNG):\n" +
+                "1. THỜI TIẾT:\n" +
+                "   - Trời nóng (>28°C): Ưu tiên món mát, thanh đạm, canh chua, gỏi, salad\n" +
+                "   - Trời lạnh (<20°C): Ưu tiên món nóng, súp, lẩu, cháo, phở\n" +
+                "   - Trời mưa: Món nóng hổi, có nước dùng, bánh, chè\n" +
+                "   - Trời hanh khô: Món có nước, không quá cay\n\n" +
+
+                "2. THỜI GIAN:\n" +
+                "   - Sáng (5-11h): Món nhẹ, dễ tiêu, bổ dưỡng (phở, bánh mì, cháo, xôi)\n" +
+                "   - Trưa (11-14h): Món chính, đầy đủ dinh dưỡng, có rau\n" +
+                "   - Chiều (14-18h): Món nhẹ, ăn vặt, tránh quá no\n" +
+                "   - Tối (18-22h): Món nhẹ, dễ tiêu, tránh món chiên rán nhiều dầu mỡ\n\n" +
+
+                "3. ĐỊA PHƯƠNG:\n" +
+                "   - Miền Bắc: Ưu tiên món thanh đạm, vị nhẹ\n" +
+                "   - Miền Trung: Món cay, đậm đà\n" +
+                "   - Miền Nam: Món ngọt, nhiều rau sống\n\n" +
+
+                "4. SỞ THÍCH:\n" +
+                "   - Nếu người dùng có sở thích cụ thể, ƯU TIÊN TUYỆT ĐỐI các món phù hợp\n" +
+                "   - Kết hợp sở thích với thời tiết và thời gian\n\n" +
+
+                "DANH SÁCH MÓN ĂN:\n" + menuStr + "\n" +
+
+                "YÊU CẦU ĐẦU RA:\n" +
+                "- Chọn ĐÚNG 5 món từ danh sách trên\n" +
+                "- Giải thích ngắn gọn (1-2 câu) TẠI SAO chọn những món này dựa trên thời tiết, thời gian, địa điểm\n" +
+                "- Trả về JSON thuần túy (KHÔNG có markdown, KHÔNG có ```json):\n\n" +
+
+                "{\n" +
+                "  \"greeting\": \"Lời chào ngắn gọn giải thích tại sao chọn những món này (tối đa 30 từ)\",\n" +
+                "  \"ids\": [\"id1\", \"id2\", \"id3\", \"id4\", \"id5\"]\n" +
+                "}";
+
         Content cnt = new Content.Builder().addText(prompt).build();
         ListenableFuture<GenerateContentResponse> fut = mdl.generateContent(cnt);
         Futures.addCallback(fut, new FutureCallback<GenerateContentResponse>() {
