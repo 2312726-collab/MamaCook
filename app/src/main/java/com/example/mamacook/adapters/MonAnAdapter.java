@@ -95,7 +95,12 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             itemHolder.tvTenMon.setText(monAn.getTen_mon());
             itemHolder.tvThoiGian.setText(monAn.getThoi_gian_nau() + " phút");
             itemHolder.tvRating.setText(RatingUtils.getRatingOnly(monAn));
-            itemHolder.tvDoKho.setText("Độ khó: " + monAn.getDo_kho());
+            
+            String doKho = monAn.getDo_kho();
+            if (doKho == null || doKho.isEmpty()) {
+                doKho = "Chưa xác định";
+            }
+            itemHolder.tvDoKho.setText("Độ khó: " + doKho);
 
             itemHolder.layoutBadgeAi.setVisibility(View.GONE);
 

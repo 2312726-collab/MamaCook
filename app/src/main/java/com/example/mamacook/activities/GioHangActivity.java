@@ -28,6 +28,7 @@ public class GioHangActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
     private View layoutEmpty;
+    private String selectedDate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +55,7 @@ public class GioHangActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getUid();
+        selectedDate = getIntent().getStringExtra("SELECTED_DATE");
 
         Toolbar toolbar = findViewById(R.id.toolbar_gio_hang);
         setSupportActionBar(toolbar);
@@ -75,10 +77,15 @@ public class GioHangActivity extends AppCompatActivity {
     private void loadShoppingList() {
         if (currentUserId == null) return;
 
-        db.collection("ke_hoach_nau_an")
+        com.google.firebase.firestore.Query query = db.collection("ke_hoach_nau_an")
                 .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("trang_thai", "dang_di_cho")
-                .addSnapshotListener((value, error) -> {
+                .whereEqualTo("trang_thai", "dang_di_cho");
+
+        if (selectedDate != null) {
+            query = query.whereEqualTo("ngay_chi_tiet", selectedDate);
+        }
+
+        query.addSnapshotListener((value, error) -> {
                     if (error != null) return;
                     planList.clear();
                     if (value != null) {

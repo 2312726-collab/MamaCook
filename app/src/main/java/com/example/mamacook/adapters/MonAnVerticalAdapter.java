@@ -35,6 +35,12 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
     private final List<MonAn> monAnList;
     private OnItemLongClickListener longClickListener;
     private boolean isAdminMode = false;
+    private String preSelectedDate, preSelectedMeal;
+
+    public void setPreSelectedData(String date, String meal) {
+        this.preSelectedDate = date;
+        this.preSelectedMeal = meal;
+    }
 
     public void setAdminMode(boolean adminMode) {
         this.isAdminMode = adminMode;
@@ -67,7 +73,12 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         holder.tvTenMon.setText(monAn.getTen_mon());
         holder.tvThoiGian.setText(String.format(Locale.getDefault(), "%d phút", monAn.getThoi_gian_nau()));
         holder.tvRating.setText(String.format(Locale.getDefault(), "%.1f", monAn.getRating()));
-        holder.tvDoKho.setText(String.format("Độ khó: %s", monAn.getDo_kho()));
+        
+        String doKho = monAn.getDo_kho();
+        if (doKho == null || doKho.isEmpty()) {
+            doKho = "Chưa xác định";
+        }
+        holder.tvDoKho.setText(String.format("Độ khó: %s", doKho));
 
         // Ẩn badge AI/Hợp gu theo yêu cầu
         holder.layoutBadgeAi.setVisibility(View.GONE);
@@ -98,6 +109,10 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         // Chuyển màn hình chi tiết
         holder.itemView.setOnClickListener(v -> {
             Intent intent = DetailMonAnActivity.createIntent(v.getContext(), monAn);
+            if (preSelectedDate != null && preSelectedMeal != null) {
+                intent.putExtra("PRE_SELECTED_DATE", preSelectedDate);
+                intent.putExtra("PRE_SELECTED_MEAL", preSelectedMeal);
+            }
             v.getContext().startActivity(intent);
             if (v.getContext() instanceof android.app.Activity) {
                 ((android.app.Activity) v.getContext()).overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);

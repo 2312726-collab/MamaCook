@@ -28,6 +28,7 @@ public class ChuanBiNauActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
     private View layoutEmpty;
+    private String selectedDate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +52,7 @@ public class ChuanBiNauActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getUid();
+        selectedDate = getIntent().getStringExtra("SELECTED_DATE");
 
         Toolbar toolbar = findViewById(R.id.toolbar_chuan_bi_nau);
         setSupportActionBar(toolbar);
@@ -72,10 +74,15 @@ public class ChuanBiNauActivity extends AppCompatActivity {
     private void loadReadyToCookList() {
         if (currentUserId == null) return;
 
-        db.collection("ke_hoach_nau_an")
+        com.google.firebase.firestore.Query query = db.collection("ke_hoach_nau_an")
                 .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("trang_thai", "cho_nau")
-                .addSnapshotListener((value, error) -> {
+                .whereEqualTo("trang_thai", "cho_nau");
+
+        if (selectedDate != null) {
+            query = query.whereEqualTo("ngay_chi_tiet", selectedDate);
+        }
+
+        query.addSnapshotListener((value, error) -> {
                     if (error != null) return;
                     planList.clear();
                     if (value != null) {

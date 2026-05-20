@@ -54,6 +54,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -94,6 +95,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private boolean isSaved = false;
     private boolean isInPlan = false;
     private MonAn currentMonAn;
+    private String preSelectedDate, preSelectedMeal;
 
     private Uri imageUri;
     private ActivityResultLauncher<Intent> galleryLauncher;
@@ -174,6 +176,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
         });
 
         currentDishId = getIntent().getStringExtra(EXTRA_ID);
+        preSelectedDate = getIntent().getStringExtra("PRE_SELECTED_DATE");
+        preSelectedMeal = getIntent().getStringExtra("PRE_SELECTED_MEAL");
+
         if (TextUtils.isEmpty(currentDishId)) {
             Toast.makeText(this, "Không tìm thấy món ăn!", Toast.LENGTH_SHORT).show();
             finish();
@@ -679,12 +684,14 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void checkIfInPlan() {
         if (currentUserId == null) return;
+        // Kiểm tra xem món này có trong bất kỳ kế hoạch nào của người dùng không
         db.collection("ke_hoach_nau_an")
-                .document(currentUserId + "_" + currentDishId)
-                .addSnapshotListener(this, (doc, error) -> {
+                .whereEqualTo("id_nguoi_dung", currentUserId)
+                .whereEqualTo("id_mon_an", currentDishId)
+                .addSnapshotListener(this, (value, error) -> {
                     if (isFinishing() || isDestroyed()) return;
-                    if (doc != null) {
-                        isInPlan = doc.exists();
+                    if (value != null) {
+                        isInPlan = !value.isEmpty();
                         updatePlanButtonUI();
                     }
                 });
@@ -709,33 +716,114 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
         if (currentMonAn == null) return;
 
-        String idPlan = currentUserId + "_" + currentDishId;
-        if (isInPlan) {
-            db.collection("ke_hoach_nau_an").document(idPlan).delete()
-                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã xóa khỏi kế hoạch!", Toast.LENGTH_SHORT).show());
-        } else {
-            String[] types = {"Sáng", "Trưa", "Tối"};
-            new AlertDialog.Builder(this)
-                    .setTitle("Chọn buổi nấu ăn")
-                    .setItems(types, (dialog, which) -> {
-                        String mealType;
-                        if (which == 0) mealType = "Sang";
-                        else if (which == 1) mealType = "Trua";
-                        else mealType = "Toi";
-
-                        saveToCookingPlan(idPlan, mealType);
-                    })
-                    .show();
+        // CẢI TIẾN: Nếu đã có thông tin ngày và buổi từ trước, lưu thẳng
+        if (preSelectedDate != null && preSelectedMeal != null) {
+            saveToCookingPlan(preSelectedDate, preSelectedMeal);
+            return;
         }
+
+        // 1. Tạo danh sách 7 ngày trong tuần hiện tại
+        List<String> dateList = new ArrayList<>();
+        List<String> dateDisplayList = new ArrayList<>();
+        Calendar cal = Calendar.getInstance();
+        
+        // Điều chỉnh về Thứ 2 đầu tuần
+        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+             cal.add(Calendar.DAY_OF_YEAR, -6); // Nếu hôm nay là CN, quay lại T2 tuần trước? 
+             // Thường tuần hiện tại tính từ T2 đến CN.
+        }
+        
+        // Cách đơn giản nhất: Lấy 7 ngày kể từ hôm nay hoặc từ đầu tuần này.
+        // User muốn "các ngày trong tuần hiện tại"
+        cal = Calendar.getInstance();
+        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        
+        SimpleDateFormat sdfDisplay = new SimpleDateFormat("EEEE (dd/MM)", new Locale("vi", "VN"));
+        SimpleDateFormat sdfDatabase = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+        for (int i = 0; i < 7; i++) {
+            dateList.add(sdfDatabase.format(cal.getTime()));
+            dateDisplayList.add(sdfDisplay.format(cal.getTime()));
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Chọn ngày nấu")
+                .setItems(dateDisplayList.toArray(new String[0]), (dialog, which) -> {
+                    String selectedDate = dateList.get(which);
+                    showMealTypeDialog(selectedDate);
+                })
+                .show();
     }
 
-    private void saveToCookingPlan(String idPlan, String mealType) {
+    private void showMealTypeDialog(String selectedDate) {
+        String[] types = {"Sáng", "Trưa", "Tối"};
+        new AlertDialog.Builder(this)
+                .setTitle("Chọn buổi nấu ăn")
+                .setItems(types, (dialog, which) -> {
+                    String mealType = (which == 0) ? "Sang" : (which == 1) ? "Trua" : "Toi";
+                    saveToCookingPlan(selectedDate, mealType);
+                })
+                .show();
+    }
+
+    private void saveToCookingPlan(String selectedDate, String mealType) {
+        String buoiTiengViet = mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối";
+        
+        // Lấy thông tin Thứ mấy từ selectedDate (yyyy-MM-dd)
+        String thuMay = "";
+        try {
+            SimpleDateFormat dbFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date date = dbFormat.parse(selectedDate);
+            if (date != null) {
+                SimpleDateFormat thuFormat = new SimpleDateFormat("EEEE", new Locale("vi", "VN"));
+                thuMay = thuFormat.format(date);
+            }
+        } catch (Exception e) {
+            thuMay = selectedDate; // Fallback nếu có lỗi
+        }
+
+        String finalThuMay = thuMay;
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận thêm món")
+                .setMessage("Bạn có chắc chắn muốn thêm món '" + currentMonAn.getTen_mon() + "' vào " + buoiTiengViet + " " + finalThuMay + " không?")
+                .setPositiveButton("Thêm ngay", (dialog, which) -> {
+                    checkDuplicateAndSave(selectedDate, mealType, finalThuMay);
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void checkDuplicateAndSave(String selectedDate, String mealType, String thuMay) {
+        db.collection("ke_hoach_nau_an")
+                .whereEqualTo("id_nguoi_dung", currentUserId)
+                .whereEqualTo("id_mon_an", currentDishId)
+                .whereEqualTo("ngay_chi_tiet", selectedDate)
+                .whereEqualTo("buoi", mealType)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        String buoiTiengViet = mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối";
+                        Toast.makeText(this, "Món ăn này đã có trong " + buoiTiengViet + " " + thuMay + "!", Toast.LENGTH_LONG).show();
+                    } else {
+                        performSavePlan(selectedDate, mealType, thuMay);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Lỗi kiểm tra dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void performSavePlan(String selectedDate, String mealType, String thuMay) {
         Map<String, Object> plan = new HashMap<>();
+        // ... (phần code map vẫn giữ nguyên)
         plan.put("id_nguoi_dung", currentUserId);
         plan.put("id_mon_an", currentDishId);
         plan.put("ten_mon", currentMonAn.getTen_mon());
         plan.put("hinh_anh", currentMonAn.getHinh_anh());
         plan.put("ngay_lap_ke_hoach", FieldValue.serverTimestamp());
+        plan.put("ngay_chi_tiet", selectedDate);
         plan.put("trang_thai", "dang_di_cho");
         plan.put("buoi", mealType);
 
@@ -752,8 +840,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
         }
         plan.put("danh_sach_nguyen_lieu", listNL);
 
-        db.collection("ke_hoach_nau_an").document(idPlan).set(plan)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã thêm vào kế hoạch " + (mealType.equals("Sang") ? "Sáng" : mealType.equals("Trua") ? "Trưa" : "Tối") + "!", Toast.LENGTH_SHORT).show());
+        db.collection("ke_hoach_nau_an").add(plan)
+                .addOnSuccessListener(docRef -> Toast.makeText(this, "Đã thêm vào kế hoạch " + (mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối") + " " + thuMay + "!", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void listenRatingRealtime(String id) {

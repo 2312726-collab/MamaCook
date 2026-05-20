@@ -6,6 +6,18 @@
     android:layout_height="match_parent"
     tools:context=".activities.HomeActivity">
 
+    <!-- Background đồng bộ để tránh màn hình đen khi chuyển fragment -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_splash" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000" />
+
     <!-- Vùng chứa các Fragment nội dung -->
     <FrameLayout
         android:id="@+id/fragment_container"

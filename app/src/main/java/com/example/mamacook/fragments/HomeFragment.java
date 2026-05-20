@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mamacook.R;
+import com.example.mamacook.BuildConfig;
 import com.example.mamacook.activities.AdminActivity;
 import com.example.mamacook.activities.QuanLyDanhGiaActivity;
 import com.example.mamacook.activities.QuanLyTaiKhoanActivity;
@@ -333,7 +334,7 @@ public class HomeFragment extends Fragment {
     private void callGemini(List<MonAn> candidates, String weather, String location) {
         if (candidates.isEmpty()) { onGeminiFailed(candidates, "empty"); return; }
 
-        String apiKey = getString(R.string.gemini_api_key);
+        String apiKey = BuildConfig.GEMINI_API_KEY;
         GenerativeModel gm = new GenerativeModel("gemini-2.0-flash", apiKey);
         GenerativeModelFutures mdl = GenerativeModelFutures.from(gm);
         

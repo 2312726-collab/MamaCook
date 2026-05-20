@@ -2,6 +2,7 @@ package com.example.mamacook.fragments;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -124,36 +125,76 @@ public class SearchResultFragment extends Fragment {
         tvResultTitle.setText("Đang tìm: '" + text + "'");
 
         String noTone = VNCharacterUtils.removeAccents(text.toLowerCase());
-        String[] words = noTone.split("\\s+");
+        String[] wordsArray = noTone.split("\\s+");
+        List<String> queryWords = new ArrayList<>();
+        for (String w : wordsArray) {
+            if (!w.trim().isEmpty()) {
+                queryWords.add(w);
+            }
+        }
+
+        if (queryWords.isEmpty()) {
+            pbLoading.setVisibility(View.GONE);
+            layoutEmpty.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        // Chỉ lấy tối đa 10 từ đầu tiên vì giới hạn của whereArrayContainsAny
+        List<String> limitedWords = queryWords.subList(0, Math.min(10, queryWords.size()));
 
         db.collection("mon_an")
-                .whereArrayContains("tu_khoa_tim_kiem", words[0])
+                .whereArrayContainsAny("tu_khoa_tim_kiem", limitedWords)
                 .get()
                 .addOnSuccessListener(snap -> {
                     resultList.clear();
                     for (QueryDocumentSnapshot doc : snap) {
                         MonAn m = doc.toObject(MonAn.class);
-                        if (m == null) continue;
-                        if (m.getId_mon_an() == null || m.getId_mon_an().isEmpty()) {
-                            m.setId_mon_an(doc.getId());
+                        if (m == null || m.getTen_mon() == null) continue;
+                        
+                        List<String> keywords = m.getTu_khoa_tim_kiem();
+                        if (keywords == null) continue;
+
+                        String currentTitleNoTone = VNCharacterUtils.removeAccents(m.getTen_mon().toLowerCase());
+
+                        // LOGIC THÔNG MINH CẢI TIẾN:
+                        // 1. Kiểm tra xem toàn bộ cụm từ tìm kiếm có xuất hiện trong Tên món không
+                        boolean matchInTitle = currentTitleNoTone.contains(noTone);
+                        
+                        // 2. Kiểm tra trong danh sách nguyên liệu (Tìm theo cụm từ)
+                        boolean matchInIngredients = false;
+                        if (m.getDanh_sach_nguyen_lieu() != null) {
+                            for (MonAn.ChiTietNguyenLieu nl : m.getDanh_sach_nguyen_lieu()) {
+                                if (nl.ten_nguyen_lieu == null) continue;
+                                String nlName = VNCharacterUtils.removeAccents(nl.ten_nguyen_lieu.toLowerCase());
+                                if (nlName.contains(noTone)) {
+                                    matchInIngredients = true;
+                                    break;
+                                }
+                            }
                         }
-                        
-                        List<String> kw = m.getTu_khoa_tim_kiem();
-                        if (kw == null) continue;
-                        
-                        boolean ok = true;
-                        for (String w : words) {
-                            if (!kw.contains(w)) {
-                                ok = false;
+
+                        // 3. Nếu không khớp cụm từ, mới kiểm tra khớp từng từ đơn trong mảng keywords
+                        boolean isMatchAllWords = true;
+                        for (String word : queryWords) {
+                            if (!keywords.contains(word)) {
+                                isMatchAllWords = false;
                                 break;
                             }
                         }
-                        if (ok) resultList.add(m);
+
+                        // Chấp nhận nếu khớp cụm từ trong Tên/Nguyên liệu HOẶC khớp toàn bộ từ đơn
+                        if (matchInTitle || matchInIngredients || isMatchAllWords) {
+                            if (m.getId_mon_an() == null || m.getId_mon_an().isEmpty()) {
+                                m.setId_mon_an(doc.getId());
+                            }
+                            resultList.add(m);
+                        }
                     }
                     
+                    // Sắp xếp theo độ liên quan cải tiến
                     resultList.sort((a, b) -> Integer.compare(
-                            calcRelevance(b, text, noTone),
-                            calcRelevance(a, text, noTone)));
+                            calcRelevance(b, text, noTone, wordsArray),
+                            calcRelevance(a, text, noTone, wordsArray)));
 
                     pbLoading.setVisibility(View.GONE);
                     if (resultList.isEmpty()) {
@@ -168,18 +209,49 @@ public class SearchResultFragment extends Fragment {
                 .addOnFailureListener(e -> {
                     pbLoading.setVisibility(View.GONE);
                     layoutEmpty.setVisibility(View.VISIBLE);
+                    Log.e("SEARCH_ERROR", e.getMessage());
                 });
     }
 
-    private int calcRelevance(MonAn m, String q, String qnt) {
+    private int calcRelevance(MonAn m, String query, String queryNoTone, String[] words) {
         if (m.getTen_mon() == null) return 0;
-        int s = 0;
-        String n = m.getTen_mon().toLowerCase();
-        String nt = VNCharacterUtils.removeAccents(n);
-        if (n.equals(q)) s += 1000; else if (nt.equals(qnt)) s += 900;
-        if (n.startsWith(q)) s += 500; else if (nt.startsWith(qnt)) s += 450;
-        if (n.contains(q)) s += 200; else if (nt.contains(qnt)) s += 180;
-        return s;
+        int score = 0;
+        String title = m.getTen_mon().toLowerCase();
+        String titleNoTone = VNCharacterUtils.removeAccents(title);
+
+        // 1. Ưu tiên khớp chính xác tuyệt đối (Cả dấu và không dấu)
+        if (title.equals(query.toLowerCase())) score += 10000;
+        else if (titleNoTone.equals(queryNoTone)) score += 8000;
+
+        // 2. Ưu tiên khớp cụm từ dài hơn (Chuỗi con liên tục)
+        if (title.contains(query.toLowerCase())) {
+            score += (2000 + query.length() * 10);
+        } else if (titleNoTone.contains(queryNoTone)) {
+            score += (1500 + queryNoTone.length() * 10);
+        }
+
+        // 3. Ưu tiên theo số lượng từ khóa khớp (Càng nhiều từ trong query xuất hiện càng tốt)
+        List<String> keywords = m.getTu_khoa_tim_kiem();
+        if (keywords != null) {
+            int matchCount = 0;
+            for (String w : words) {
+                if (keywords.contains(w)) {
+                    matchCount++;
+                    score += 500; // Cộng điểm cho mỗi từ khớp
+                }
+            }
+            // Thưởng lớn nếu khớp toàn bộ các từ trong câu tìm kiếm
+            if (matchCount >= words.length) {
+                score += 3000;
+            }
+        }
+
+        // 4. Ưu tiên món ăn có vị trí từ khóa ở đầu tên
+        if (title.startsWith(query.toLowerCase()) || titleNoTone.startsWith(queryNoTone)) {
+            score += 1000;
+        }
+
+        return score;
     }
 
     private void hideKeyboard() {

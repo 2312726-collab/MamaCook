@@ -12,6 +12,7 @@ public class CookingPlan {
     private Timestamp ngay_lap_ke_hoach;
     private String trang_thai; // "dang_di_cho" hoặc "cho_nau"
     private String buoi; // "Sang", "Trua", "Toi"
+    private String ngay_chi_tiet; // "yyyy-MM-dd"
     private List<IngredientItem> danh_sach_nguyen_lieu;
 
     public CookingPlan() {}
@@ -21,6 +22,9 @@ public class CookingPlan {
 
     public String getBuoi() { return buoi; }
     public void setBuoi(String buoi) { this.buoi = buoi; }
+
+    public String getNgay_chi_tiet() { return ngay_chi_tiet; }
+    public void setNgay_chi_tiet(String ngay_chi_tiet) { this.ngay_chi_tiet = ngay_chi_tiet; }
 
     public static class IngredientItem {
         private String ten_nguyen_lieu;
