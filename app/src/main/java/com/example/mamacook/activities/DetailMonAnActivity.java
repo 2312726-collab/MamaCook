@@ -48,6 +48,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.FirebaseStorage;
@@ -92,6 +93,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private boolean isSaved = false;
     private boolean isInPlan = false;
     private MonAn currentMonAn;
+    private ListenerRegistration monAnListener;
 
     private Uri imageUri;
     private ActivityResultLauncher<Intent> galleryLauncher;
@@ -151,11 +153,18 @@ public class DetailMonAnActivity extends AppCompatActivity {
         }
 
         renderFromIntent();
-        listenRatingRealtime(currentDishId);
-        fetchLatestReviews(currentDishId);
-        checkIfSaved();
-        checkIfInPlan();
         addToHistory(currentDishId);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (currentDishId != null) {
+            startListeningMonAnDetail(currentDishId);
+            fetchLatestReviews(currentDishId);
+            checkIfSaved();
+            checkIfInPlan();
+        }
     }
 
     private void initViews() {
@@ -239,10 +248,10 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void updateRatingUI(String rating, int count) {
-        if (rating == null) rating = "0.0";
-        tvRatingInfo.setText(String.format(new Locale("vi", "VN"), "🕒 %s ⭐ (%d)", rating, count));
-        tvDiemTrungBinh.setText("⭐ " + rating);
-        if (tvSoDanhGia != null) tvSoDanhGia.setText(String.format(new Locale("vi", "VN"), "(%d đánh giá)", count));
+        // Ẩn các thông tin rating dư thừa theo yêu cầu tinh chỉnh UI
+        if (tvRatingInfo != null) tvRatingInfo.setVisibility(View.GONE);
+        if (tvDiemTrungBinh != null) tvDiemTrungBinh.setVisibility(View.GONE);
+        if (tvSoDanhGia != null) tvSoDanhGia.setVisibility(View.GONE);
     }
 
     private void setupToolbar() {
@@ -440,46 +449,91 @@ public class DetailMonAnActivity extends AppCompatActivity {
         });
     }
 
-    private void listenRatingRealtime(String id) {
-        db.collection("mon_an").document(id).addSnapshotListener(this, (doc, error) -> {
+    private void startListeningMonAnDetail(String id) {
+        DocumentReference docRef = db.collection("mon_an").document(id);
+        // Thêm 'this' để Firebase tự động quản lý vòng đời listener theo Activity
+        monAnListener = docRef.addSnapshotListener(this, (doc, error) -> {
+            if (error != null) {
+                Log.e(TAG, "Listen failed.", error);
+                return;
+            }
+
             if (doc != null && doc.exists()) {
                 currentMonAn = doc.toObject(MonAn.class);
                 if (currentMonAn != null) {
                     currentMonAn.setId_mon_an(doc.getId());
-                    updateRatingUI(RatingUtils.getRatingOnly(currentMonAn), currentMonAn.getReviewCount());
-                    tvTen.setText(currentMonAn.getTen_mon());
-                    tvThoiGian.setText(String.format(Locale.getDefault(), "%d phút", currentMonAn.getThoi_gian_nau()));
-
-                    // TỰ ĐỘNG LOAD LẠI ẢNH MỚI NHẤT
-                    if (currentMonAn.getHinh_anh() != null && !currentMonAn.getHinh_anh().isEmpty()) {
-                        if (currentMonAn.getHinh_anh().startsWith("http")) {
-                            Glide.with(DetailMonAnActivity.this)
-                                 .load(currentMonAn.getHinh_anh())
-                                 .placeholder(R.drawable.bg_splash)
-                                 .into(imgMonAn);
-                        } else {
-                            StorageReference ref = FirebaseStorage.getInstance().getReference().child(currentMonAn.getHinh_anh());
-                            Glide.with(DetailMonAnActivity.this)
-                                 .load(ref)
-                                 .placeholder(R.drawable.bg_splash)
-                                 .into(imgMonAn);
-                        }
-                    }
-                    // KẾT THÚC ĐOẠN CODE THÊM MỚI
-                    if (currentMonAn.getDanh_sach_nguyen_lieu() != null) {
-                        fullNguyenLieuList = currentMonAn.getDanh_sach_nguyen_lieu();
-                        updateNguyenLieuDisplay();
-                    }
-                    if (currentMonAn.getDanh_sach_buoc_nau() != null) {
-                        buocNauAdapter = new BuocNauAdapter(currentMonAn.getDanh_sach_buoc_nau());
-                        rvBuocNau.setAdapter(buocNauAdapter);
-                    }
-                    if (currentMonAn.getDo_kho() != null) tvDoKho.setText(currentMonAn.getDo_kho());
-                    tvKhauPhan.setText(String.format(Locale.getDefault(), "%d người", currentMonAn.getKhau_phan()));
-                    if (currentMonAn.getVung_mien() != null) tvRegion.setText(currentMonAn.getVung_mien());
+                    updateUI(currentMonAn);
                 }
+            } else {
+                Toast.makeText(this, "Món ăn không tồn tại hoặc đã bị xóa", Toast.LENGTH_SHORT).show();
+                finish();
             }
         });
+    }
+
+    private void updateUI(MonAn monAn) {
+        if (monAn == null) return;
+
+        // 1. Cập nhật Tên và Ảnh
+        tvTen.setText(monAn.getTen_mon());
+        String hinhAnh = monAn.getHinh_anh();
+        if (!TextUtils.isEmpty(hinhAnh)) {
+            if (hinhAnh.startsWith("http")) {
+                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            } else {
+                StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            }
+        }
+
+        // 2. Cập nhật 3 cột thông tin (Thời gian, Độ khó, Khẩu phần)
+        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", monAn.getThoi_gian_nau()));
+        
+        String dk = monAn.getDo_kho();
+        tvDoKho.setText(TextUtils.isEmpty(dk) ? "Chưa rõ" : dk);
+        
+        int kp = monAn.getKhau_phan();
+        tvKhauPhan.setText(kp > 0 ? kp + " người" : "Chưa rõ");
+
+        String vm = monAn.getVung_mien();
+        tvRegion.setText("Vùng miền: " + (TextUtils.isEmpty(vm) ? "Chưa rõ" : vm));
+
+        // 3. Cập nhật phần Sơ chế (Chuẩn bị) - Xử lý List SoChe
+        if (monAn.getDanh_sach_so_che() != null && !monAn.getDanh_sach_so_che().isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (MonAn.SoChe sc : monAn.getDanh_sach_so_che()) {
+                if (!TextUtils.isEmpty(sc.tieu_de)) {
+                    sb.append("• ").append(sc.tieu_de).append(":\n");
+                }
+                sb.append(sc.noi_dung).append("\n\n");
+            }
+            tvChuanBi.setText(sb.toString().trim());
+            tvChuanBi.setVisibility(View.VISIBLE);
+        } else {
+            tvChuanBi.setText("Không có thông tin sơ chế.");
+        }
+
+        // 4. Cập nhật Nguyên liệu & Bước nấu
+        if (monAn.getDanh_sach_nguyen_lieu() != null) {
+            fullNguyenLieuList = monAn.getDanh_sach_nguyen_lieu();
+            updateNguyenLieuDisplay();
+        }
+        
+        if (monAn.getDanh_sach_buoc_nau() != null) {
+            buocNauAdapter = new BuocNauAdapter(monAn.getDanh_sach_buoc_nau());
+            rvBuocNau.setAdapter(buocNauAdapter);
+        }
+
+        updateRatingUI(null, 0); // Ẩn các view rating theo thiết kế mới
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (monAnListener != null) {
+            monAnListener.remove();
+            monAnListener = null;
+        }
     }
 
     private void checkIfSaved() {

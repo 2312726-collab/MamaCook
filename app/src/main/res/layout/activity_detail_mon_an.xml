@@ -176,31 +176,33 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:baselineAligned="false">
 
+                        <!-- Cột Thời gian -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Thời gian:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
 
                             <TextView
                                 android:id="@+id/tv_detail_thoi_gian"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="45 phút"
-                                android:textColor="@color/text_brown"
-                                android:textSize="18sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="Chuẩn bị"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:text="⌛ 45 phút"
+                                android:textColor="@color/text_brown"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <View
@@ -208,29 +210,30 @@
                             android:layout_height="match_parent"
                             android:background="#E0E0E0" />
 
+                        <!-- Cột Độ khó -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Độ khó:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
 
                             <TextView
                                 android:id="@+id/tv_detail_do_kho"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
                                 android:text="Trung bình"
                                 android:textColor="@color/text_brown"
-                                android:textSize="18sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Độ khó"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
                         </LinearLayout>
 
                         <View
@@ -238,6 +241,7 @@
                             android:layout_height="match_parent"
                             android:background="#E0E0E0" />
 
+                        <!-- Cột Khẩu phần -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -246,21 +250,21 @@
                             android:orientation="vertical">
 
                             <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Khẩu phần:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                            <TextView
                                 android:id="@+id/tv_detail_khau_phan"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
                                 android:text="4 người"
                                 android:textColor="@color/text_brown"
-                                android:textSize="18sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Khẩu phần"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
