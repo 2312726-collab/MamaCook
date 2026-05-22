@@ -449,6 +449,23 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     updateRatingUI(RatingUtils.getRatingOnly(currentMonAn), currentMonAn.getReviewCount());
                     tvTen.setText(currentMonAn.getTen_mon());
                     tvThoiGian.setText(String.format(Locale.getDefault(), "%d phút", currentMonAn.getThoi_gian_nau()));
+
+                    // TỰ ĐỘNG LOAD LẠI ẢNH MỚI NHẤT
+                    if (currentMonAn.getHinh_anh() != null && !currentMonAn.getHinh_anh().isEmpty()) {
+                        if (currentMonAn.getHinh_anh().startsWith("http")) {
+                            Glide.with(DetailMonAnActivity.this)
+                                 .load(currentMonAn.getHinh_anh())
+                                 .placeholder(R.drawable.bg_splash)
+                                 .into(imgMonAn);
+                        } else {
+                            StorageReference ref = FirebaseStorage.getInstance().getReference().child(currentMonAn.getHinh_anh());
+                            Glide.with(DetailMonAnActivity.this)
+                                 .load(ref)
+                                 .placeholder(R.drawable.bg_splash)
+                                 .into(imgMonAn);
+                        }
+                    }
+                    // KẾT THÚC ĐOẠN CODE THÊM MỚI
                     if (currentMonAn.getDanh_sach_nguyen_lieu() != null) {
                         fullNguyenLieuList = currentMonAn.getDanh_sach_nguyen_lieu();
                         updateNguyenLieuDisplay();

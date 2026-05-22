@@ -13,4 +13,5 @@ public class DanhMuc {
     public String getId_danh_muc() { return id_danh_muc; }
     public void setId_danh_muc(String id_danh_muc) { this.id_danh_muc = id_danh_muc; }
     public String getTen_danh_muc() { return ten_danh_muc; }
+    public void setTen_danh_muc(String ten_danh_muc) { this.ten_danh_muc = ten_danh_muc; }
 }

@@ -25,12 +25,12 @@
                 android:id="@+id/tv_stt_buoc_nau"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:background="@drawable/ic_nav_profile"
-                android:backgroundTint="@color/brand_primary"
+                android:background="@drawable/bg_circle_orange"
                 android:textColor="@color/white"
                 android:text="1"
                 android:gravity="center"
-                android:textStyle="bold"/>
+                android:textStyle="bold"
+                android:textSize="12sp"/>
 
             <EditText
                 android:id="@+id/edt_sub_tieu_de_buoc_nau"
@@ -42,7 +42,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="@null"
-                android:textColor="@color/text_brown"/>
+                android:textColor="@android:color/black"/>
 
             <ImageButton
                 android:id="@+id/btn_delete_buoc_nau"
@@ -57,32 +57,41 @@
             android:id="@+id/edt_sub_mo_ta_buoc_nau"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
             android:hint="Mô tả cụ thể các hành động nấu..."
-            android:textSize="13sp"
+            android:textSize="14sp"
+            android:textColor="@color/text_brown"
             android:inputType="textMultiLine"
-            android:minLines="2"/>
+            android:minLines="2"
+            android:background="@drawable/bg_admin_input"
+            android:padding="12dp"
+            android:gravity="top"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="8dp">
 
             <EditText
                 android:id="@+id/edt_sub_thoi_gian_buoc"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:hint="Thời gian nấu"
-                android:textSize="13sp"
-                android:inputType="number"/>
+                android:hint="Thời gian"
+                android:textSize="14sp"
+                android:textColor="@color/text_brown"
+                android:inputType="number"
+                android:background="@drawable/bg_admin_input"
+                android:padding="8dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" phút"
-                android:textSize="13sp"/>
+                android:layout_marginStart="8dp"
+                android:text="phút"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"/>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

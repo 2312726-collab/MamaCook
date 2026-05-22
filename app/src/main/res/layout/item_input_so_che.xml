@@ -25,12 +25,12 @@
                 android:id="@+id/tv_stt_so_che"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:background="@drawable/ic_nav_profile"
-                android:backgroundTint="@color/brand_primary"
+                android:background="@drawable/bg_circle_orange"
                 android:textColor="@color/white"
                 android:text="1"
                 android:gravity="center"
-                android:textStyle="bold"/>
+                android:textStyle="bold"
+                android:textSize="12sp"/>
 
             <EditText
                 android:id="@+id/edt_sub_tieu_de_so_che"
@@ -42,7 +42,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="@null"
-                android:textColor="@color/text_brown"/>
+                android:textColor="@android:color/black"/>
 
             <ImageButton
                 android:id="@+id/btn_delete_so_che"
@@ -57,10 +57,14 @@
             android:id="@+id/edt_sub_noi_dung_so_che"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
             android:hint="Nội dung băm nhỏ, rửa sạch chi tiết..."
-            android:textSize="13sp"
+            android:textSize="14sp"
+            android:textColor="@color/text_brown"
             android:inputType="textMultiLine"
-            android:minLines="2"/>
+            android:minLines="2"
+            android:background="@drawable/bg_admin_input"
+            android:padding="12dp"
+            android:gravity="top"/>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
