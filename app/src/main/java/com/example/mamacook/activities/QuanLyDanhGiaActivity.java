@@ -74,6 +74,7 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     private void setupSpinner() {
         String[] trangThaiList = {
                 "Tất cả",
+                "Chờ duyệt",
                 "Đang hiển thị",
                 "Đã ẩn",
                 "Vi phạm"
@@ -90,11 +91,13 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
         spinnerTrangThai.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position == 0) trangThaiDangChon = "tat_ca";
-                else if (position == 1) trangThaiDangChon = "hien_thi";
-                else if (position == 2) trangThaiDangChon = "an";
-                else trangThaiDangChon = "vi_pham";
-
+                switch (position) {
+                    case 0: trangThaiDangChon = "tat_ca"; break;
+                    case 1: trangThaiDangChon = "cho_duyet"; break;
+                    case 2: trangThaiDangChon = "hien_thi"; break;
+                    case 3: trangThaiDangChon = "an"; break;
+                    case 4: trangThaiDangChon = "vi_pham"; break;
+                }
                 locDanhGia();
             }
 
@@ -156,7 +159,8 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
 
             if (tenNguoiDung == null) tenNguoiDung = "";
             if (noiDung == null) noiDung = "";
-            if (trangThai == null || trangThai.isEmpty()) trangThai = "hien_thi";
+            // Mặc định là cho_duyet nếu chưa có trang_thai
+            if (trangThai == null || trangThai.isEmpty()) trangThai = "cho_duyet";
 
             boolean khopTen = tenNguoiDung.toLowerCase().contains(keywordTen);
             boolean khopBinhLuan = noiDung.toLowerCase().contains(keywordBinhLuan);
@@ -173,7 +177,6 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         if (danhGiaListener != null) {
             danhGiaListener.remove();
         }

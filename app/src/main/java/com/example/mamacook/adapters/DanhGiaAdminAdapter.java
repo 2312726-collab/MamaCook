@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -59,7 +60,21 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
 
         holder.tvTenNguoiDung.setText(tenNguoiDung == null ? "Ẩn danh" : tenNguoiDung);
         holder.tvNoiDung.setText(noiDung == null ? "Không có nội dung" : noiDung);
-        holder.tvSoSao.setText("Số sao: " + (soSao == null ? "0" : soSao.toString()));
+
+        String tenMon = doc.getString("ten_mon_an");
+        holder.tvMonAn.setText("Món: " + (tenMon == null ? "N/A" : tenMon));
+
+        com.google.firebase.Timestamp timestamp = doc.getTimestamp("ngay_danh_gia");
+        if (timestamp != null) {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault());
+            holder.tvNgay.setText(sdf.format(timestamp.toDate()));
+        } else {
+            holder.tvNgay.setText("");
+        }
+
+        float soSaoVal = (soSao == null) ? 0f : soSao.floatValue();
+        holder.rbSoSao.setRating(soSaoVal);
+
         holder.tvTrangThai.setText("Trạng thái: " + trangThai);
 
         if ("vi_pham".equals(trangThai)) {
@@ -72,44 +87,33 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
 
         holder.btnAnHien.setOnClickListener(v -> {
             int currentPosition = holder.getBindingAdapterPosition();
-
-            if (currentPosition == RecyclerView.NO_POSITION
-                    || currentPosition >= danhGiaList.size()) {
-                return;
-            }
+            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= danhGiaList.size()) return;
 
             DocumentSnapshot currentDoc = danhGiaList.get(currentPosition);
             String currentId = currentDoc.getId();
-            String currentTrangThai = currentDoc.getString("trang_thai");
 
-            if (currentTrangThai == null || currentTrangThai.isEmpty()) {
-                currentTrangThai = "hien_thi";
-            }
-
-            String trangThaiMoi;
-
-            if ("hien_thi".equals(currentTrangThai)) {
-                trangThaiMoi = "vi_pham";
-            } else {
-                trangThaiMoi = "hien_thi";
-            }
-
-            db.collection("danh_gia")
-                    .document(currentId)
-                    .update("trang_thai", trangThaiMoi)
-                    .addOnSuccessListener(unused -> {
-                        Toast.makeText(context, "Đã cập nhật trạng thái", Toast.LENGTH_SHORT).show();
+            String[] options = {"Hiển thị", "Ẩn", "Vi phạm"};
+            new AlertDialog.Builder(context)
+                    .setTitle("Chọn trạng thái")
+                    .setItems(options, (dialog, which) -> {
+                        String trangThaiMoi;
+                        if (which == 0) trangThaiMoi = "hien_thi";
+                        else if (which == 1) trangThaiMoi = "an";
+                        else trangThaiMoi = "vi_pham";
 
                         db.collection("danh_gia")
                                 .document(currentId)
-                                .get()
-                                .addOnSuccessListener(newDoc -> {
-                                    capNhatItemTheoId(currentId, newDoc);
-                                });
+                                .update("trang_thai", trangThaiMoi)
+                                .addOnSuccessListener(unused -> {
+                                    Toast.makeText(context, "Đã cập nhật: " + options[which], Toast.LENGTH_SHORT).show();
+                                    db.collection("danh_gia").document(currentId).get()
+                                            .addOnSuccessListener(newDoc -> capNhatItemTheoId(currentId, newDoc));
+                                })
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                                );
                     })
-                    .addOnFailureListener(e ->
-                            Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                    );
+                    .show();
         });
 
         holder.btnXoa.setOnClickListener(v -> {
@@ -169,7 +173,8 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
     }
 
     static class DanhGiaViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTenNguoiDung, tvNoiDung, tvSoSao, tvTrangThai;
+        TextView tvTenNguoiDung, tvNoiDung, tvTrangThai, tvMonAn, tvNgay;
+        RatingBar rbSoSao;
         Button btnAnHien, btnXoa;
 
         public DanhGiaViewHolder(@NonNull View itemView) {
@@ -177,8 +182,10 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
 
             tvTenNguoiDung = itemView.findViewById(R.id.tv_ten_nguoi_dung_dg);
             tvNoiDung = itemView.findViewById(R.id.tv_noi_dung_dg);
-            tvSoSao = itemView.findViewById(R.id.tv_so_sao_dg);
+            rbSoSao = itemView.findViewById(R.id.rb_so_sao_dg);
             tvTrangThai = itemView.findViewById(R.id.tv_trang_thai_dg);
+            tvMonAn = itemView.findViewById(R.id.tv_mon_an_dg);
+            tvNgay = itemView.findViewById(R.id.tv_ngay_dg);
             btnAnHien = itemView.findViewById(R.id.btn_an_hien_dg);
             btnXoa = itemView.findViewById(R.id.btn_xoa_dg);
         }
