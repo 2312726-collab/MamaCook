@@ -28,6 +28,7 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
     private Button btnTatCa, btnViPham;
     private UserAdminAdapter adapter;
     private FirebaseFirestore db;
+    private com.google.firebase.firestore.ListenerRegistration userListener; // Bộ lắng nghe realtime
 
     private final List<User> fullList = new ArrayList<>();
     private final List<User> filteredList = new ArrayList<>();
@@ -55,7 +56,8 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
     }
 
     private void loadUsers() {
-        db.collection("nguoi_dung")
+        // Gán listener vào biến để có thể gỡ bỏ khi đóng Activity
+        userListener = db.collection("nguoi_dung")
                 .addSnapshotListener((query, error) -> {
                     if (error != null || query == null) return;
                     fullList.clear();
@@ -66,6 +68,15 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
                     }
                     applyFilters();
                 });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Giải phóng bộ lắng nghe để tránh rò rỉ bộ nhớ (Memory Leak)
+        if (userListener != null) {
+            userListener.remove();
+        }
     }
 
     private void setupButtons() {

@@ -9,11 +9,13 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mamacook.R;
 import com.example.mamacook.models.User;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.UserViewHolder> {
@@ -24,13 +26,21 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
     }
 
     private final Context context;
-    private final List<User> userList;
+    private List<User> userList;
     private final OnUserActionListener listener;
 
     public UserAdminAdapter(Context context, List<User> userList, OnUserActionListener listener) {
         this.context = context;
-        this.userList = userList;
+        this.userList = new ArrayList<>(userList);
         this.listener = listener;
+    }
+
+    // Sử dụng DiffUtil để cập nhật danh sách mượt mà và tối ưu hiệu năng
+    public void updateList(List<User> newList) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new UserDiffCallback(this.userList, newList));
+        this.userList.clear();
+        this.userList.addAll(newList);
+        diffResult.dispatchUpdatesTo(this);
     }
 
     @NonNull
@@ -92,6 +102,37 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
             tvSoLanViPham = itemView.findViewById(R.id.tv_so_lan_vi_pham_user);
             btnKhoaMo = itemView.findViewById(R.id.btn_khoa_mo_user);
             btnDoiVaiTro = itemView.findViewById(R.id.btn_doi_vai_tro_user);
+        }
+    }
+
+    // Lớp hỗ trợ so sánh sự khác biệt giữa hai danh sách người dùng
+    private static class UserDiffCallback extends DiffUtil.Callback {
+        private final List<User> oldList;
+        private final List<User> newList;
+
+        public UserDiffCallback(List<User> oldList, List<User> newList) {
+            this.oldList = oldList;
+            this.newList = newList;
+        }
+
+        @Override
+        public int getOldListSize() { return oldList.size(); }
+
+        @Override
+        public int getNewListSize() { return newList.size(); }
+
+        @Override
+        public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+            return oldList.get(oldItemPosition).getId_nguoi_dung().equals(newList.get(newItemPosition).getId_nguoi_dung());
+        }
+
+        @Override
+        public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+            User oldUser = oldList.get(oldItemPosition);
+            User newUser = newList.get(newItemPosition);
+            return oldUser.getRole().equals(newUser.getRole()) &&
+                   oldUser.getTrang_thai_tai_khoan().equals(newUser.getTrang_thai_tai_khoan()) &&
+                   oldUser.getSo_lan_vi_pham() == newUser.getSo_lan_vi_pham();
         }
     }
 }
