@@ -203,7 +203,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void checkUserRole() {
         // 1. Mặc định ban đầu (Dành cho User thường hoặc chưa đăng nhập)
-        // Hiện nút User, Ẩn nút Admin
         if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
         if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
         if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
@@ -214,11 +213,11 @@ public class DetailMonAnActivity extends AppCompatActivity {
         // 2. Gọi đúng bảng "nguoi_dung" bằng Document ID (UID)
         db.collection("nguoi_dung").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
                         String role = documentSnapshot.getString("role");
 
                         // 3. Nếu kiểm tra đúng là Admin
-                        if (role != null && "admin".equalsIgnoreCase(role.trim())) {
+                        if ("admin".equalsIgnoreCase(role)) {
                             // BẬT 2 nút của Admin (Sửa, Xóa)
                             if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.VISIBLE);
                             if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.VISIBLE);
@@ -226,10 +225,21 @@ public class DetailMonAnActivity extends AppCompatActivity {
                             // ẨN 2 nút của User (Yêu thích, Kế hoạch)
                             if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.GONE);
                             if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.GONE);
+                        } else {
+                            // Nếu role không phải admin hoặc null -> giữ nguyên mặc định user
+                            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
+                            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
+                            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
+                            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
                         }
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Lỗi kiểm tra quyền: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Lỗi kiểm tra quyền: " + e.getMessage());
+                    // Mặc định an toàn nếu lỗi mạng/DB
+                    if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
+                    if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
+                });
     }
 
     private void renderFromIntent() {

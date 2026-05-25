@@ -20,6 +20,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.util.Log;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -33,6 +34,7 @@ import com.example.mamacook.models.MonAn;
 import com.example.mamacook.models.MonAn.BuocNau;
 import com.example.mamacook.models.MonAn.ChiTietNguyenLieu;
 import com.example.mamacook.models.MonAn.SoChe;
+import com.example.mamacook.utils.VNCharacterUtils;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 
@@ -225,41 +227,74 @@ public class AddEditMonAnActivity extends AppCompatActivity {
     }
 
     private void checkIntentAndInitForm() {
-        if (getIntent().hasExtra("mon_an_id")) {
-            isEditMode = true;
+        // 1. Xác định trạng thái (Mode) chặt chẽ dựa trên Intent
+        isEditMode = getIntent() != null && getIntent().hasExtra("mon_an_id");
+
+        if (isEditMode) {
+            // 2. Cấu hình UI cho chế độ CHỈNH SỬA
             tvTitleForm.setText("Chỉnh sửa món ăn");
             btnSaveForm.setText("Cập nhật");
 
             String dishId = getIntent().getStringExtra("mon_an_id");
-            setLoading(true);
-
-            db.collection("mon_an").document(dishId).get()
-                    .addOnSuccessListener(documentSnapshot -> {
-                        setLoading(false);
-                        if (documentSnapshot.exists()) {
-                            currentMonAn = documentSnapshot.toObject(MonAn.class);
-                            if (currentMonAn != null) {
-                                currentMonAn.setId_mon_an(documentSnapshot.getId());
-                                fillDataToViews(currentMonAn);
+            if (dishId != null && !dishId.isEmpty()) {
+                setLoading(true);
+                db.collection("mon_an").document(dishId).get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            setLoading(false);
+                            if (documentSnapshot.exists()) {
+                                currentMonAn = documentSnapshot.toObject(MonAn.class);
+                                if (currentMonAn != null) {
+                                    currentMonAn.setId_mon_an(documentSnapshot.getId());
+                                    fillDataToViews(currentMonAn);
+                                }
+                            } else {
+                                Toast.makeText(this, "Không tìm thấy dữ liệu món ăn!", Toast.LENGTH_SHORT).show();
+                                finish();
                             }
-                        } else {
-                            Toast.makeText(this, "Không tìm thấy dữ liệu món ăn!", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            setLoading(false);
+                            Toast.makeText(this, "Lỗi tải dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                             finish();
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        setLoading(false);
-                        Toast.makeText(this, "Lỗi tải dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
+                        });
+            } else {
+                Toast.makeText(this, "ID món ăn không hợp lệ!", Toast.LENGTH_SHORT).show();
+                finish();
+            }
         } else {
-            isEditMode = false;
+            // 2. Cấu hình UI cho chế độ THÊM MỚI
             tvTitleForm.setText("Thêm món ăn mới");
-            btnSaveForm.setText("Đăng món ăn");
-            // Add initial empty rows
-            addNguyenLieuFormRow(null);
-            addSoCheFormRow(null);
-            addBuocNauFormRow(null);
+            btnSaveForm.setText("Thêm món");
+            
+            // 3. Reset sạch sẽ form và container để loại bỏ dữ liệu rác
+            resetFormToDefault();
         }
+    }
+
+    private void resetFormToDefault() {
+        // Clear basic EditTexts
+        edtTenMon.setText("");
+        edtThoiGianNau.setText("");
+        edtKhauPhan.setText("");
+        
+        // Reset AutoCompleteTextViews
+        spinnerDoKho.setText("", false);
+        spinnerVungMien.setText("", false);
+        spinnerDanhMuc.setText("", false);
+        
+        // Clear dynamic containers
+        containerNguyenLieu.removeAllViews();
+        containerSoChe.removeAllViews();
+        containerBuocNau.removeAllViews();
+        
+        // Reset image and URI
+        imgMonAnForm.setImageResource(R.drawable.ic_nav_profile);
+        selectedMainImageUri = null;
+        
+        // Add initial empty rows for fresh start
+        addNguyenLieuFormRow(null);
+        addSoCheFormRow(null);
+        addBuocNauFormRow(null);
     }
 
     private void fillDataToViews(MonAn monAn) {
@@ -274,8 +309,14 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         }
 
         if (monAn.getHinh_anh() != null && !monAn.getHinh_anh().isEmpty()) {
-            storage.getReference().child(monAn.getHinh_anh()).getDownloadUrl()
-                    .addOnSuccessListener(uri -> Glide.with(this).load(uri).into(imgMonAnForm));
+            if (monAn.getHinh_anh().startsWith("http")) {
+                Glide.with(this).load(monAn.getHinh_anh()).into(imgMonAnForm);
+            } else {
+                storage.getReference().child(monAn.getHinh_anh()).getDownloadUrl()
+                        .addOnSuccessListener(uri -> {
+                            if (!isFinishing()) Glide.with(this).load(uri).into(imgMonAnForm);
+                        });
+            }
         }
 
         if (monAn.getDanh_sach_nguyen_lieu() != null) {
@@ -381,6 +422,16 @@ public class AddEditMonAnActivity extends AppCompatActivity {
             return;
         }
 
+        if (listDanhMuc.isEmpty()) {
+            Toast.makeText(this, "Đang tải dữ liệu danh mục, vui lòng đợi...", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (spinnerDanhMuc.getText().toString().trim().isEmpty()) {
+            Toast.makeText(this, "Vui lòng chọn danh mục cho món ăn!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         // Trích xuất dữ liệu động (nguyên liệu, sơ chế, các bước)
         if (!extractDynamicData()) return;
 
@@ -414,53 +465,42 @@ public class AddEditMonAnActivity extends AppCompatActivity {
     }
 
     private boolean extractDynamicData() {
-        danhSachNguyenLieu.clear();
-        danhSachSoChe.clear();
-        danhSachBuocNau.clear();
+        List<ChiTietNguyenLieu> tempNL = new ArrayList<>();
+        List<SoChe> tempSC = new ArrayList<>();
+        List<BuocNau> tempBN = new ArrayList<>();
 
-        // 1. Xử lý danh sách nguyên liệu
+        // 1. Xử lý nguyên liệu
         for (int i = 0; i < containerNguyenLieu.getChildCount(); i++) {
             NguyenLieuViewHolder holder = (NguyenLieuViewHolder) containerNguyenLieu.getChildAt(i).getTag();
             if (holder == null) continue;
-            
             String tenNL = holder.edtTen.getText().toString().trim();
             if (tenNL.isEmpty()) continue;
 
             ChiTietNguyenLieu nl = new ChiTietNguyenLieu();
             nl.ten_nguyen_lieu = tenNL;
-            
-            // Xử lý an toàn số lượng (hỗ trợ dấu phẩy)
-            try {
-                String slStr = holder.edtSoLuong.getText().toString().trim().replace(",", ".");
-                nl.so_luong = slStr.isEmpty() ? 0 : Double.parseDouble(slStr);
-            } catch (Exception e) {
-                nl.so_luong = 0;
-            }
-            
+            nl.so_luong = safeParseDouble(holder.edtSoLuong.getText().toString(), 0);
             nl.don_vi = holder.edtDonVi.getText().toString().trim();
             nl.ghi_chu = holder.edtGhiChu.getText().toString().trim();
-            danhSachNguyenLieu.add(nl);
+            tempNL.add(nl);
         }
 
         // 2. Xử lý sơ chế
         for (int i = 0; i < containerSoChe.getChildCount(); i++) {
             SoCheViewHolder holder = (SoCheViewHolder) containerSoChe.getChildAt(i).getTag();
             if (holder == null) continue;
-            
             String tDe = holder.edtTieuDe.getText().toString().trim();
             if (tDe.isEmpty()) continue;
             
             SoChe sc = new SoChe();
             sc.tieu_de = tDe;
             sc.noi_dung = holder.edtNoiDung.getText().toString().trim();
-            danhSachSoChe.add(sc);
+            tempSC.add(sc);
         }
 
         // 3. Xử lý bước nấu
         for (int i = 0; i < containerBuocNau.getChildCount(); i++) {
             BuocNauViewHolder holder = (BuocNauViewHolder) containerBuocNau.getChildAt(i).getTag();
             if (holder == null) continue;
-            
             String tDe = holder.edtTieuDe.getText().toString().trim();
             if (tDe.isEmpty()) continue;
 
@@ -468,30 +508,59 @@ public class AddEditMonAnActivity extends AppCompatActivity {
             bn.so_buoc = i + 1;
             bn.tieu_de = tDe;
             bn.mo_ta = holder.edtMoTa.getText().toString().trim();
-            
-            // Xử lý an toàn thời gian bước
-            try {
-                String tgStr = holder.edtThoiGian.getText().toString().trim();
-                bn.thoi_gian_buoc = tgStr.isEmpty() ? 0 : Integer.parseInt(tgStr);
-            } catch (Exception e) {
-                bn.thoi_gian_buoc = 0;
-            }
-            danhSachBuocNau.add(bn);
+            bn.thoi_gian_buoc = safeParseInt(holder.edtThoiGian.getText().toString(), 0);
+            tempBN.add(bn);
         }
+
+        if (tempNL.isEmpty()) {
+            Toast.makeText(this, "Vui lòng thêm ít nhất một nguyên liệu", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (tempBN.isEmpty()) {
+            Toast.makeText(this, "Vui lòng thêm các bước thực hiện", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        danhSachNguyenLieu = tempNL;
+        danhSachSoChe = tempSC;
+        danhSachBuocNau = tempBN;
         return true;
+    }
+
+    private double safeParseDouble(String text, double defaultVal) {
+        try {
+            String cleanText = text.trim().replace(",", ".");
+            return cleanText.isEmpty() ? defaultVal : Double.parseDouble(cleanText);
+        } catch (Exception e) { return defaultVal; }
     }
 
     private void handleUploadProcess(String id, String ten) {
         if (selectedMainImageUri != null) {
+            setLoading(true);
             Luban.with(this)
                     .load(selectedMainImageUri)
                     .ignoreBy(100)
                     .setCompressListener(new OnCompressListener() {
                         @Override public void onStart() {}
                         @Override public void onSuccess(File file) {
-                            String path = "mon_an/" + id + ".jpg";
-                            storage.getReference().child(path).putFile(Uri.fromFile(file))
-                                    .addOnSuccessListener(task -> saveToFirestore(id, ten, path))
+                            // Tạo tên file duy nhất với timestamp để tránh cache
+                            String fileName = id + "_" + System.currentTimeMillis() + ".jpg";
+                            com.google.firebase.storage.StorageReference fileRef = storage.getReference().child("mon_an/" + fileName);
+                            
+                            fileRef.putFile(Uri.fromFile(file))
+                                    .addOnSuccessListener(taskSnapshot -> {
+                                        fileRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                                            String newImageUrl = uri.toString();
+                                            String oldImageUrl = isEditMode && currentMonAn != null ? currentMonAn.getHinh_anh() : null;
+                                            
+                                            saveToFirestore(id, ten, newImageUrl);
+                                            
+                                            // Xóa ảnh cũ sau khi đã lưu URL mới thành công
+                                            if (oldImageUrl != null && !oldImageUrl.isEmpty()) {
+                                                deleteOldImage(oldImageUrl);
+                                            }
+                                        });
+                                    })
                                     .addOnFailureListener(e -> {
                                         setLoading(false);
                                         Toast.makeText(AddEditMonAnActivity.this, "Lỗi tải ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -502,72 +571,56 @@ public class AddEditMonAnActivity extends AppCompatActivity {
                             Toast.makeText(AddEditMonAnActivity.this, "Lỗi nén ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }).launch();
-        } else if (isEditMode) {
+        } else if (isEditMode && currentMonAn != null) {
             saveToFirestore(id, ten, currentMonAn.getHinh_anh());
         } else {
             setLoading(false);
-            Toast.makeText(this, "Vui lòng chọn ảnh!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng chọn hoặc chụp ảnh món ăn!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void deleteOldImage(String oldImageUrl) {
+        if (oldImageUrl == null || oldImageUrl.isEmpty() || !oldImageUrl.startsWith("http")) {
+            return;
+        }
+        try {
+            storage.getReferenceFromUrl(oldImageUrl).delete()
+                    .addOnSuccessListener(aVoid -> Log.d("Storage", "Đã xóa ảnh cũ thành công"))
+                    .addOnFailureListener(e -> Log.e("Storage", "Lỗi xóa ảnh cũ: " + e.getMessage()));
+        } catch (Exception e) {
+            Log.e("Storage", "URL ảnh không hợp lệ để xóa: " + e.getMessage());
         }
     }
 
     private void saveToFirestore(String id, String ten, String imgPath) {
-        MonAn monAn = isEditMode ? currentMonAn : new MonAn();
-        monAn.setId_mon_an(id);
+        if (isFinishing()) return;
+
+        MonAn monAn = isEditMode ? currentMonAn : createNewMonAnTemplate(id);
         monAn.setTen_mon(ten);
         monAn.setHinh_anh(imgPath);
 
-        // Xử lý an toàn Thời gian nấu
-        try {
-            String val = edtThoiGianNau.getText().toString().trim();
-            monAn.setThoi_gian_nau(val.isEmpty() ? 0 : Integer.parseInt(val));
-        } catch (Exception e) {
-            monAn.setThoi_gian_nau(0);
-        }
-
-        // Xử lý an toàn Khẩu phần
-        try {
-            String val = edtKhauPhan.getText().toString().trim();
-            monAn.setKhau_phan(val.isEmpty() ? 0 : Integer.parseInt(val));
-        } catch (Exception e) {
-            monAn.setKhau_phan(0);
-        }
-
+        // Parse số an toàn
+        monAn.setThoi_gian_nau(safeParseInt(edtThoiGianNau.getText().toString(), 0));
+        monAn.setKhau_phan(safeParseInt(edtKhauPhan.getText().toString(), 0));
+        
         monAn.setDo_kho(spinnerDoKho.getText().toString());
         monAn.setVung_mien(spinnerVungMien.getText().toString());
         
-        // So khớp ID Danh mục từ Text chọn
-        String selectedDanhMuc = spinnerDanhMuc.getText().toString().trim();
-        if (!selectedDanhMuc.isEmpty()) {
-            for (DanhMuc dm : listDanhMuc) {
-                if (dm.getTen_danh_muc() != null && dm.getTen_danh_muc().equalsIgnoreCase(selectedDanhMuc)) {
-                    monAn.setId_danh_muc(dm.getId_danh_muc());
-                    break;
-                }
-            }
-        }
+        // So khớp ID Danh mục
+        updateMonAnDanhMuc(monAn);
 
-        // Đảm bảo các trường quan trọng không bị null cho món mới
-        if (!isEditMode) {
-            monAn.setTrang_thai("public");
-            monAn.setLuot_xem(0);
-            monAn.setRating(0.0);
-            monAn.setReviewCount(0);
-            monAn.setTotalScore(0.0);
-            monAn.setGia_tien(0.0);
-        }
-
-        monAn.setDanh_sach_nguyen_lieu(danhSachNguyenLieu != null ? danhSachNguyenLieu : new ArrayList<>());
-        monAn.setDanh_sach_so_che(danhSachSoChe != null ? danhSachSoChe : new ArrayList<>());
-        monAn.setDanh_sach_buoc_nau(danhSachBuocNau != null ? danhSachBuocNau : new ArrayList<>());
+        monAn.setDanh_sach_nguyen_lieu(danhSachNguyenLieu);
+        monAn.setDanh_sach_so_che(danhSachSoChe);
+        monAn.setDanh_sach_buoc_nau(danhSachBuocNau);
         monAn.setTu_khoa_tim_kiem(generateKeywords(ten));
         
         com.google.firebase.Timestamp now = com.google.firebase.Timestamp.now();
         if (!isEditMode) monAn.setNgay_tao(now);
         monAn.setNgay_cap_nhat(now);
 
-        // Sử dụng .set() để lưu dữ liệu (Hỗ trợ cả Add và Edit)
         db.collection("mon_an").document(id).set(monAn)
                 .addOnSuccessListener(aVoid -> {
+                    if (isFinishing()) return;
                     setLoading(false);
                     Toast.makeText(this, isEditMode ? "Cập nhật thành công!" : "Đã đăng món ăn thành công!", Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK);
@@ -579,23 +632,57 @@ public class AddEditMonAnActivity extends AppCompatActivity {
                 });
     }
 
+    private MonAn createNewMonAnTemplate(String id) {
+        MonAn monAn = new MonAn();
+        monAn.setId_mon_an(id);
+        monAn.setTrang_thai("public");
+        monAn.setLuot_xem(0);
+        monAn.setRating(0.0);
+        monAn.setReviewCount(0);
+        monAn.setTotalScore(0.0);
+        monAn.setGia_tien(0.0);
+        return monAn;
+    }
+
+    private void updateMonAnDanhMuc(MonAn monAn) {
+        String selected = spinnerDanhMuc.getText().toString().trim();
+        for (DanhMuc dm : listDanhMuc) {
+            if (dm.getTen_danh_muc() != null && dm.getTen_danh_muc().equalsIgnoreCase(selected)) {
+                monAn.setId_danh_muc(dm.getId_danh_muc());
+                return;
+            }
+        }
+    }
+
+    private int safeParseInt(String text, int defaultVal) {
+        try {
+            String cleanText = text.trim();
+            return cleanText.isEmpty() ? defaultVal : Integer.parseInt(cleanText);
+        } catch (Exception e) { return defaultVal; }
+    }
+
     private List<String> generateKeywords(String name) {
-        List<String> keywords = new ArrayList<>();
-        String normalized = removeAccent(name).toLowerCase();
-        String[] words = normalized.split(" ");
+        java.util.Set<String> keywords = new java.util.HashSet<>();
+        String normalized = VNCharacterUtils.removeAccents(name).toLowerCase();
+        String[] words = normalized.split("\\s+");
+        
+        // Thêm từng từ đơn
+        for (String word : words) {
+            if (word.length() > 1) keywords.add(word);
+        }
+        
+        // Thêm cụm từ tích lũy (Prefix)
         StringBuilder sb = new StringBuilder();
         for (String word : words) {
             if (sb.length() > 0) sb.append(" ");
             sb.append(word);
             keywords.add(sb.toString());
         }
-        return keywords;
+        return new ArrayList<>(keywords);
     }
 
     private String removeAccent(String str) {
-        String nfd = java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFD);
-        return java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+").matcher(nfd).replaceAll("")
-                .toLowerCase().replaceAll("đ", "d").replaceAll("[^a-z0-9\\s]", "").trim();
+        return VNCharacterUtils.removeAccents(str).toLowerCase().replaceAll("[^a-z0-9\\s]", "").trim();
     }
 
     private void setLoading(boolean loading) {

@@ -157,6 +157,8 @@ public class MainActivity extends AppCompatActivity {
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
                 user.setRole("user");
+                user.setSo_lan_vi_pham(0);
+                // Không setMat_khau để bảo mật
                 db.collection("nguoi_dung").document(uid).set(user);
             }
             startActivity(new Intent(MainActivity.this, HomeActivity.class));

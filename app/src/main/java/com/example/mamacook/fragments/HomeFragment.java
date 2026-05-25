@@ -91,7 +91,7 @@ public class HomeFragment extends Fragment {
 
     private TextView    tvGreeting, tvAiInsights;
     private EditText    etSearch;
-    private ImageButton btnFilter, btnAdminMenu;
+    private ImageButton btnFilter;
     private FrameLayout layoutThongBao;
     private ProgressBar pbAiLoading;
     private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory, rvWeeklyAttention;
@@ -170,7 +170,6 @@ public class HomeFragment extends Fragment {
         tvAiInsights  = v.findViewById(R.id.tvAiInsights);
         etSearch      = v.findViewById(R.id.et_search);
         btnFilter     = v.findViewById(R.id.btn_filter);
-        btnAdminMenu  = v.findViewById(R.id.btn_admin_menu);
         layoutThongBao = v.findViewById(R.id.layout_thong_bao);
         pbAiLoading   = v.findViewById(R.id.pb_ai_loading);
         currentSelectedCategory = v.findViewById(R.id.btn_cat_all);
@@ -577,31 +576,6 @@ public class HomeFragment extends Fragment {
                 listHistory.clear(); listHistory.addAll(sorted);
                 adapterHistory.notifyDataSetChanged();
             });
-        });
-    }
-
-    private void checkAdminRole() {
-        FirebaseUser user = mAuth.getCurrentUser(); if (user == null) return;
-        db.collection("nguoi_dung").document(user.getUid()).get().addOnSuccessListener(doc -> {
-            if (!isAdded() || !doc.exists()) return;
-            String v = doc.getString("vai_tro"), r = doc.getString("role");
-            if ("admin".equals(v) || "admin".equals(r)) { btnAdminMenu.setVisibility(View.VISIBLE); setupAdminMenu(); }
-        });
-    }
-
-    private void setupAdminMenu() {
-        btnAdminMenu.setOnClickListener(v -> {
-            android.widget.PopupMenu p = new android.widget.PopupMenu(getContext(), v);
-            p.getMenuInflater().inflate(R.menu.menu_admin_popup, p.getMenu());
-            p.setOnMenuItemClickListener(item -> {
-                if (getActivity() == null) return false;
-                if (item.getItemId() == R.id.menu_admin_dashboard) startActivity(new Intent(getActivity(), AdminActivity.class));
-                else if (item.getItemId() == R.id.menu_admin_stats) startActivity(new Intent(getActivity(), ThongKeAdminActivity.class));
-                else if (item.getItemId() == R.id.menu_admin_users) startActivity(new Intent(getActivity(), QuanLyTaiKhoanActivity.class));
-                else if (item.getItemId() == R.id.menu_admin_reviews) startActivity(new Intent(getActivity(), QuanLyDanhGiaActivity.class));
-                return true;
-            });
-            p.show();
         });
     }
 
