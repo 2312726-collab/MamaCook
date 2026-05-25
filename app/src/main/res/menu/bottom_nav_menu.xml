@@ -7,7 +7,7 @@
     <item
         android:id="@+id/nav_recipes"
         android:icon="@drawable/ic_nav_recipes"
-        android:title="Công thức" />
+        android:title="Lịch trình" />
     <item
         android:id="@+id/nav_favorites"
         android:icon="@drawable/ic_nav_favorites"

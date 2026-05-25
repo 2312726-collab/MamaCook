@@ -219,7 +219,7 @@ public class SampleData {
         mon.setId_danh_muc(danhmuc);
         mon.setLuot_xem(xem);
         mon.setRating(rate);
-        mon.setTong_luot_danh_gia(danhgia);
+        mon.setReviewCount(danhgia);
         mon.setTrang_thai("hien_thi");
         mon.setNgay_tao(Timestamp.now());
         
@@ -244,8 +244,8 @@ public class SampleData {
         List<MonAn.BuocNau> buocNauList = new ArrayList<>();
         for (int i = 0; i < buocs.length; i++) {
             MonAn.BuocNau bn = new MonAn.BuocNau();
-            bn.so_thu_tu = i + 1;
-            bn.noi_dung_buoc = buocs[i];
+            bn.so_buoc = i + 1;
+            bn.mo_ta = buocs[i];
             buocNauList.add(bn);
         }
         mon.setDanh_sach_buoc_nau(buocNauList);
@@ -254,4 +254,6 @@ public class SampleData {
         return mon;
     }
     */
+
+
 }

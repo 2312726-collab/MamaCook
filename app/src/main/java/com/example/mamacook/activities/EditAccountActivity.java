@@ -81,7 +81,7 @@ public class EditAccountActivity extends AppCompatActivity {
                     etPhone.setText(user.getSo_dien_thoai());
                     tvEmail.setText(user.getEmail());
                     
-                    String role = user.getRole();
+                    String role = user.getVai_tro();
                     tvRole.setText(role != null && role.equals("admin") ? "Quản trị viên" : "Người dùng");
 
                     if (user.getNgay_tao() != null) {

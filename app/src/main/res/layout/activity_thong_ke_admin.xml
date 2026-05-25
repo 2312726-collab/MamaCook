@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F1E7"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <!-- TITLE -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thống kê hệ thống"
+            android:textColor="#3E2723"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.01" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Phân tích hoạt động và chất lượng hệ thống MamaCook"
+            android:textColor="#8D6E63"
+            android:textSize="14sp"
+            android:lineSpacingExtra="2dp" />
+
+        <!-- TRUNG BÌNH ĐÁNH GIÁ -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="190dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_admin_card"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⭐ TRUNG BÌNH ĐÁNH GIÁ"
+                android:textColor="#E65100"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.04"
+                android:lineSpacingExtra="2dp" />
+
+            <TextView
+                android:id="@+id/tv_stat_rating_avg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="0.0 /5"
+                android:textColor="#BF360C"
+                android:textSize="44sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="★★★★★"
+                android:textColor="#FFC107"
+                android:textSize="22sp"
+                android:layout_marginTop="2dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Điểm trung bình từ toàn bộ đánh giá người dùng"
+                android:textColor="#6D4C41"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"
+                android:maxLines="2" />
+        </LinearLayout>
+
+        <!-- MÓN HOT -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="175dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_admin_card"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔥 MÓN HOT TUẦN"
+                android:textColor="#D84315"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.04"
+                android:lineSpacingExtra="2dp" />
+
+            <TextView
+                android:id="@+id/tv_stat_hot_week"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Chưa có dữ liệu"
+                android:textColor="#4E342E"
+                android:textSize="27sp"
+                android:textStyle="bold"
+                android:lineSpacingExtra="4dp"
+                android:maxLines="2" />
+
+            <TextView
+                android:id="@+id/tv_hot_week_desc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Món ăn được xem nhiều nhất trong 7 ngày gần đây"
+                android:textColor="#8D6E63"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"
+                android:maxLines="2" />
+        </LinearLayout>
+
+        <!-- TỔNG QUAN -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="📊 TỔNG QUAN DỮ LIỆU"
+            android:textColor="#263238"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.03"
+            android:lineSpacingExtra="2dp" />
+
+        <!-- ROW 1 -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <!-- USERS -->
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="180dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_admin_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="👥"
+                    android:textSize="30sp" />
+
+                <TextView
+                    android:id="@+id/tv_stat_users"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="0"
+                    android:textColor="#0D47A1"
+                    android:textSize="34sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Người dùng"
+                    android:textColor="#455A64"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2" />
+            </LinearLayout>
+
+            <!-- MÓN ĂN -->
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="180dp"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_admin_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🍲"
+                    android:textSize="30sp" />
+
+                <TextView
+                    android:id="@+id/tv_stat_dishes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="0"
+                    android:textColor="#2E7D32"
+                    android:textSize="34sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Món ăn"
+                    android:textColor="#455A64"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ROW 2 -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <!-- ĐÁNH GIÁ -->
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="190dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_admin_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="💬 TỔNG ĐÁNH GIÁ"
+                    android:textColor="#512DA8"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.03"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2" />
+
+                <TextView
+                    android:id="@+id/tv_stat_reviews"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="0"
+                    android:textColor="#512DA8"
+                    android:textSize="36sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Lượt đánh giá"
+                    android:textColor="#6D4C41"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2" />
+            </LinearLayout>
+
+            <!-- ĐÁNH GIÁ THẤP -->
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="190dp"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_admin_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚠️ MÓN ĐÁNH GIÁ THẤP"
+                    android:textColor="#E64A19"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.03"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2" />
+
+                <TextView
+                    android:id="@+id/tv_low_rating_dishes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="0"
+                    android:textColor="#E64A19"
+                    android:textSize="36sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Món dưới 3.5 sao"
+                    android:textColor="#6D4C41"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- HOẠT ĐỘNG HỆ THỐNG -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="170dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_admin_card"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📌 HOẠT ĐỘNG HỆ THỐNG"
+                android:textColor="#1565C0"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.03"
+                android:lineSpacingExtra="3dp" />
+
+            <TextView
+                android:id="@+id/tv_hoat_dong_he_thong"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Đang tải dữ liệu..."
+                android:textColor="#4E342E"
+                android:textSize="15sp"
+                android:lineSpacingExtra="7dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

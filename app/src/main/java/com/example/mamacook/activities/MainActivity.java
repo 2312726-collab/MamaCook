@@ -42,38 +42,45 @@ public class MainActivity extends AppCompatActivity {
     private GoogleSignInClient mGoogleSignInClient;
     private CallbackManager mCallbackManager;
     
-    private TextView btnNavRegister;
-    private Button btnLoginMain, btnLoginFacebook, btnLoginGoogle; // Khôi phục lại kiểu Button
+    private TextView btnNavRegister, tvForgot;
+    private Button btnLoginMain, btnLoginFacebook, btnLoginGoogle;
     private EditText etLoginUser, etLoginPassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         
         mAuth = FirebaseAuth.getInstance();
+        if (mAuth.getCurrentUser() != null) {
+            startActivity(new Intent(MainActivity.this, HomeActivity.class));
+            finish();
+            return;
+        }
+
+        setContentView(R.layout.activity_main);
+        
         db = FirebaseFirestore.getInstance();
         mCallbackManager = CallbackManager.Factory.create();
         
-        // Ánh xạ thêm các trường nhập liệu
         etLoginUser = findViewById(R.id.et_login_user);
         etLoginPassword = findViewById(R.id.et_login_password);
-        btnNavRegister = findViewById(R.id.btn_nav_register);
+        tvForgot = findViewById(R.id.tv_forgot_password);
         btnLoginMain = findViewById(R.id.btn_login_main);
         btnLoginFacebook = findViewById(R.id.btn_login_facebook);
         btnLoginGoogle = findViewById(R.id.btn_login_google);
+        btnNavRegister = findViewById(R.id.btn_nav_register);
 
-        // Cấu hình Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        if (btnLoginMain != null) {
-            btnLoginMain.setOnClickListener(v -> loginUser());
-        }
+        tvForgot.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, ForgotPasswordActivity.class)));
+        btnLoginMain.setOnClickListener(v -> loginUser());
+        btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
 
+        // Xử lý sự kiện click cho Google và Facebook
         if (btnLoginGoogle != null) {
             btnLoginGoogle.setOnClickListener(v -> {
                 Intent signInIntent = mGoogleSignInClient.getSignInIntent();
@@ -89,18 +96,10 @@ public class MainActivity extends AppCompatActivity {
 
         LoginManager.getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
             @Override
-            public void onSuccess(LoginResult loginResult) {
-                handleFacebookAccessToken(loginResult.getAccessToken().getToken());
-            }
+            public void onSuccess(LoginResult loginResult) { handleAuth(FacebookAuthProvider.getCredential(loginResult.getAccessToken().getToken())); }
             @Override public void onCancel() {}
-            @Override public void onError(FacebookException error) {
-                Toast.makeText(MainActivity.this, "Lỗi Facebook: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onError(FacebookException error) { Toast.makeText(MainActivity.this, "Lỗi: " + error.getMessage(), Toast.LENGTH_SHORT).show(); }
         });
-
-        if (btnNavRegister != null) {
-            btnNavRegister.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RegisterActivity.class)));
-        }
     }
 
     private void loginUser() {
@@ -108,14 +107,14 @@ public class MainActivity extends AppCompatActivity {
         String password = etLoginPassword.getText().toString().trim();
 
         if (TextUtils.isEmpty(input) || TextUtils.isEmpty(password)) {
-            Toast.makeText(this, "Vui lòng nhập email và mật khẩu", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng nhập tài khoản và mật khẩu", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Hiếu: Xử lý đăng nhập bằng Số điện thoại (tự động chuyển thành email giả)
+        // TỰ ĐỘNG XỬ LÝ: Nếu là SĐT -> Thêm đuôi ảo để login vào Firebase Auth
         String finalEmail = input;
-        if (input.matches("\\d+")) {
-            finalEmail = input + "@mamacook.com";
+        if (!input.contains("@")) {
+            finalEmail = input.toLowerCase() + "@mamacook.com";
         }
 
         mAuth.signInWithEmailAndPassword(finalEmail, password)
@@ -124,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(new Intent(MainActivity.this, HomeActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(MainActivity.this, "Sai tài khoản hoặc mật khẩu!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Tài khoản hoặc mật khẩu không đúng!", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -133,64 +132,35 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         mCallbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
-
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                firebaseAuthWithGoogle(account.getIdToken());
-            } catch (ApiException e) {
-                Toast.makeText(this, "Lỗi Google: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            try { handleAuth(GoogleAuthProvider.getCredential(task.getResult(ApiException.class).getIdToken(), null)); }
+            catch (ApiException e) { Toast.makeText(this, "Lỗi Google: " + e.getMessage(), Toast.LENGTH_SHORT).show(); }
         }
     }
 
-    private void firebaseAuthWithGoogle(String idToken) {
-        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
+    private void handleAuth(AuthCredential credential) {
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
-            if (task.isSuccessful()) {
-                saveUserToFirestore(mAuth.getCurrentUser());
-            }
-        });
-    }
-
-    private void handleFacebookAccessToken(String token) {
-        AuthCredential credential = FacebookAuthProvider.getCredential(token);
-        mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
-            if (task.isSuccessful()) {
-                saveUserToFirestore(mAuth.getCurrentUser());
-            }
+            if (task.isSuccessful()) saveUserToFirestore(mAuth.getCurrentUser());
         });
     }
 
     private void saveUserToFirestore(FirebaseUser firebaseUser) {
         if (firebaseUser == null) return;
         String uid = firebaseUser.getUid();
-
-        db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(documentSnapshot -> {
-            if (!documentSnapshot.exists()) {
+        db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(doc -> {
+            if (!doc.exists()) {
                 User user = new User();
                 user.setId_nguoi_dung(uid);
                 user.setHo_ten(firebaseUser.getDisplayName());
                 user.setEmail(firebaseUser.getEmail());
-                user.setAnh_dai_dien(firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "");
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
-                user.setRole("user"); // Hiếu: Đảm bảo dùng trường role đồng bộ
+                user.setRole("user");
                 db.collection("nguoi_dung").document(uid).set(user);
             }
             startActivity(new Intent(MainActivity.this, HomeActivity.class));
             finish();
         });
-    }
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        // Hiếu: Nếu đã đăng nhập thì tự động vào Home
-        if (mAuth.getCurrentUser() != null) {
-            startActivity(new Intent(MainActivity.this, HomeActivity.class));
-            finish();
-        }
     }
 }

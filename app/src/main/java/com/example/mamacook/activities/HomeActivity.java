@@ -1,79 +1,41 @@
 package com.example.mamacook.activities;
 
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.Spinner;
-import android.widget.TextView;
-import com.example.mamacook.activities.AccountActivity; // hiếu thêm dòng này
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
-import com.example.mamacook.adapters.MonAnAdapter;
 import com.example.mamacook.R;
-import com.example.mamacook.utils.VNCharacterUtils;
-import com.example.mamacook.models.MonAn;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
+import com.example.mamacook.fragments.AccountFragment;
+import com.example.mamacook.fragments.FavoriteFragment;
+import com.example.mamacook.fragments.HomeFragment;
+import com.example.mamacook.fragments.ScheduleFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
 
 public class HomeActivity extends AppCompatActivity {
 
-    private FirebaseFirestore db;
-    private FirebaseAuth mAuth;
-    private TextView tvGreeting, tvCategoryTitle;
-    private EditText etSearch;
-    private ImageButton btnFilter;
-    private LinearLayout layoutFilters;
-    private Spinner spnDifficulty, spnTime, spnRating;
-    
-    private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory;
-    private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory;
-    
-    private List<MonAn> listCategory = new ArrayList<>();
-    private List<MonAn> listFeatured = new ArrayList<>();
-    private List<MonAn> listNew = new ArrayList<>();
-    private List<MonAn> listHistory = new ArrayList<>();
-
-    private TextView currentSelectedCategory;
-    private List<MonAn> listFullCurrentCategory = new ArrayList<>();
-
-    private String lastCategoryId = "all";
-    private String lastCategoryTitle = "Gợi ý cho bạn";
+    private BottomNavigationView bottomNavigationView;
+    private int currentId = -1;
+    private ImageButton btnChatFloat;
+    private String tenNguoiDung = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Làm trong suốt thanh trạng thái
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = getWindow();
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
@@ -88,339 +50,128 @@ public class HomeActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_home);
 
-        db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
-        
-        tvGreeting = findViewById(R.id.tv_greeting);
-        tvCategoryTitle = findViewById(R.id.tv_category_display_title);
-        etSearch = findViewById(R.id.et_search);
-        btnFilter = findViewById(R.id.btn_filter);
-        layoutFilters = findViewById(R.id.layout_filters);
-        
-        spnDifficulty = findViewById(R.id.spn_difficulty_main);
-        spnTime = findViewById(R.id.spn_time_main);
-        spnRating = findViewById(R.id.spn_rating_main);
+        bottomNavigationView = findViewById(R.id.bottom_navigation);
+        btnChatFloat = findViewById(R.id.btn_chat_float);
 
-        displayUserProfile();
-        setupRecyclerViews();
-        setupCategoryButtons();
-        setupSearchAction();
-        setupSpinners();
-        
-        // nam làm cái này: Fix lỗi nhấn Yêu thích không chuyển màn hình
-        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-        bottomNavigationView.setSelectedItemId(R.id.nav_home);
+        // Load tên người dùng để truyền sang ChatActivity
+        loadUserName();
+
+        btnChatFloat.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, ChatActivity.class);
+            intent.putExtra("che_do", "user");
+            intent.putExtra("ten_user", tenNguoiDung);
+            startActivity(intent);
+        });
+
         bottomNavigationView.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_favorites) {
-                // nam làm cái này: Chuyển sang FavoriteActivity thực sự
-                startActivity(new Intent(HomeActivity.this, FavoriteActivity.class));
-                return true;
-            } else if (id == R.id.nav_profile) {
-                // Hiếu: Chuyển sang AccountActivity
-                startActivity(new Intent(HomeActivity.this, AccountActivity.class));
-                return true;
-            }
-            return false;
+            showFragment(item.getItemId());
+            return true;
         });
 
-        btnFilter.setOnClickListener(v -> toggleFilterLayout());
-        
-        loadFeaturedRecipes();
-        loadNewRecipes();
-        loadHistoryRecipes(11); 
-
-        currentSelectedCategory = findViewById(R.id.btn_cat_all);
-        loadRecipesByCategory("all", "Gợi ý cho bạn");
-    }
-
-    private void setupSearchAction() {
-        etSearch.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                String query = etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-                if (!query.isEmpty()) performSearch(query);
-                else loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-                return true;
-            }
-            return false;
-        });
-
-        etSearch.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable s) {
-                if (s.toString().trim().isEmpty()) loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-            }
-        });
-    }
-
-    private void setupCategoryButtons() {
-        int[] btnIds = {R.id.btn_cat_all, R.id.btn_cat_man, R.id.btn_cat_canh, R.id.btn_cat_chay, R.id.btn_cat_vat, R.id.btn_cat_lau};
-        String[] categoryIds = {"all", "mon_man", "mon_canh", "mon_chay", "an_vat", "mon_lau"};
-        String[] titles = {"Gợi ý cho bạn", "Món mặn", "Món canh", "Món chay", "Ăn vặt", "Món lẩu"};
-        for (int i = 0; i < btnIds.length; i++) {
-            final int index = i;
-            TextView btn = findViewById(btnIds[i]);
-            if (btn != null) {
-                btn.setOnClickListener(v -> {
-                    lastCategoryId = categoryIds[index];
-                    lastCategoryTitle = titles[index];
-                    if (currentSelectedCategory != null) {
-                        currentSelectedCategory.setBackgroundResource(R.drawable.bg_input_field);
-                        currentSelectedCategory.setTextColor(android.graphics.Color.parseColor("#555555"));
-                    }
-                    btn.setBackgroundResource(R.drawable.bg_register_button);
-                    btn.setTextColor(android.graphics.Color.WHITE);
-                    currentSelectedCategory = btn;
-                    etSearch.setText(""); 
-                    loadRecipesByCategory(lastCategoryId, lastCategoryTitle);
-                });
-            }
-        }
-    }
-
-    private void toggleFilterLayout() {
-        if (layoutFilters.getVisibility() == View.GONE) {
-            layoutFilters.setVisibility(View.VISIBLE);
-            layoutFilters.setAlpha(0f);
-            layoutFilters.animate().alpha(1f).setDuration(300).start();
+        // Khôi phục trạng thái hoặc hiển thị mặc định
+        if (savedInstanceState != null) {
+            currentId = savedInstanceState.getInt("currentId", R.id.nav_home);
+            bottomNavigationView.setSelectedItemId(currentId);
         } else {
-            layoutFilters.setVisibility(View.GONE);
-            resetFilters();
+            bottomNavigationView.setSelectedItemId(R.id.nav_home);
+            showFragment(R.id.nav_home);
         }
-    }
 
-    private void resetFilters() {
-        spnDifficulty.setSelection(0);
-        spnTime.setSelection(0);
-        spnRating.setSelection(0);
-        applyFilters();
-    }
-
-    private void setupSpinners() {
-        String[] difficulties = {"Tất cả", "Dễ", "Trung bình", "Khó"};
-        String[] times = {"Tất cả", "Dưới 15'", "15-30'", "30-60'", "Trên 60'"};
-        String[] ratings = {"Tất cả", "4★ trở lên", "3★ trở lên", "2★ trở lên"};
-
-        spnDifficulty.setAdapter(new LabelSpinnerAdapter(this, "Độ khó", difficulties));
-        spnTime.setAdapter(new LabelSpinnerAdapter(this, "Thời gian", times));
-        spnRating.setAdapter(new LabelSpinnerAdapter(this, "Đánh giá", ratings));
-
-        AdapterView.OnItemSelectedListener filterListener = new AdapterView.OnItemSelectedListener() {
+        // Xử lý nút Back
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                applyFilters();
+            public void handleOnBackPressed() {
+                if (currentId != R.id.nav_home) {
+                    bottomNavigationView.setSelectedItemId(R.id.nav_home);
+                } else {
+                    showExitDialog();
+                }
             }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
-        };
-
-        spnDifficulty.setOnItemSelectedListener(filterListener);
-        spnTime.setOnItemSelectedListener(filterListener);
-        spnRating.setOnItemSelectedListener(filterListener);
-    }
-
-    private static class LabelSpinnerAdapter extends ArrayAdapter<String> {
-        private final String label;
-        public LabelSpinnerAdapter(Context context, String label, String[] items) {
-            super(context, R.layout.spinner_item_selected, items);
-            this.label = label;
-            setDropDownViewResource(R.layout.spinner_dropdown_item);
-        }
-        @NonNull
-        @Override
-        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            TextView view = (TextView) super.getView(position, convertView, parent);
-            String item = getItem(position);
-            if (item != null && item.equals("Tất cả")) view.setText(label);
-            else view.setText(item);
-            return view;
-        }
-    }
-
-    private void performSearch(String searchText) {
-        tvCategoryTitle.setText("Kết quả cho: '" + searchText + "'");
-        String searchTextNoTone = VNCharacterUtils.removeAccents(searchText);
-        String[] searchWordsNoTone = searchTextNoTone.split("\\s+");
-        db.collection("mon_an").whereArrayContains("tu_khoa_tim_kiem", searchWordsNoTone[0]).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<MonAn> results = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        List<String> dbKeywords = mon.getTu_khoa_tim_kiem();
-                        if (dbKeywords == null) continue;
-                        boolean matchAll = true;
-                        for (String wordNoTone : searchWordsNoTone) {
-                            if (!dbKeywords.contains(wordNoTone)) { matchAll = false; break; }
-                        }
-                        if (matchAll) results.add(mon);
-                    }
-                    Collections.sort(results, (m1, m2) -> Integer.compare(calculateRelevance(m2, searchText, searchTextNoTone), calculateRelevance(m1, searchText, searchTextNoTone)));
-                    listFullCurrentCategory = new ArrayList<>(results);
-                    applyFilters();
-                });
-    }
-
-    private void applyFilters() {
-        if (spnDifficulty.getSelectedItem() == null) return;
-
-        String difficulty = spnDifficulty.getSelectedItem().toString();
-        String timeRange = spnTime.getSelectedItem().toString();
-        String ratingRange = spnRating.getSelectedItem().toString();
-
-        List<MonAn> filteredList = new ArrayList<>();
-
-        for (MonAn mon : listFullCurrentCategory) {
-            boolean matchDifficulty = difficulty.equals("Tất cả") ||
-                    (mon.getDo_kho() != null && mon.getDo_kho().equals(difficulty));
-
-            boolean matchTime = false;
-            int time = mon.getThoi_gian_nau();
-            if (timeRange.equals("Tất cả")) matchTime = true;
-            else if (timeRange.equals("Dưới 15'") && time < 15) matchTime = true;
-            else if (timeRange.equals("15-30'") && time >= 15 && time <= 30) matchTime = true;
-            else if (timeRange.equals("30-60'") && time > 30 && time <= 60) matchTime = true;
-            else if (timeRange.equals("Trên 60'") && time > 60) matchTime = true;
-
-            boolean matchRating = false;
-            double rating = mon.getRating();
-            if (ratingRange.equals("Tất cả")) matchRating = true;
-            else if (ratingRange.equals("4★ trở lên") && rating >= 4.0) matchRating = true;
-            else if (ratingRange.equals("3★ trở lên") && rating >= 3.0) matchRating = true;
-            else if (ratingRange.equals("2★ trở lên") && rating >= 2.0) matchRating = true;
-
-            if (matchDifficulty && matchTime && matchRating) {
-                filteredList.add(mon);
-            }
-        }
-
-        listCategory.clear();
-        listCategory.addAll(filteredList);
-
-        // CẬP NHẬT: Gửi kèm thông tin bộ lọc sang Adapter
-        adapterCategory.setSectionInfo("DANH_MUC", lastCategoryId, difficulty, timeRange, ratingRange);
-        adapterCategory.notifyDataSetChanged();
-    }
-
-
-    private int calculateRelevance(MonAn mon, String query, String queryNoTone) {
-        int score = 0;
-        String name = mon.getTen_mon().toLowerCase();
-        String nameNoTone = VNCharacterUtils.removeAccents(name);
-        if (name.equals(query)) score += 1000;
-        else if (nameNoTone.equals(queryNoTone)) score += 900;
-        if (name.startsWith(query)) score += 500;
-        else if (nameNoTone.startsWith(queryNoTone)) score += 450;
-        if (name.contains(query)) score += 200;
-        else if (nameNoTone.contains(queryNoTone)) score += 180;
-        return score;
-    }
-
-    private void displayUserProfile() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user != null) {
-            db.collection("nguoi_dung").document(user.getUid()).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        String name = documentSnapshot.getString("ho_ten");
-                        if (name != null && !name.isEmpty()) tvGreeting.setText("Xin chào " + name + "!");
-                    }
-                });
-        }
-    }
-
-    private void setupRecyclerViews() {
-        rvCategory = findViewById(R.id.rv_category_dishes);
-        rvFeatured = findViewById(R.id.rv_featured);
-        rvNew = findViewById(R.id.rv_new_recipes);
-        rvHistory = findViewById(R.id.rv_history);
-        
-        rvCategory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        rvFeatured.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        rvNew.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        rvHistory.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        
-        adapterCategory = new MonAnAdapter(listCategory);
-        adapterFeatured = new MonAnAdapter(listFeatured);
-        adapterFeatured.setSectionInfo("NOI_BAT", "");
-        adapterNew = new MonAnAdapter(listNew);
-        adapterNew.setSectionInfo("MOI", "");
-        adapterHistory = new MonAnAdapter(listHistory);
-        adapterHistory.setSectionInfo("LICH_SU", "");
-        
-        rvCategory.setAdapter(adapterCategory);
-        rvFeatured.setAdapter(adapterFeatured);
-        rvNew.setAdapter(adapterNew);
-        rvHistory.setAdapter(adapterHistory);
-    }
-
-    private void loadFeaturedRecipes() {
-        db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(11).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    listFeatured.clear();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        listFeatured.add(mon);
-                    }
-                    adapterFeatured.notifyDataSetChanged();
-                });
-    }
-
-    private void loadNewRecipes() {
-        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(11).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    listNew.clear();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        MonAn mon = doc.toObject(MonAn.class);
-                        mon.setId_mon_an(doc.getId());
-                        listNew.add(mon);
-                    }
-                    adapterNew.notifyDataSetChanged();
-                });
-    }
-
-    private void loadHistoryRecipes(int limit) {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) return;
-        db.collection("lich_su_xem").document(user.getUid()).collection("mon_an")
-                .orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(limit).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        tasks.add(db.collection("mon_an").document(doc.getId()).get());
-                    }
-                    Tasks.whenAllComplete(tasks).addOnSuccessListener(results -> {
-                        listHistory.clear();
-                        for (Task<DocumentSnapshot> task : tasks) {
-                            if (task.isSuccessful()) {
-                                DocumentSnapshot doc = task.getResult();
-                                if (doc.exists()) {
-                                    MonAn mon = doc.toObject(MonAn.class);
-                                    mon.setId_mon_an(doc.getId());
-                                    listHistory.add(mon);
-                                }
-                            }
-                        }
-                        adapterHistory.notifyDataSetChanged();
-                    });
-                });
-    }
-
-    private void loadRecipesByCategory(String categoryId, String title) {
-        tvCategoryTitle.setText(title);
-        Query query = db.collection("mon_an");
-        if (!categoryId.equals("all")) query = query.whereEqualTo("id_danh_muc", categoryId);
-        query.limit(20).get().addOnSuccessListener(queryDocumentSnapshots -> {
-            listFullCurrentCategory.clear();
-            for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                MonAn mon = doc.toObject(MonAn.class);
-                mon.setId_mon_an(doc.getId());
-                listFullCurrentCategory.add(mon);
-            }
-            applyFilters();
         });
+    }
+
+    private void loadUserName() {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+        FirebaseFirestore.getInstance().collection("nguoi_dung").document(uid).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        tenNguoiDung = doc.getString("ho_ten");
+                    }
+                });
+    }
+
+    private void showFragment(int id) {
+        if (currentId == id) return;
+
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+
+        // Hiệu ứng trượt Slide
+        if (currentId != -1) {
+            int currentPos = getNavPosition(currentId);
+            int nextPos = getNavPosition(id);
+            if (nextPos > currentPos) {
+                transaction.setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left);
+            } else {
+                transaction.setCustomAnimations(R.anim.slide_in_left, R.anim.slide_out_right);
+            }
+        }
+
+        String nextTag = String.valueOf(id);
+        Fragment nextFragment = fragmentManager.findFragmentByTag(nextTag);
+
+        // Ẩn tất cả các Fragment đang có
+        for (Fragment fragment : fragmentManager.getFragments()) {
+            transaction.hide(fragment);
+        }
+
+        if (nextFragment == null) {
+            nextFragment = createFragmentById(id);
+            transaction.add(R.id.fragment_container, nextFragment, nextTag);
+        } else {
+            transaction.show(nextFragment);
+        }
+
+        transaction.commit();
+        currentId = id;
+    }
+
+    private Fragment createFragmentById(int id) {
+        if (id == R.id.nav_home) return new HomeFragment();
+        if (id == R.id.nav_recipes) return new ScheduleFragment();
+        if (id == R.id.nav_favorites) return new FavoriteFragment();
+        if (id == R.id.nav_profile) return new AccountFragment();
+        return new HomeFragment();
+    }
+
+    private int getNavPosition(int id) {
+        if (id == R.id.nav_home) return 0;
+        if (id == R.id.nav_recipes) return 1;
+        if (id == R.id.nav_favorites) return 2;
+        if (id == R.id.nav_profile) return 3;
+        return 0;
+    }
+
+    private void showExitDialog() {
+        View view = getLayoutInflater().inflate(R.layout.dialog_exit_confirm, null);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setView(view)
+                .create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        view.findViewById(R.id.btn_dialog_cancel).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btn_dialog_exit).setOnClickListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+        dialog.show();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("currentId", currentId);
     }
 }

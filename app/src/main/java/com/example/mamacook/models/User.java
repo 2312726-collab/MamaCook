@@ -6,13 +6,16 @@ public class User {
     private String id_nguoi_dung;
     private String ho_ten;
     private String email;
+    private String mat_khau;
     private String anh_dai_dien;
     private String ngay_sinh;
     private String gioi_tinh;
     private String so_dien_thoai;
     private Timestamp ngay_tao;
     private String trang_thai_tai_khoan;
-    private String role; //  dùng role
+
+    private String role; // 🔥 sửa từ vai_tro -> role
+    private int so_lan_vi_pham; // 🔥 thêm mới
 
     public User() {}
 
@@ -24,6 +27,9 @@ public class User {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getMat_khau() { return mat_khau; }
+    public void setMat_khau(String mat_khau) { this.mat_khau = mat_khau; }
 
     public String getAnh_dai_dien() { return anh_dai_dien; }
     public void setAnh_dai_dien(String anh_dai_dien) { this.anh_dai_dien = anh_dai_dien; }
@@ -45,4 +51,11 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    // Alias cho tương thích với code cũ
+    public String getVai_tro() { return role; }
+    public void setVai_tro(String vai_tro) { this.role = vai_tro; }
+
+    public int getSo_lan_vi_pham() { return so_lan_vi_pham; }
+    public void setSo_lan_vi_pham(int so_lan_vi_pham) { this.so_lan_vi_pham = so_lan_vi_pham; }
 }

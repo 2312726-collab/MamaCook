@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Bảo mật API key - không push lên Git
+app/src/main/res/values/secrets.xml

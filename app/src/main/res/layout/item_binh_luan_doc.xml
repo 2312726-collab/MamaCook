@@ -7,24 +7,26 @@
     android:layout_marginHorizontal="8dp"
     android:layout_marginTop="4dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="3dp">
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#FDFDFD">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@android:color/white">
+        android:padding="16dp">
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <ImageView
+            <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/imgAvatarBinhLuan"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_mama" />
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_mama"
+                app:shapeAppearanceOverlay="@style/Circle" />
 
             <TextView
                 android:id="@+id/tvTenNguoiBinhLuan"
@@ -32,9 +34,9 @@
                 android:layout_height="wrap_content"
                 android:layout_toEndOf="@id/imgAvatarBinhLuan"
                 android:layout_marginStart="12dp"
-                android:text="Khách hàng ẩn danh"
+                android:text="Khách hàng"
                 android:textStyle="bold"
-                android:textColor="#333333"
+                android:textColor="@color/text_brown"
                 android:textSize="15sp" />
 
             <TextView
@@ -45,7 +47,7 @@
                 android:layout_below="@id/tvTenNguoiBinhLuan"
                 android:layout_marginStart="12dp"
                 android:text="2 giờ trước"
-                android:textColor="#888888"
+                android:textColor="#9E9E9E"
                 android:textSize="12sp" />
 
             <RatingBar
@@ -67,9 +69,17 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="Nội dung đánh giá hiển thị ở đây..."
-            android:textColor="#555555"
-            android:lineSpacingExtra="3dp"
-            android:textSize="14sp" />
+            android:textColor="#3E2723"
+            android:lineSpacingExtra="4dp"
+            android:textSize="15sp" />
+
+        <ImageView
+            android:id="@+id/imgBinhLuanDinhKem"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="12dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

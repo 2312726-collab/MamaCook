@@ -18,6 +18,12 @@
         <item name="cornerSize">10dp</item>
     </style>
 
+    <!-- STYLE BO GÓC CHO HÌNH ẢNH MÓN ĂN TRONG KẾ HOẠCH -->
+    <style name="RoundedCornerImage" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
     <!-- Style cho chữ khi được chọn -->
     <style name="BottomNavTextActive">
         <item name="android:textSize">14sp</item>
