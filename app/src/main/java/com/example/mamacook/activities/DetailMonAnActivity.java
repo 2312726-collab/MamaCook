@@ -29,6 +29,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 import androidx.core.widget.NestedScrollView;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -75,8 +76,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
     public static final String EXTRA_NGUYEN_LIEU  = "NGUYEN_LIEU";
 
     private FirebaseFirestore db;
-    private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment;
-    private ImageView btnEditMonAn, btnDeleteMonAn;
+    private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment, btnQrCode, btnQrCodeFab;
+    private ImageView btnEditMonAn, btnDeleteMonAn; 
     private TextView tvTen, tvRatingInfo, tvThoiGian, tvDiemTrungBinh, tvXemTatCa;
     private RelativeLayout layoutPreviewImage;
     private LinearLayout layoutInputComment;
@@ -116,6 +117,12 @@ public class DetailMonAnActivity extends AppCompatActivity {
         intent.putExtra(EXTRA_THOI_GIAN,    monAn.getThoi_gian_nau());
         intent.putExtra(EXTRA_RATING,       RatingUtils.getRatingOnly(monAn));
         intent.putExtra(EXTRA_REVIEW_COUNT, monAn.getReviewCount());
+        return intent;
+    }
+
+    public static Intent createIntent(Context context, String dishId) {
+        Intent intent = new Intent(context, DetailMonAnActivity.class);
+        intent.putExtra(EXTRA_ID, dishId);
         return intent;
     }
 
@@ -185,6 +192,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
         btnAddAttachment   = findViewById(R.id.btn_detail_add_attachment);
         imgPreviewComment  = findViewById(R.id.img_detail_preview_comment);
         layoutPreviewImage = findViewById(R.id.layout_detail_preview_image);
+        btnQrCode          = findViewById(R.id.btn_qr_code);
+        btnQrCodeFab       = findViewById(R.id.btn_qr_code_fab);
         layoutInputComment = findViewById(R.id.layout_detail_input_comment);
         rvNguyenLieu = findViewById(R.id.rv_detail_nguyen_lieu);
         rvBuocNau = findViewById(R.id.rv_detail_buoc_nau);
@@ -218,20 +227,24 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
                         // 3. Nếu kiểm tra đúng là Admin
                         if ("admin".equalsIgnoreCase(role)) {
-                            // BẬT 2 nút của Admin (Sửa, Xóa)
-                            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.VISIBLE);
-                            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.VISIBLE);
+            // BẬT 3 nút của Admin (Sửa, Xóa, QR)
+            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.VISIBLE);
+            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.VISIBLE);
+            if (btnQrCode != null) btnQrCode.setVisibility(View.VISIBLE);
+            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.GONE);
 
-                            // ẨN 2 nút của User (Yêu thích, Kế hoạch)
-                            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.GONE);
-                            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.GONE);
-                        } else {
-                            // Nếu role không phải admin hoặc null -> giữ nguyên mặc định user
-                            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
-                            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
-                            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
-                            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
-                        }
+            // ẨN 2 nút của User (Yêu thích, Kế hoạch)
+            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.GONE);
+            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.GONE);
+        } else {
+            // Nếu role không phải admin hoặc null -> giữ nguyên mặc định user
+            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
+            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
+            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
+            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
+            if (btnQrCode != null) btnQrCode.setVisibility(View.GONE);
+            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.VISIBLE);
+        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -306,6 +319,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (btnFavoriteDetail != null) btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
         if (btnAddToPlan != null) btnAddToPlan.setOnClickListener(v -> toggleCookingPlan());
         btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
+        if (btnQrCode != null) btnQrCode.setOnClickListener(v -> openQRCode());
+        if (btnQrCodeFab != null) btnQrCodeFab.setOnClickListener(v -> openQRCode());
         if (tvXemTatCa != null) tvXemTatCa.setOnClickListener(v -> {
             Intent intent = new Intent(this, TatCaBinhLuanActivity.class);
             intent.putExtra(EXTRA_ID, currentDishId);
@@ -340,6 +355,16 @@ public class DetailMonAnActivity extends AppCompatActivity {
                         .show();
             });
         }
+    }
+
+    private void openQRCode() {
+        if (currentDishId == null) {
+            Toast.makeText(this, "Không có ID món ăn", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent intent = new Intent(this, QRCodeViewerActivity.class);
+        intent.putExtra("EXTRA_ID", currentDishId);
+        startActivity(intent);
     }
 
     private void deleteMonAn() {
