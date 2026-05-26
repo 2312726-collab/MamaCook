@@ -28,6 +28,9 @@
         <activity android:name=".activities.ThongBaoActivity" />
         <activity android:name=".activities.DanhSachChatActivity" />
         <activity android:name=".activities.ChatActivity" />
+        <activity android:name=".activities.ScanQRCodeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MamaCook"/>
 
         <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
         <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
@@ -73,6 +76,10 @@
         <activity
             android:name=".activities.AddEditMonAnActivity"
             android:exported="false" />
+        <activity
+            android:name=".activities.QRCodeViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Translucent" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
