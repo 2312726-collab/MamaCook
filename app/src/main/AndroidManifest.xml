@@ -70,6 +70,9 @@
         <activity android:name=".activities.GioHangActivity" android:exported="false" />
         <activity android:name=".activities.ChuanBiNauActivity" android:exported="false" />
         <activity android:name=".activities.FavoriteActivity" android:exported="false" />
+        <activity android:name=".activities.AddEditMonAnActivity" android:exported="false" />
+        <activity android:name=".activities.QRCodeViewerActivity" android:exported="false" />
+        <activity android:name=".activities.ScanQRCodeActivity" android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -11,10 +11,12 @@ public class MonAn {
     private String do_kho;
     private String id_danh_muc;
     private Timestamp ngay_tao;
+    private Timestamp ngay_cap_nhat;
     private String trang_thai;
     private int luot_xem;
     private double rating;
     private int reviewCount;
+    private int tong_luot_danh_gia;
     private double totalScore;
     private double gia_tien;
     private int match_score;
@@ -79,6 +81,8 @@ public class MonAn {
     public void setId_danh_muc(String id_danh_muc) { this.id_danh_muc = id_danh_muc; }
     public Timestamp getNgay_tao() { return ngay_tao; }
     public void setNgay_tao(Timestamp ngay_tao) { this.ngay_tao = ngay_tao; }
+    public Timestamp getNgay_cap_nhat() { return ngay_cap_nhat; }
+    public void setNgay_cap_nhat(Timestamp ngay_cap_nhat) { this.ngay_cap_nhat = ngay_cap_nhat; }
     public String getTrang_thai() { return trang_thai; }
     public void setTrang_thai(String trang_thai) { this.trang_thai = trang_thai; }
     public int getLuot_xem() { return luot_xem; }
@@ -89,6 +93,9 @@ public class MonAn {
     
     public int getReviewCount() { return reviewCount; }
     public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
+    
+    public int getTong_luot_danh_gia() { return tong_luot_danh_gia; }
+    public void setTong_luot_danh_gia(int tong_luot_danh_gia) { this.tong_luot_danh_gia = tong_luot_danh_gia; }
     
     public double getTotalScore() { return totalScore; }
     public void setTotalScore(double totalScore) { this.totalScore = totalScore; }
@@ -101,7 +108,4 @@ public class MonAn {
     public void setDanh_sach_so_che(List<SoChe> danh_sach_so_che) { this.danh_sach_so_che = danh_sach_so_che; }
     public List<String> getTu_khoa_tim_kiem() { return tu_khoa_tim_kiem; }
     public void setTu_khoa_tim_kiem(List<String> tu_khoa_tim_kiem) { this.tu_khoa_tim_kiem = tu_khoa_tim_kiem; }
-    
-    // Alias cho tương thích ngược nếu cần
-    public int getTong_luot_danh_gia() { return reviewCount; }
 }

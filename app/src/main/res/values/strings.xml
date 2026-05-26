@@ -36,4 +36,16 @@
     <string name="diff_hard">Khó</string>
     <string name="apply_filter">Áp dụng bộ lọc</string>
     <string name="recipe_unit">%1$d món</string>
+
+    <!-- [VALIDATION HOTFIX] -->
+    <string name="err_empty_dish_name">Tên món ăn không được để trống!</string>
+    <string name="err_invalid_time">Vui lòng nhập thời gian nấu hợp lệ!</string>
+    <string name="err_invalid_portion">Vui lòng nhập khẩu phần hợp lệ!</string>
+    <string name="err_empty_difficulty">Vui lòng chọn độ khó cho món ăn!</string>
+    <string name="err_empty_ingredient_name">Vui lòng nhập tên nguyên liệu!</string>
+    <string name="err_empty_ingredient_qty">Vui lòng nhập số lượng!</string>
+    <string name="err_empty_soche_content">Nội dung sơ chế không được để trống!</string>
+    <string name="err_empty_step_title">Tiêu đề bước không được để trống!</string>
+    <string name="err_empty_step_desc">Mô tả chi tiết không được để trống!</string>
+    <string name="err_no_image">Vui lòng chọn ảnh đại diện cho món ăn!</string>
 </resources>

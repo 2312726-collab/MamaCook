@@ -63,10 +63,21 @@ public class BuocNauAdapter extends RecyclerView.Adapter<BuocNauAdapter.ViewHold
             // Ảnh minh họa
             if (buoc.hinh_anh_buoc != null && !buoc.hinh_anh_buoc.isEmpty()) {
                 holder.imgBuoc.setVisibility(View.VISIBLE);
-                Glide.with(holder.itemView.getContext())
-                        .load(buoc.hinh_anh_buoc)
-                        .placeholder(R.drawable.bg_splash)
-                        .into(holder.imgBuoc);
+                if (buoc.hinh_anh_buoc.startsWith("http")) {
+                    Glide.with(holder.itemView.getContext())
+                            .load(buoc.hinh_anh_buoc)
+                            .placeholder(R.drawable.bg_splash)
+                            .into(holder.imgBuoc);
+                } else {
+                    com.google.firebase.storage.StorageReference storageRef = 
+                        com.google.firebase.storage.FirebaseStorage.getInstance()
+                            .getReference()
+                            .child(buoc.hinh_anh_buoc);
+                    Glide.with(holder.itemView.getContext())
+                            .load(storageRef)
+                            .placeholder(R.drawable.bg_splash)
+                            .into(holder.imgBuoc);
+                }
             } else {
                 holder.imgBuoc.setVisibility(View.GONE);
             }
