@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".activities.EditAccountActivity">
 
-    <!-- 1. Background gỗ toàn màn hình đồng bộ với app -->
+    <!-- Background gỗ -->
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -14,7 +14,7 @@
         android:src="@drawable/bg_splash"
         android:contentDescription="@null" />
 
-    <!-- 2. Header Section -->
+    <!-- Header Section -->
     <LinearLayout
         android:id="@+id/header_layout"
         android:layout_width="match_parent"
@@ -35,8 +35,7 @@
             android:focusable="true"
             android:padding="12dp"
             android:src="@drawable/ic_back_arrow"
-            app:tint="@color/white"
-            android:contentDescription="Quay lại" />
+            app:tint="@color/white" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -56,7 +55,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/header_layout">
 
-        <!-- 3. Tấm nền giấy da bo tròn (Parchment effect) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,7 +73,6 @@
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
-            <!-- Form nhập liệu -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -90,7 +87,6 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <!-- Họ và tên -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -114,7 +110,6 @@
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="16dp" android:background="#E0D4C3" />
 
-                    <!-- Email -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -138,7 +133,52 @@
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="16dp" android:background="#E0D4C3" />
 
-                    <!-- Số điện thoại -->
+                    <!-- Ô chọn Ngày sinh -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="serif"
+                        android:text="Ngày sinh"
+                        android:textColor="#8D6E63"
+                        android:textSize="14sp" />
+
+                    <EditText
+                        android:id="@+id/et_edit_dob"
+                        android:layout_width="match_parent"
+                        android:layout_height="55dp"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_field"
+                        android:fontFamily="serif"
+                        android:hint="Chọn ngày sinh"
+                        android:paddingHorizontal="15dp"
+                        android:textColor="#4E342E"
+                        android:textSize="16sp"
+                        android:focusable="false"
+                        android:focusableInTouchMode="false"
+                        android:clickable="true" />
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="16dp" android:background="#E0D4C3" />
+
+                    <!-- Ô chọn Giới tính -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="serif"
+                        android:text="Giới tính"
+                        android:textColor="#8D6E63"
+                        android:textSize="14sp" />
+
+                    <Spinner
+                        android:id="@+id/spn_edit_gender"
+                        android:layout_width="match_parent"
+                        android:layout_height="55dp"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_field"
+                        android:paddingHorizontal="15dp"
+                        android:spinnerMode="dropdown" />
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="16dp" android:background="#E0D4C3" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -162,7 +202,6 @@
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="16dp" android:background="#E0D4C3" />
 
-                    <!-- Vai trò (Màu chữ nhạt hơn để báo hiệu không cho sửa) -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -177,6 +216,7 @@
                         android:layout_height="55dp"
                         android:layout_marginTop="6dp"
                         android:background="@drawable/bg_input_field"
+                        android:enabled="false"
                         android:fontFamily="serif"
                         android:gravity="center_vertical"
                         android:paddingHorizontal="15dp"
@@ -186,7 +226,6 @@
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="16dp" android:background="#E0D4C3" />
 
-                    <!-- Ngày tham gia -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -201,22 +240,22 @@
                         android:layout_height="55dp"
                         android:layout_marginTop="6dp"
                         android:background="@drawable/bg_input_field"
+                        android:enabled="false"
                         android:fontFamily="serif"
                         android:gravity="center_vertical"
                         android:paddingHorizontal="15dp"
-                        android:text="01/01/2024"
+                        android:text="--"
                         android:textColor="#A1887F"
                         android:textSize="16sp" />
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Nút Lưu -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_save_profile"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
-                android:layout_marginTop="40dp"
+                android:layout_marginTop="32dp"
                 android:layout_marginBottom="40dp"
                 android:fontFamily="serif"
                 android:text="Lưu thay đổi"
