@@ -1,6 +1,8 @@
 package com.example.mamacook.activities;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -15,6 +17,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.mamacook.R;
 import com.google.zxing.BinaryBitmap;
@@ -22,30 +26,30 @@ import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
 import com.google.zxing.common.HybridBinarizer;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
+import com.journeyapps.barcodescanner.CaptureManager;
 import com.journeyapps.barcodescanner.DecoratedBarcodeView;
-import com.journeyapps.barcodescanner.DefaultDecoderFactory;
 
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.List;
 
 public class ScanQRCodeActivity extends AppCompatActivity {
 
-    private DecoratedBarcodeView barcodeView;
-    private ImageButton btnBack, btnFlash;
-    private View scannerLine;
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
+    private CaptureManager capture;
+    private DecoratedBarcodeView barcodeScannerView;
+    private ImageButton btnFlash;
     private boolean isFlashOn = false;
-    private boolean isHandled = false;
+    private View scannerLine;
 
-    private final ActivityResultLauncher<Intent> galleryLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri imageUri = result.getData().getData();
-                    decodeQRCodeFromUri(imageUri);
+    private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    decodeQRCode(uri);
                 }
             }
     );
@@ -55,67 +59,67 @@ public class ScanQRCodeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scan_qr_code);
 
-        initViews();
-        setupScanner();
-        startScannerLineAnimation();
+        barcodeScannerView = findViewById(R.id.barcode_scanner);
+        btnFlash = findViewById(R.id.btn_flash);
+        scannerLine = findViewById(R.id.scanner_line);
+
+        // Kiểm tra quyền camera trước khi khởi tạo
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+            return;
+        }
+
+        initializeScanner(savedInstanceState);
     }
 
-    /**
-     * Khởi tạo các thành phần giao diện và thiết lập sự kiện nút bấm
-     */
-    private void initViews() {
-        barcodeView = findViewById(R.id.barcodeScannerView);
-        btnBack = findViewById(R.id.btnBack);
-        btnFlash = findViewById(R.id.btnFlash);
-        scannerLine = findViewById(R.id.scannerLine);
+    private void initializeScanner(Bundle savedInstanceState) {
+        // Khởi tạo CaptureManager để quản lý camera
+        capture = new CaptureManager(this, barcodeScannerView);
+        capture.initializeFromIntent(getIntent(), savedInstanceState);
 
-        btnBack.setOnClickListener(v -> finish());
-        
-        btnFlash.setOnClickListener(v -> {
-            if (isFlashOn) {
-                barcodeView.setTorchOff();
-                btnFlash.setImageResource(R.drawable.ic_flash_on);
-            } else {
-                barcodeView.setTorchOn();
-                btnFlash.setImageResource(R.drawable.ic_flash_off);
-            }
-            isFlashOn = !isFlashOn;
-        });
-
-        findViewById(R.id.btnGallery).setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_PICK);
-            intent.setType("image/*");
-            galleryLauncher.launch(intent);
-        });
-    }
-
-    /**
-     * Cấu hình trình quét mã QR (ZXing) và callback xử lý kết quả
-     */
-    private void setupScanner() {
-        barcodeView.getBarcodeView().setDecoderFactory(new DefaultDecoderFactory(Collections.singletonList(com.google.zxing.BarcodeFormat.QR_CODE)));
-        barcodeView.decodeContinuous(new BarcodeCallback() {
+        // [HOTFIX 2] Lắng nghe kết quả quét từ Camera & Đảm bảo chạy trên UI Thread
+        barcodeScannerView.decodeSingle(new BarcodeCallback() {
             @Override
             public void barcodeResult(BarcodeResult result) {
-                if (result.getText() != null) {
-                    handleResult(result.getText());
-                }
+                runOnUiThread(() -> handleScanResult(result.getText()));
             }
 
             @Override
-            public void possibleResultPoints(List<com.google.zxing.ResultPoint> resultPoints) {}
+            public void possibleResultPoints(List<ResultPoint> resultPoints) {}
         });
+
+        // Nút Quay lại
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
+        // Nút Flash
+        btnFlash.setOnClickListener(v -> toggleFlash());
+
+        // Nút Thư viện
+        findViewById(R.id.btn_gallery).setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+
+        // Hiệu ứng quét chạy lên xuống
+        startScannerAnimation();
     }
 
-    /**
-     * Bắt đầu hiệu ứng đường kẻ chạy lên xuống để mô phỏng quét laser
-     */
-    private void startScannerLineAnimation() {
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initializeScanner(null);
+            } else {
+                Toast.makeText(this, "Cần cấp quyền Camera để quét mã QR", Toast.LENGTH_LONG).show();
+                finish();
+            }
+        }
+    }
+
+    private void startScannerAnimation() {
         TranslateAnimation animation = new TranslateAnimation(
                 Animation.RELATIVE_TO_PARENT, 0.0f,
                 Animation.RELATIVE_TO_PARENT, 0.0f,
-                Animation.RELATIVE_TO_PARENT, 0.3f,
-                Animation.RELATIVE_TO_PARENT, 0.7f
+                Animation.RELATIVE_TO_PARENT, 0.0f,
+                Animation.RELATIVE_TO_PARENT, 0.95f
         );
         animation.setDuration(2000);
         animation.setRepeatCount(Animation.INFINITE);
@@ -123,55 +127,109 @@ public class ScanQRCodeActivity extends AppCompatActivity {
         scannerLine.startAnimation(animation);
     }
 
-    /**
-     * Xử lý kết quả sau khi quét được mã QR (mở màn hình chi tiết món ăn)
-     * @param text Nội dung mã QR (thường là ID món ăn)
-     */
-    private void handleResult(String text) {
-        if (isHandled || text == null || text.trim().isEmpty()) return;
-        isHandled = true;
+    private void toggleFlash() {
+        // [HOTFIX 5] Kiểm tra phần cứng Flash tránh Crash
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
+            Toast.makeText(this, "Thiết bị không hỗ trợ đèn Flash", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        barcodeView.pause();
-        // Giả sử text quét được là ID món ăn
-        Intent intent = new Intent(this, DetailMonAnActivity.class);
-        intent.putExtra("ID_MON_AN", text.trim());
-        startActivity(intent);
-        finish();
+        if (isFlashOn) {
+            barcodeScannerView.setTorchOff();
+            btnFlash.setImageResource(R.drawable.ic_flash_on);
+        } else {
+            barcodeScannerView.setTorchOn();
+            btnFlash.setImageResource(R.drawable.ic_flash_off);
+        }
+        isFlashOn = !isFlashOn;
     }
 
-    /**
-     * Giải mã QR từ một hình ảnh được chọn trong thư viện
-     * @param uri Uri của hình ảnh
-     */
-    private void decodeQRCodeFromUri(Uri uri) {
-        try {
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            if (bitmap == null) return;
+    private boolean isHandled = false; // Ngăn chặn xử lý nhiều lần
 
-            int[] intArray = new int[bitmap.getWidth() * bitmap.getHeight()];
-            bitmap.getPixels(intArray, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+    private void decodeQRCode(Uri uri) {
+        if (isHandled) return;
 
-            LuminanceSource source = new RGBLuminanceSource(bitmap.getWidth(), bitmap.getHeight(), intArray);
-            BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+        new Thread(() -> {
+            // Sử dụng try-with-resources để tự động đóng InputStream
+            try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 2;
 
-            Result result = new MultiFormatReader().decode(binaryBitmap);
-            handleResult(result.getText());
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, options);
+                if (bitmap == null) {
+                    runOnUiThread(() -> Toast.makeText(this, "Không thể đọc ảnh", Toast.LENGTH_SHORT).show());
+                    return;
+                }
 
-        } catch (Exception e) {
-            Toast.makeText(this, "Không tìm thấy mã QR trong ảnh", Toast.LENGTH_SHORT).show();
+                int width = bitmap.getWidth();
+                int height = bitmap.getHeight();
+                int[] pixels = new int[width * height];
+                bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+
+                LuminanceSource source = new RGBLuminanceSource(width, height, pixels);
+                BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+
+                MultiFormatReader reader = new MultiFormatReader();
+                Result result = reader.decode(binaryBitmap);
+
+                runOnUiThread(() -> handleScanResult(result.getText()));
+
+            } catch (Throwable e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    String errorMsg = (e instanceof OutOfMemoryError) ? "Ảnh quá lớn, hãy chọn ảnh khác" : "Không tìm thấy mã QR";
+                    Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+
+    private void handleScanResult(String result) {
+        if (isHandled) return;
+
+        if (result != null && !result.isEmpty()) {
+            isHandled = true; // Đánh dấu đã xử lý
+            Intent intent = DetailMonAnActivity.createIntent(this, result);
+            startActivity(intent);
+            finish();
+        } else {
+            Toast.makeText(this, "Mã QR không hợp lệ", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        barcodeView.resume();
+        // [HOTFIX 3] Kiểm tra quyền Camera trước khi Resume (Tránh crash khi user tắt quyền trong Settings)
+        if (capture != null && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            capture.onResume();
+        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Vui lòng cấp quyền Camera để quét mã", Toast.LENGTH_LONG).show();
+            finish();
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        barcodeView.pause();
+        if (capture != null) {
+            capture.onPause();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (capture != null) {
+            capture.onDestroy();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (capture != null) {
+            capture.onSaveInstanceState(outState);
+        }
     }
 }

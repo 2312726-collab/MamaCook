@@ -57,14 +57,38 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
 
     private void loadUsers() {
         // Gán listener vào biến để có thể gỡ bỏ khi đóng Activity
+        android.util.Log.d("QuanLyTaiKhoan", "Bắt đầu load users...");
+
+        // Kiểm tra user đã đăng nhập chưa
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            android.util.Log.e("QuanLyTaiKhoan", "User chưa đăng nhập!");
+            Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
+            return;
+        }
+        android.util.Log.d("QuanLyTaiKhoan", "User đã đăng nhập: " + currentUser.getEmail());
+
         userListener = db.collection("nguoi_dung")
                 .addSnapshotListener((query, error) -> {
-                    if (error != null || query == null) return;
+                    if (error != null) {
+                        android.util.Log.e("QuanLyTaiKhoan", "Lỗi: " + error.getMessage());
+                        Toast.makeText(this, "Lỗi tải dữ liệu: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    if (query == null) {
+                        android.util.Log.e("QuanLyTaiKhoan", "Query null");
+                        Toast.makeText(this, "Query null - Không có dữ liệu", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    android.util.Log.d("QuanLyTaiKhoan", "Số user: " + query.size());
+                    Toast.makeText(this, "Đã load " + query.size() + " users", Toast.LENGTH_SHORT).show();
                     fullList.clear();
                     for (QueryDocumentSnapshot doc : query) {
                         User u = doc.toObject(User.class);
                         u.setId_nguoi_dung(doc.getId());
                         fullList.add(u);
+                        android.util.Log.d("QuanLyTaiKhoan", "User: " + u.getHo_ten());
                     }
                     applyFilters();
                 });
@@ -103,22 +127,26 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
     }
 
     private void applyFilters() {
-        filteredList.clear();
+        android.util.Log.d("QuanLyTaiKhoan", "applyFilters called - fullList size: " + fullList.size());
+        List<User> newFilteredList = new ArrayList<>();
         for (User u : fullList) {
             boolean matchesSearch = u.getHo_ten() != null && u.getHo_ten().toLowerCase().contains(keywordHienTai)
                     || u.getEmail() != null && u.getEmail().toLowerCase().contains(keywordHienTai);
-            
+
             if (keywordHienTai.isEmpty()) matchesSearch = true;
 
             if (matchesSearch) {
                 if (dangLocViPham) {
-                    if (u.getSo_lan_vi_pham() > 0) filteredList.add(u);
+                    if (u.getSo_lan_vi_pham() > 0) newFilteredList.add(u);
                 } else {
-                    filteredList.add(u);
+                    newFilteredList.add(u);
                 }
             }
         }
-        adapter.notifyDataSetChanged();
+        android.util.Log.d("QuanLyTaiKhoan", "After filter - newFilteredList size: " + newFilteredList.size());
+        filteredList.clear();
+        filteredList.addAll(newFilteredList);
+        adapter.updateList(newFilteredList);
     }
 
     @Override

@@ -48,9 +48,7 @@ public class AccountFragment extends Fragment {
 
     private ImageView imgAvatar;
     private TextView tvDisplayName, tvDisplayEmail, tvInfoName, tvInfoEmail, tvInfoPhone, tvInfoRole, tvInfoDate;
-    private LinearLayout btnEditProfile, btnChangePassword, btnAddMonAn;
-    private LinearLayout btnAdminUsers, btnAdminStats, btnAdminReviews, btnAdminRecipes, btnAdminChat;
-    private View dividerAdmin1, dividerAdmin2, dividerAdmin3, dividerAdmin4, dividerAdmin5;
+    private LinearLayout btnEditProfile, btnChangePassword, btnAdminDashboard;
     private com.google.android.material.button.MaterialButton btnLogout;
 
     private FirebaseAuth mAuth;
@@ -106,7 +104,7 @@ public class AccountFragment extends Fragment {
 
         initViews(view);
         setupListeners();
-        
+
         return view;
     }
 
@@ -125,16 +123,6 @@ public class AccountFragment extends Fragment {
 
         btnChangePassword.setOnClickListener(v -> {
             startActivity(new Intent(getActivity(), com.example.mamacook.activities.ChangePasswordActivity.class));
-        });
-
-        btnAddMonAn.setOnClickListener(v -> {
-            if (isAdded() && getContext() != null) {
-                Intent intent = new Intent(requireContext(), com.example.mamacook.activities.AddEditMonAnActivity.class);
-                startActivity(intent);
-                if (getActivity() != null) {
-                    getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                }
-            }
         });
 
         imgAvatar.setOnClickListener(v -> showAvatarOptions());
@@ -226,26 +214,16 @@ public class AccountFragment extends Fragment {
         tvInfoDate = view.findViewById(R.id.tv_info_date);
         btnEditProfile = view.findViewById(R.id.btn_edit_profile);
         btnChangePassword = view.findViewById(R.id.btn_change_password);
-        btnAddMonAn = view.findViewById(R.id.btn_add_monan);
-        btnAdminUsers = view.findViewById(R.id.btn_admin_users);
-        btnAdminStats = view.findViewById(R.id.btn_admin_stats);
-        btnAdminReviews = view.findViewById(R.id.btn_admin_reviews);
-        btnAdminRecipes = view.findViewById(R.id.btn_admin_recipes);
-        btnAdminChat = view.findViewById(R.id.btn_admin_chat);
-        dividerAdmin1 = view.findViewById(R.id.divider_admin_1);
-        dividerAdmin2 = view.findViewById(R.id.divider_admin_2);
-        dividerAdmin3 = view.findViewById(R.id.divider_admin_3);
-        dividerAdmin4 = view.findViewById(R.id.divider_admin_4);
-        dividerAdmin5 = view.findViewById(R.id.divider_admin_5);
+        btnAdminDashboard = view.findViewById(R.id.btn_admin_dashboard);
         btnLogout = view.findViewById(R.id.btn_logout);
     }
 
     private void loadUserData() {
-        FirebaseUser userAuth = mAuth.getCurrentUser();
-        if (userAuth == null || isDataLoading) return;
+        FirebaseUser firebaseUser = mAuth.getCurrentUser();
+        if (firebaseUser == null) return;
 
         isDataLoading = true;
-        db.collection("nguoi_dung").document(userAuth.getUid()).get()
+        db.collection("nguoi_dung").document(firebaseUser.getUid()).get()
                 .addOnSuccessListener(doc -> {
                     isDataLoading = false;
                     if (isAdded() && doc.exists()) {
@@ -270,44 +248,17 @@ public class AccountFragment extends Fragment {
                         String role = doc.getString("role");
                         String vaiTro = doc.getString("vai_tro");
                         if ("admin".equals(role) || "admin".equals(vaiTro)) {
-                            // Show buttons
-                            if (btnAdminUsers != null) btnAdminUsers.setVisibility(View.VISIBLE);
-                            if (btnAdminStats != null) btnAdminStats.setVisibility(View.VISIBLE);
-                            if (btnAdminReviews != null) btnAdminReviews.setVisibility(View.VISIBLE);
-                            if (btnAdminRecipes != null) btnAdminRecipes.setVisibility(View.VISIBLE);
-                            if (btnAdminChat != null) btnAdminChat.setVisibility(View.VISIBLE);
-                            
-                            if (dividerAdmin1 != null) dividerAdmin1.setVisibility(View.VISIBLE);
-                            if (dividerAdmin2 != null) dividerAdmin2.setVisibility(View.VISIBLE);
-                            if (dividerAdmin3 != null) dividerAdmin3.setVisibility(View.VISIBLE);
-                            if (dividerAdmin4 != null) dividerAdmin4.setVisibility(View.VISIBLE);
-                            if (dividerAdmin5 != null) dividerAdmin5.setVisibility(View.VISIBLE);
-
-                            // Setup click listeners
-                            btnAdminUsers.setOnClickListener(v -> {
-                                startActivity(new Intent(getActivity(), com.example.mamacook.activities.QuanLyTaiKhoanActivity.class));
-                                if (getActivity() != null) getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                            });
-
-                            btnAdminStats.setOnClickListener(v -> {
-                                startActivity(new Intent(getActivity(), com.example.mamacook.activities.ThongKeAdminActivity.class));
-                                if (getActivity() != null) getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                            });
-
-                            btnAdminReviews.setOnClickListener(v -> {
-                                startActivity(new Intent(getActivity(), com.example.mamacook.activities.QuanLyDanhGiaActivity.class));
-                                if (getActivity() != null) getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                            });
-
-                            btnAdminRecipes.setOnClickListener(v -> {
-                                startActivity(new Intent(getActivity(), com.example.mamacook.activities.QuanLyMonAnActivity.class));
-                                if (getActivity() != null) getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                            });
-
-                            btnAdminChat.setOnClickListener(v -> {
-                                startActivity(new Intent(getActivity(), com.example.mamacook.activities.DanhSachChatActivity.class));
-                                if (getActivity() != null) getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                            });
+                            // Hiển thị nút Admin Dashboard
+                            if (btnAdminDashboard != null) {
+                                btnAdminDashboard.setVisibility(View.VISIBLE);
+                                btnAdminDashboard.setOnClickListener(v -> {
+                                    Intent intent = new Intent(getActivity(), com.example.mamacook.activities.AdminActivity.class);
+                                    startActivity(intent);
+                                    if (getActivity() != null) {
+                                        getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+                                    }
+                                });
+                            }
                         }
                     }
                 })

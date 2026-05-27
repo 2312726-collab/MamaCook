@@ -236,5 +236,4 @@ public class MonAn implements Parcelable {
     public void setDanh_sach_so_che(List<SoChe> danh_sach_so_che) { this.danh_sach_so_che = danh_sach_so_che; }
     public List<String> getTu_khoa_tim_kiem() { return tu_khoa_tim_kiem; }
     public void setTu_khoa_tim_kiem(List<String> tu_khoa_tim_kiem) { this.tu_khoa_tim_kiem = tu_khoa_tim_kiem; }
-    public int getTong_luot_danh_gia() { return reviewCount; }
 }

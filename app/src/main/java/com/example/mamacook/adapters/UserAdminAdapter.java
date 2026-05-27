@@ -54,10 +54,16 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         User user = userList.get(position);
 
+        android.util.Log.d("UserAdminAdapter", "Binding user: " + user.getHo_ten() + ", Role: " + user.getRole());
+
         holder.tvHoTen.setText(user.getHo_ten() != null ? user.getHo_ten() : "Chưa có tên");
         holder.tvEmail.setText(user.getEmail() != null ? user.getEmail() : "Chưa có email");
-        holder.tvVaiTro.setText("Role: " + user.getRole());
-        
+
+        String role = user.getRole();
+        if (role == null) role = user.getVai_tro(); // Fallback
+        if (role == null) role = "user"; // Default
+        holder.tvVaiTro.setText("Vai trò: " + role);
+
         String trangThai = user.getTrang_thai_tai_khoan();
         holder.tvTrangThai.setText("Trạng thái: " + (trangThai == null ? "dang_hoat_dong" : trangThai));
 
@@ -73,7 +79,7 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
             holder.btnKhoaMo.setText("Khóa");
         }
 
-        holder.btnDoiVaiTro.setText("admin".equals(user.getRole()) ? "Đổi thành user" : "Đổi thành admin");
+        holder.btnDoiVaiTro.setText("admin".equals(role) ? "Đổi thành user" : "Đổi thành admin");
 
         holder.btnKhoaMo.setOnClickListener(v -> {
             if (listener != null) listener.onToggleStatus(user);

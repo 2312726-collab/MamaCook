@@ -21,7 +21,7 @@ public class AdminActivity extends AppCompatActivity {
     private View[] barWeekViews;
 
     private LinearLayout layoutThongKe, layoutQuanLyTaiKhoan, layoutQuanLyDanhGia;
-    private LinearLayout layoutQuanLyMonAn, layoutGuiThongBao, layoutChatNguoiDung;
+    private LinearLayout layoutQuanLyMonAn, layoutThemMonAn, layoutGuiThongBao, layoutChatNguoiDung;
 
     private FirebaseFirestore db;
 
@@ -70,6 +70,7 @@ public class AdminActivity extends AppCompatActivity {
         layoutQuanLyTaiKhoan = findViewById(R.id.layout_quan_ly_tai_khoan);
         layoutQuanLyDanhGia = findViewById(R.id.layout_quan_ly_danh_gia);
         layoutQuanLyMonAn = findViewById(R.id.layout_quan_ly_mon_an);
+        layoutThemMonAn = findViewById(R.id.layout_them_mon_an);
         layoutGuiThongBao = findViewById(R.id.layout_gui_thong_bao);
         layoutChatNguoiDung = findViewById(R.id.layout_chat_nguoi_dung);
     }
@@ -217,6 +218,9 @@ public class AdminActivity extends AppCompatActivity {
 
         layoutQuanLyMonAn.setOnClickListener(v ->
                 startActivity(new Intent(AdminActivity.this, QuanLyMonAnActivity.class)));
+
+        layoutThemMonAn.setOnClickListener(v ->
+                startActivity(new Intent(AdminActivity.this, AddEditMonAnActivity.class)));
 
         layoutGuiThongBao.setOnClickListener(v ->
                 startActivity(new Intent(AdminActivity.this, AdminGuiThongBaoActivity.class)));

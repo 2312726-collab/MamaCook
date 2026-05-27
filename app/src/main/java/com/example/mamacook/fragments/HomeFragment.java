@@ -618,6 +618,17 @@ public class HomeFragment extends Fragment {
         if (rvCategory != null) rvCategory.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
+    private void checkAdminRole() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+        db.collection("nguoi_dung").document(user.getUid()).get().addOnSuccessListener(doc -> {
+            if (isAdded() && doc.exists()) {
+                // Implementation for HomeFragment if needed, e.g. show admin panel
+                // Currently just defined to resolve compilation error
+            }
+        });
+    }
+
     private static class LabelSpinnerAdapter extends android.widget.ArrayAdapter<String> {
         private final String label;
         LabelSpinnerAdapter(Context ctx, String lbl, String[] items) { super(ctx, R.layout.spinner_item_selected, items); label = lbl; setDropDownViewResource(R.layout.spinner_dropdown_item); }
