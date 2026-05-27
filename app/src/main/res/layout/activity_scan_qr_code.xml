@@ -3,100 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black">
+    android:background="@android:color/black">
 
     <com.journeyapps.barcodescanner.DecoratedBarcodeView
-        android:id="@+id/barcode_scanner"
+        android:id="@+id/barcodeScannerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:zxing_preview_scaling_strategy="centerCrop"
         app:zxing_use_texture_view="true" />
 
-    <!-- Custom Overlay -->
+    <!-- Overlay Layer -->
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/container_scan_window"
-        android:layout_width="280dp"
-        android:layout_height="280dp"
-        android:background="@android:color/transparent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <!-- Corner Borders -->
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
-            android:background="#FFFFFF"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <View
-            android:layout_width="4dp"
-            android:layout_height="40dp"
-            android:background="#FFFFFF"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
-            android:background="#FFFFFF"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <View
-            android:layout_width="4dp"
-            android:layout_height="40dp"
-            android:background="#FFFFFF"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
-            android:background="#FFFFFF"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <View
-            android:layout_width="4dp"
-            android:layout_height="40dp"
-            android:background="#FFFFFF"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
-            android:background="#FFFFFF"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <View
-            android:layout_width="4dp"
-            android:layout_height="40dp"
-            android:background="#FFFFFF"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- Scanner Line Animation placeholder -->
-        <View
-            android:id="@+id/scanner_line"
-            android:layout_width="match_parent"
-            android:layout_height="2dp"
-            android:background="#FF4D00"
-            app:layout_constraintTop_toTopOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!-- Clear center for camera -->
+    <!-- Scan Window (280x280dp) -->
     <View
+        android:id="@+id/viewFinder"
         android:layout_width="280dp"
         android:layout_height="280dp"
         android:background="@android:color/transparent"
@@ -105,60 +29,113 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/tv_instruction"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="Di chuyển camera tới mã QR để quét"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        app:layout_constraintBottom_toTopOf="@id/container_scan_window"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+    <!-- Corner Borders -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:background="@android:color/white"
+        app:layout_constraintStart_toStartOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
 
+    <View
+        android:layout_width="4dp"
+        android:layout_height="40dp"
+        android:background="@android:color/white"
+        app:layout_constraintStart_toStartOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:background="@android:color/white"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
+
+    <View
+        android:layout_width="4dp"
+        android:layout_height="40dp"
+        android:background="@android:color/white"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:background="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
+        app:layout_constraintStart_toStartOf="@id/viewFinder" />
+
+    <View
+        android:layout_width="4dp"
+        android:layout_height="40dp"
+        android:background="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
+        app:layout_constraintStart_toStartOf="@id/viewFinder" />
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:background="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder" />
+
+    <View
+        android:layout_width="4dp"
+        android:layout_height="40dp"
+        android:background="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder" />
+
+    <!-- Scanner Line -->
+    <View
+        android:id="@+id/scannerLine"
+        android:layout_width="260dp"
+        android:layout_height="2dp"
+        android:background="#FF4D00"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder"
+        app:layout_constraintStart_toStartOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
+
+    <!-- Top Controls -->
     <ImageButton
-        android:id="@+id/btn_back"
+        android:id="@+id/btnBack"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_margin="16dp"
         android:background="@drawable/bg_notification_circle"
         android:padding="12dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/abc_ic_ab_back_material"
+        android:src="@drawable/ic_back_arrow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/white" />
+        app:tint="@android:color/white" />
 
     <ImageButton
-        android:id="@+id/btn_flash"
+        android:id="@+id/btnFlash"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
+        android:layout_margin="16dp"
         android:background="@drawable/bg_notification_circle"
         android:padding="12dp"
-        android:scaleType="fitCenter"
         android:src="@drawable/ic_flash_on"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/white" />
+        app:tint="@android:color/white" />
 
+    <!-- Gallery Button -->
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btn_gallery"
+        android:id="@+id/btnGallery"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:background="@drawable/bg_register_button"
-        android:paddingHorizontal="24dp"
+        android:layout_marginBottom="60dp"
+        android:background="@drawable/bg_button_orange"
+        android:drawablePadding="8dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
         android:text="Chọn ảnh từ Thư viện"
         android:textAllCaps="false"
-        android:textColor="@color/white"
-        android:drawableStart="@drawable/ic_image"
-        android:drawablePadding="8dp"
+        android:textColor="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/container_scan_window" />
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

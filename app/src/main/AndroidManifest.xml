@@ -80,6 +80,9 @@
             android:name=".activities.QRCodeViewerActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Translucent" />
+        <activity android:name=".activities.AddEditMonAnActivity" android:exported="false" />
+        <activity android:name=".activities.QRCodeViewerActivity" android:exported="false" />
+        <activity android:name=".activities.ScanQRCodeActivity" android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
