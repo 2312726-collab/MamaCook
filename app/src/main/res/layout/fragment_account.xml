@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#F5F5DC">
 
-    <!-- 1. Background gỗ toàn màn hình đồng bộ với Home/Activity -->
+    <!-- 1. Background gỗ toàn màn hình -->
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -14,7 +14,7 @@
         android:src="@drawable/bg_splash"
         android:contentDescription="@null" />
 
-    <!-- 2. Header Section (Tiêu đề căn giữa cho Fragment) -->
+    <!-- 2. Header Section -->
     <LinearLayout
         android:id="@+id/header_layout"
         android:layout_width="match_parent"
@@ -29,9 +29,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="serif"
-            android:text="Tài khoản"
+            android:text="Hồ sơ cá nhân"
             android:textColor="@color/white"
-            android:textSize="26sp"
+            android:textSize="24sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -42,7 +42,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/header_layout">
 
-        <!-- 3. Tấm nền giấy da bo tròn (Đồng bộ với Home) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -50,7 +49,7 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Profile Header -->
+            <!-- Profile Header (Avatar + Tên) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -59,9 +58,9 @@
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/img_avatar"
-                    android:layout_width="115dp"
-                    android:layout_height="115dp"
-                    android:padding="3dp"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:padding="4dp"
                     android:scaleType="centerCrop"
                     android:src="@drawable/ic_avatar"
                     app:shapeAppearanceOverlay="@style/Circle"
@@ -74,7 +73,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:fontFamily="serif"
-                    android:text="Tên người dùng"
+                    android:text="--"
                     android:textColor="#4E342E"
                     android:textSize="26sp"
                     android:textStyle="bold" />
@@ -85,7 +84,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:fontFamily="serif"
-                    android:text="email@example.com"
+                    android:text="--"
                     android:textColor="#6D4C41"
                     android:textSize="15sp"
                     android:textStyle="italic" />
@@ -116,6 +115,7 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
+                    <!-- Tên -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                         <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Họ và tên" android:textColor="#8D6E63" android:fontFamily="serif" />
                         <TextView android:id="@+id/tv_info_name" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#4E342E" android:textStyle="bold" android:fontFamily="serif" />
@@ -123,6 +123,7 @@
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="#E0D4C3" />
 
+                    <!-- Email -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                         <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Email" android:textColor="#8D6E63" android:fontFamily="serif" />
                         <TextView android:id="@+id/tv_info_email" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#4E342E" android:fontFamily="serif" />
@@ -130,20 +131,39 @@
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="#E0D4C3" />
 
+                    <!-- Ngày sinh (MỚI) -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Số điện thoại" android:textColor="#8D6E63" android:fontFamily="serif" />
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Ngày sinh" android:textColor="#8D6E63" android:fontFamily="serif" />
+                        <TextView android:id="@+id/tv_info_dob" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#4E342E" android:fontFamily="serif" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="#E0D4C3" />
+
+                    <!-- Giới tính (MỚI) -->
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Giới tính" android:textColor="#8D6E63" android:fontFamily="serif" />
+                        <TextView android:id="@+id/tv_info_gender" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#4E342E" android:fontFamily="serif" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="#E0D4C3" />
+
+                    <!-- Số điện thoại -->
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="SĐT" android:textColor="#8D6E63" android:fontFamily="serif" />
                         <TextView android:id="@+id/tv_info_phone" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#4E342E" android:fontFamily="serif" />
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="#E0D4C3" />
 
+                    <!-- Vai trò -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
                         <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Vai trò" android:textColor="#8D6E63" android:fontFamily="serif" />
-                        <TextView android:id="@+id/tv_info_role" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Người dùng" android:textColor="#2E7D32" android:textStyle="bold" android:fontFamily="serif" />
+                        <TextView android:id="@+id/tv_info_role" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#2E7D32" android:textStyle="bold" android:fontFamily="serif" />
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="12dp" android:background="#E0D4C3" />
 
+                    <!-- Ngày tham gia -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                         <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Ngày tham gia" android:textColor="#8D6E63" android:fontFamily="serif" />
                         <TextView android:id="@+id/tv_info_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="#4E342E" android:fontFamily="serif" />
@@ -152,7 +172,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Tùy chọn chức năng -->
+            <!-- Tùy chọn -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -213,17 +233,17 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_logout"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="58dp"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="40dp"
                 android:fontFamily="serif"
                 android:text="Đăng xuất"
                 android:textAllCaps="false"
                 android:textColor="#B71C1C"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 app:backgroundTint="#FFFFFF"
-                app:cornerRadius="28dp"
+                app:cornerRadius="30dp"
                 app:strokeColor="#B71C1C"
                 app:strokeWidth="1.5dp"
                 app:elevation="2dp" />
