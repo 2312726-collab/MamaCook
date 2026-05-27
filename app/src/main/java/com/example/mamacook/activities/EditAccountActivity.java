@@ -23,8 +23,8 @@ import java.util.Map;
 public class EditAccountActivity extends AppCompatActivity {
 
     private ImageView btnBack;
-    private EditText etName, etPhone;
-    private TextView tvEmail, tvRole, tvDate;
+    private EditText etName, etPhone, etEmail;
+    private TextView tvRole, tvDate;
     private com.google.android.material.button.MaterialButton btnSave;
 
     private FirebaseAuth mAuth;
@@ -52,24 +52,23 @@ public class EditAccountActivity extends AppCompatActivity {
 
         btnBack.setOnClickListener(v -> finish());
 
-        btnSave.setOnClickListener(v -> checkPhoneAndSave());
+        btnSave.setOnClickListener(v -> checkDataAndSave());
     }
 
     private void initViews() {
         btnBack = findViewById(R.id.btn_edit_back);
         etName = findViewById(R.id.et_edit_name);
         etPhone = findViewById(R.id.et_edit_phone);
-        tvEmail = findViewById(R.id.tv_edit_email);
+        etEmail = findViewById(R.id.et_edit_email);
         tvRole = findViewById(R.id.tv_edit_role);
         tvDate = findViewById(R.id.tv_edit_date);
         btnSave = findViewById(R.id.btn_save_profile);
     }
 
     private void setupLockedFields() {
-        // Hiếu: Thiết lập thông báo "Không thể sửa!" khi click vào các trường bị khóa
-        tvEmail.setOnClickListener(v -> Toast.makeText(this, "Không thể sửa!", Toast.LENGTH_SHORT).show());
-        tvRole.setOnClickListener(v -> Toast.makeText(this, "Không thể sửa!", Toast.LENGTH_SHORT).show());
-        tvDate.setOnClickListener(v -> Toast.makeText(this, "Không thể sửa!", Toast.LENGTH_SHORT).show());
+        // Thông báo khi người dùng cố gắng sửa các trường bị khóa
+        tvRole.setOnClickListener(v -> Toast.makeText(this, "không thể chỉnh sửa", Toast.LENGTH_SHORT).show());
+        tvDate.setOnClickListener(v -> Toast.makeText(this, "không thể chỉnh sửa", Toast.LENGTH_SHORT).show());
     }
 
     private void loadUserData() {
@@ -79,7 +78,7 @@ public class EditAccountActivity extends AppCompatActivity {
                 if (user != null) {
                     etName.setText(user.getHo_ten());
                     etPhone.setText(user.getSo_dien_thoai());
-                    tvEmail.setText(user.getEmail());
+                    etEmail.setText(user.getEmail());
                     
                     String role = user.getVai_tro();
                     tvRole.setText(role != null && role.equals("admin") ? "Quản trị viên" : "Người dùng");
@@ -93,16 +92,22 @@ public class EditAccountActivity extends AppCompatActivity {
         });
     }
 
-    private void checkPhoneAndSave() {
+    private void checkDataAndSave() {
         String newName = etName.getText().toString().trim();
         String newPhone = etPhone.getText().toString().trim();
+        String newEmail = etEmail.getText().toString().trim();
 
         if (TextUtils.isEmpty(newName)) {
             Toast.makeText(this, "Vui lòng nhập họ tên", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Hiếu: Kiểm tra nếu số điện thoại không trống thì check trùng
+        if (TextUtils.isEmpty(newEmail)) {
+            Toast.makeText(this, "Vui lòng nhập email", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Kiểm tra trùng số điện thoại (nếu có nhập)
         if (!TextUtils.isEmpty(newPhone)) {
             db.collection("nguoi_dung")
                     .whereEqualTo("so_dien_thoai", newPhone)
@@ -110,7 +115,7 @@ public class EditAccountActivity extends AppCompatActivity {
                     .addOnSuccessListener(queryDocumentSnapshots -> {
                         boolean isDuplicate = false;
                         for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
-                            if (!doc.getId().equals(uid)) { // Trùng với người khác (không phải mình)
+                            if (!doc.getId().equals(uid)) {
                                 isDuplicate = true;
                                 break;
                             }
@@ -119,25 +124,38 @@ public class EditAccountActivity extends AppCompatActivity {
                         if (isDuplicate) {
                             Toast.makeText(this, "Số điện thoại này đã được sử dụng", Toast.LENGTH_SHORT).show();
                         } else {
-                            updateProfile(newName, newPhone);
+                            updateProfile(newName, newPhone, newEmail);
                         }
                     })
                     .addOnFailureListener(e -> Toast.makeText(this, "Lỗi kiểm tra: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         } else {
-            updateProfile(newName, "");
+            updateProfile(newName, "", newEmail);
         }
     }
 
-    private void updateProfile(String name, String phone) {
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("ho_ten", name);
-        updates.put("so_dien_thoai", phone);
+    private void updateProfile(String name, String phone, String email) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
 
-        db.collection("nguoi_dung").document(uid).update(updates)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(EditAccountActivity.this, "Cập nhật thành công!", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> Toast.makeText(EditAccountActivity.this, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        // 1. Cập nhật Email trong hệ thống Authentication trước
+        user.updateEmail(email).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                // 2. Nếu Auth thành công, cập nhật Firestore
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("ho_ten", name);
+                updates.put("so_dien_thoai", phone);
+                updates.put("email", email);
+
+                db.collection("nguoi_dung").document(uid).update(updates)
+                        .addOnSuccessListener(aVoid -> {
+                            Toast.makeText(EditAccountActivity.this, "Cập nhật thành công!", Toast.LENGTH_SHORT).show();
+                            finish();
+                        })
+                        .addOnFailureListener(e -> Toast.makeText(EditAccountActivity.this, "Lỗi cập nhật Firestore: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            } else {
+                // Lỗi này thường do yêu cầu re-authenticate (người dùng cần đăng nhập lại gần đây để đổi email)
+                Toast.makeText(this, "Lỗi cập nhật Email: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }

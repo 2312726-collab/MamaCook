@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.mamacook">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -14,11 +18,7 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MamaCook">
-        <activity android:name=".activities.AdminActivity" />
-        <activity android:name=".activities.ThongKeAdminActivity" />
-        <activity android:name=".activities.QuanLyTaiKhoanActivity" />
-        <activity android:name=".activities.QuanLyDanhGiaActivity" />
-        <activity android:name=".activities.QuanLyMonAnActivity" />
+        
         <activity android:name=".activities.AdminActivity" />
         <activity android:name=".activities.ThongKeAdminActivity" />
         <activity android:name=".activities.QuanLyTaiKhoanActivity" />
@@ -70,13 +70,14 @@
         <activity android:name=".activities.GioHangActivity" android:exported="false" />
         <activity android:name=".activities.ChuanBiNauActivity" android:exported="false" />
         <activity android:name=".activities.FavoriteActivity" android:exported="false" />
-        <!-- hiếu làm cái này: Khai báo AccountActivity để không bị crash khi mở -->
         <activity android:name=".activities.AccountActivity" android:exported="false" />
-        <!-- hiếu làm cái này: Khai báo EditAccountActivity để không bị crash khi mở -->
-        <activity android:name=".activities.EditAccountActivity" android:exported="false" />
-        <!-- hiếu làm cái này: Khai báo ChangePasswordActivity để không bị crash khi mở -->
-        <activity android:name=".activities.ChangePasswordActivity" android:exported="false" />
+        <activity android:name=".activities.PreviewAvatarActivity" android:exported="false" />
 
+        <activity
+            android:name="com.canhub.cropper.CropImageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light"
+            tools:replace="android:exported"/>
 
         <provider
             android:name="androidx.core.content.FileProvider"

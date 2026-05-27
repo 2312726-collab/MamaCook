@@ -69,13 +69,16 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         // Khôi phục trạng thái hoặc hiển thị mặc định
+        // Hieu sua: Toi uu logic nap fragment ban dau de tranh lag/ANR va fix loi mat noi dung khi xoay man hinh
+        int idToSelect;
         if (savedInstanceState != null) {
-            currentId = savedInstanceState.getInt("currentId", R.id.nav_home);
-            bottomNavigationView.setSelectedItemId(currentId);
+            idToSelect = savedInstanceState.getInt("currentId", R.id.nav_home);
         } else {
-            bottomNavigationView.setSelectedItemId(R.id.nav_home);
-            showFragment(R.id.nav_home);
+            idToSelect = R.id.nav_home;
         }
+        
+        currentId = -1; // Reset ve -1 de chac chan ham showFragment se thuc thi transaction dau tien
+        bottomNavigationView.setSelectedItemId(idToSelect);
 
         // Xử lý nút Back
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
@@ -102,6 +105,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void showFragment(int id) {
+        // Hieu sua: Neu dang o dung fragment do thi khong lam gi ca de tiet kiem tai nguyen
         if (currentId == id) return;
 
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -121,9 +125,11 @@ public class HomeActivity extends AppCompatActivity {
         String nextTag = String.valueOf(id);
         Fragment nextFragment = fragmentManager.findFragmentByTag(nextTag);
 
-        // Ẩn tất cả các Fragment đang có
+        // Ẩn tất cả các Fragment đang có một cách an toàn (Hieu sua: tranh loop loi tren mot so dong may)
         for (Fragment fragment : fragmentManager.getFragments()) {
-            transaction.hide(fragment);
+            if (fragment != null && fragment.isAdded()) {
+                transaction.hide(fragment);
+            }
         }
 
         if (nextFragment == null) {
@@ -133,7 +139,8 @@ public class HomeActivity extends AppCompatActivity {
             transaction.show(nextFragment);
         }
 
-        transaction.commit();
+        // Hieu sua: Dung commitAllowingStateLoss de tranh crash app khi chuyen tab quá nhanh
+        transaction.commitAllowingStateLoss();
         currentId = id;
     }
 
@@ -141,6 +148,7 @@ public class HomeActivity extends AppCompatActivity {
         if (id == R.id.nav_home) return new HomeFragment();
         if (id == R.id.nav_recipes) return new ScheduleFragment();
         if (id == R.id.nav_favorites) return new FavoriteFragment();
+        // Hieu sua: Luon goi AccountFragment moi nhat de dong bo giao dien voi activity_account
         if (id == R.id.nav_profile) return new AccountFragment();
         return new HomeFragment();
     }

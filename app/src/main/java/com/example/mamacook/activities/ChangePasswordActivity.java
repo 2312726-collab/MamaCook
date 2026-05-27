@@ -1,5 +1,6 @@
 package com.example.mamacook.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.EditText;
@@ -35,9 +36,10 @@ public class ChangePasswordActivity extends AppCompatActivity {
 
         btnBack.setOnClickListener(v -> finish());
 
+        // Chuyển hướng sang màn hình Quên mật khẩu đã có sẵn
         tvForgotPassword.setOnClickListener(v -> {
-            // Hiếu: Xử lý sự kiện click quên mật khẩu (chưa tạo màn hình mới)
-            Toast.makeText(this, "Chức năng Quên mật khẩu đang được phát triển", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(ChangePasswordActivity.this, ForgotPasswordActivity.class);
+            startActivity(intent);
         });
 
         btnChangePassword.setOnClickListener(v -> validateAndChangePassword());
@@ -74,12 +76,18 @@ public class ChangePasswordActivity extends AppCompatActivity {
 
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null && user.getEmail() != null) {
-            // Xác thực lại người dùng trước khi đổi mật khẩu
             AuthCredential credential = EmailAuthProvider.getCredential(user.getEmail(), currentPass);
+
+            // Hiển thị trạng thái đang xử lý
+            btnChangePassword.setEnabled(false);
+            btnChangePassword.setText("Đang xử lý...");
 
             user.reauthenticate(credential).addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
                     user.updatePassword(newPass).addOnCompleteListener(updateTask -> {
+                        btnChangePassword.setEnabled(true);
+                        btnChangePassword.setText("Cập nhật mật khẩu mới");
+                        
                         if (updateTask.isSuccessful()) {
                             Toast.makeText(ChangePasswordActivity.this, "Đổi mật khẩu thành công!", Toast.LENGTH_SHORT).show();
                             finish();
@@ -88,6 +96,8 @@ public class ChangePasswordActivity extends AppCompatActivity {
                         }
                     });
                 } else {
+                    btnChangePassword.setEnabled(true);
+                    btnChangePassword.setText("Cập nhật mật khẩu mới");
                     Toast.makeText(ChangePasswordActivity.this, "Mật khẩu hiện tại không chính xác", Toast.LENGTH_SHORT).show();
                 }
             });
