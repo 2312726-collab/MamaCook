@@ -1,6 +1,7 @@
 package com.example.mamacook.models;
 
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.Exclude; // Hieu sửa: Import Exclude để tránh trùng lặp trường trên Firestore
 
 public class User {
     private String id_nguoi_dung;
@@ -51,6 +52,14 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    // Hieu sửa: Dùng @Exclude để Firestore không tạo thêm trường "vai_tro" bị trùng lặp
+    // trong khi code Java vẫn gọi user.getVai_tro() được bình thường để tương thích với các phần cũ.
+    @Exclude
+    public String getVai_tro() { return role; }
+    
+    @Exclude
+    public void setVai_tro(String vai_tro) { this.role = vai_tro; }
 
     public int getSo_lan_vi_pham() { return so_lan_vi_pham; }
     public void setSo_lan_vi_pham(int so_lan_vi_pham) { this.so_lan_vi_pham = so_lan_vi_pham; }

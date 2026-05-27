@@ -1,12 +1,74 @@
 <resources>
     <string name="app_name">MamaCook</string>
-    
+
     <!-- 1. Thay ID ứng dụng mới của bạn vào đây -->
     <string name="facebook_app_id">1435559144936955</string>
-    
+
     <!-- 2. Thay ID ứng dụng mới vào sau chữ fb -->
     <string name="fb_login_protocol_scheme">fb1435559144936955</string>
-    
+
     <!-- 3. Dán Client Token mới lấy ở mục Nâng cao vào đây -->
     <string name="facebook_client_token">8055829f5a0bc6f5de94e2c75fb71587</string>
+
+    <!-- Google Web Client ID (Lấy từ google-services.json) -->
+    <string name="default_web_client_id">465869652634-nherujam09rmkno2m783ps2b1g1v68o7.apps.googleusercontent.com</string>
+
+    <!-- Filter Strings -->
+    <string name="filter_title">Bộ lọc món ăn</string>
+    <string name="sort_by">Sắp xếp theo</string>
+    <string name="sort_newest">Mới nhất</string>
+    <string name="sort_oldest">Cũ nhất</string>
+    <string name="rating_label">Đánh giá (Sao)</string>
+    <string name="all">Tất cả</string>
+    <string name="rate_5">5 sao</string>
+    <string name="rate_4_plus">4+ sao</string>
+    <string name="rate_3_plus">3+ sao</string>
+    <string name="rate_2_plus">2+ sao</string>
+    <string name="rate_1_plus">1+ sao</string>
+    <string name="cooking_time">Thời gian nấu</string>
+    <string name="time_under_15">&lt; 15 phút</string>
+    <string name="time_15_30">15 - 30 phút</string>
+    <string name="time_30_60">30 - 60 phút</string>
+    <string name="time_above_60">&gt; 60 phút</string>
+    <string name="difficulty">Độ khó</string>
+    <string name="diff_easy">Dễ</string>
+    <string name="diff_medium">Trung bình</string>
+    <string name="diff_hard">Khó</string>
+    <string name="apply_filter">Áp dụng bộ lọc</string>
+    <string name="recipe_unit">%1$d món</string>
+
+    <!-- Add, Edit món ăn Strings -->
+    <string name="title_add_mon_an">Thêm Món Ăn Mới</string>
+    <string name="btn_save">Lưu Món Ăn</string>
+    <string name="btn_capture">Chụp ảnh trực tiếp</string>
+    <string name="btn_select_gallery">Chọn từ thư viện</string>
+
+    <string name="sec_basic_info">1. Thông tin cơ bản món ăn</string>
+    <string name="hint_ten_mon">Tên món ăn</string>
+    <string name="hint_thoi_gian">Thời gian nấu (phút)</string>
+    <string name="hint_khau_phan">Khẩu phần (người)</string>
+    <string name="hint_gia_tien">Giá tiền dự kiến (VNĐ)</string>
+    <string name="hint_danh_muc">Danh mục món ăn</string>
+    <string name="hint_do_kho">Độ khó</string>
+    <string name="hint_vung_mien">Vùng miền</string>
+
+    <string name="sec_nguyen_lieu">2. Danh sách nguyên liệu</string>
+    <string name="sec_so_che">3. Công đoạn sơ chế</string>
+    <string name="sec_buoc_nau">4. Các bước thực hiện</string>
+
+    <string name="desc_back">Quay lại</string>
+    <string name="desc_dish_image">Hình ảnh món ăn</string>
+    <string name="desc_add">Thêm phần tử</string>
+
+    <!-- [VALIDATION HOTFIX] -->
+    <string name="err_empty_dish_name">Tên món ăn không được để trống!</string>
+    <string name="err_invalid_time">Vui lòng nhập thời gian nấu hợp lệ!</string>
+    <string name="err_invalid_portion">Vui lòng nhập khẩu phần hợp lệ!</string>
+    <string name="err_empty_difficulty">Vui lòng chọn độ khó cho món ăn!</string>
+    <string name="err_empty_ingredient_name">Vui lòng nhập tên nguyên liệu!</string>
+    <string name="err_empty_ingredient_qty">Vui lòng nhập số lượng!</string>
+    <string name="err_empty_soche_content">Nội dung sơ chế không được để trống!</string>
+    <string name="err_empty_step_title">Tiêu đề bước không được để trống!</string>
+    <string name="err_empty_step_desc">Mô tả chi tiết không được để trống!</string>
+    <string name="err_no_image">Vui lòng chọn ảnh đại diện cho món ăn!</string>
 </resources>

@@ -22,4 +22,32 @@
     <color name="accent_red">#D32F2F</color>
     <color name="vcb_green">#7AB51D</color>
     <color name="vcb_green_dark">#5E8C16</color>
+
+    <!-- ========================================== -->
+    <!-- MÀU MỚI CHO REDESIGN DETAIL ACTIVITY -->
+    <!-- ========================================== -->
+
+    <!-- Màu từ prototype HTML -->
+    <color name="brand_primary">#C8522A</color>
+    <color name="gold_rating">#E8A020</color>
+    <color name="green_success">#2D7A4F</color>
+    <color name="surface_light">#FDF6F0</color>
+
+    <!-- Màu cho text secondary -->
+    <color name="text_secondary">#8D6E63</color>
+
+    <!-- Màu cho glassmorphism -->
+    <color name="glass_white_overlay">#CCFFFFFF</color>
+    <color name="glass_stroke">#33FFFFFF</color>
+
+    <!-- Màu cho buttons -->
+    <color name="button_favorite_selected">#FF5252</color>
+    <color name="button_plan_selected">#FFEB3B</color>
+
+    <!-- Màu transparent -->
+    <color name="transparent">#00000000</color>
+
+    <!-- [VALIDATION HOTFIX] -->
+    <color name="error_red">#D32F2F</color>
+    <color name="warning_orange">#FFA000</color>
 </resources>

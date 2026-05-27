@@ -74,6 +74,7 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     private void setupSpinner() {
         String[] trangThaiList = {
                 "Tất cả",
+                "Chờ duyệt",
                 "Đang hiển thị",
                 "Đã ẩn",
                 "Vi phạm"
@@ -90,11 +91,13 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
         spinnerTrangThai.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position == 0) trangThaiDangChon = "tat_ca";
-                else if (position == 1) trangThaiDangChon = "hien_thi";
-                else if (position == 2) trangThaiDangChon = "an";
-                else trangThaiDangChon = "vi_pham";
-
+                switch (position) {
+                    case 0: trangThaiDangChon = "tat_ca"; break;
+                    case 1: trangThaiDangChon = "cho_duyet"; break;
+                    case 2: trangThaiDangChon = "hien_thi"; break;
+                    case 3: trangThaiDangChon = "an"; break;
+                    case 4: trangThaiDangChon = "vi_pham"; break;
+                }
                 locDanhGia();
             }
 
@@ -130,15 +133,31 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     }
 
     private void loadDanhGiaRealtime() {
+        android.util.Log.d("QuanLyDanhGia", "Bắt đầu load đánh giá từ Firebase...");
+
+        // Kiểm tra user đã đăng nhập chưa
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            android.util.Log.e("QuanLyDanhGia", "User chưa đăng nhập!");
+            Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
+            return;
+        }
+        android.util.Log.d("QuanLyDanhGia", "User đã đăng nhập: " + currentUser.getEmail());
+
         danhGiaListener = db.collection("danh_gia")
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
+                        android.util.Log.e("QuanLyDanhGia", "Lỗi: " + error.getMessage());
                         Toast.makeText(this, "Lỗi tải đánh giá: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
 
-                    if (querySnapshot == null) return;
+                    if (querySnapshot == null) {
+                        android.util.Log.e("QuanLyDanhGia", "querySnapshot null");
+                        return;
+                    }
 
+                    android.util.Log.d("QuanLyDanhGia", "Số đánh giá: " + querySnapshot.size());
                     danhGiaGocList.clear();
                     danhGiaGocList.addAll(querySnapshot.getDocuments());
 
@@ -147,6 +166,7 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     }
 
     private void locDanhGia() {
+        android.util.Log.d("QuanLyDanhGia", "locDanhGia - danhGiaGocList size: " + danhGiaGocList.size());
         danhGiaLocList.clear();
 
         for (DocumentSnapshot doc : danhGiaGocList) {
@@ -156,7 +176,8 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
 
             if (tenNguoiDung == null) tenNguoiDung = "";
             if (noiDung == null) noiDung = "";
-            if (trangThai == null || trangThai.isEmpty()) trangThai = "hien_thi";
+            // Mặc định là cho_duyet nếu chưa có trang_thai
+            if (trangThai == null || trangThai.isEmpty()) trangThai = "cho_duyet";
 
             boolean khopTen = tenNguoiDung.toLowerCase().contains(keywordTen);
             boolean khopBinhLuan = noiDung.toLowerCase().contains(keywordBinhLuan);
@@ -166,7 +187,7 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
                 danhGiaLocList.add(doc);
             }
         }
-
+        android.util.Log.d("QuanLyDanhGia", "After filter - danhGiaLocList size: " + danhGiaLocList.size());
         adapter.notifyDataSetChanged();
         tvSoLuongDanhGia.setText("Tổng: " + danhGiaLocList.size() + " đánh giá");
     }
@@ -174,7 +195,6 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         if (danhGiaListener != null) {
             danhGiaListener.remove();
         }

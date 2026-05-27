@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,29 +44,44 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
     public void onBindViewHolder(@NonNull DanhGiaViewHolder holder, int position) {
         DocumentSnapshot doc = danhGiaList.get(position);
 
+        String id = doc.getId();
         String tenNguoiDung = doc.getString("ten_nguoi_dung");
         String noiDung = doc.getString("noi_dung");
         String trangThai = doc.getString("trang_thai");
 
-        if (tenNguoiDung == null || tenNguoiDung.isEmpty()) tenNguoiDung = "Ẩn danh";
-        if (noiDung == null || noiDung.isEmpty()) noiDung = "Không có nội dung";
-        if (trangThai == null || trangThai.isEmpty()) trangThai = "hien_thi";
+        if (trangThai == null || trangThai.isEmpty()) {
+            trangThai = "hien_thi";
+        }
 
         Number soSao = doc.getDouble("so_sao");
         if (soSao == null) {
             soSao = doc.getLong("so_sao");
         }
 
-        holder.tvTenNguoiDung.setText(tenNguoiDung);
-        holder.tvNoiDung.setText(noiDung);
-        holder.tvSoSao.setText("Số sao: " + (soSao == null ? "0" : soSao.toString()));
-        holder.tvTrangThai.setText("Trạng thái: " + hienThiTrangThai(trangThai));
+        holder.tvTenNguoiDung.setText(tenNguoiDung == null ? "Ẩn danh" : tenNguoiDung);
+        holder.tvNoiDung.setText(noiDung == null ? "Không có nội dung" : noiDung);
 
-        doiMauTrangThai(holder, trangThai);
+        String tenMon = doc.getString("ten_mon_an");
+        holder.tvMonAn.setText("Món: " + (tenMon == null ? "N/A" : tenMon));
 
-        if ("an".equals(trangThai) || "vi_pham".equals(trangThai)) {
+        com.google.firebase.Timestamp timestamp = doc.getTimestamp("ngay_danh_gia");
+        if (timestamp != null) {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault());
+            holder.tvNgay.setText(sdf.format(timestamp.toDate()));
+        } else {
+            holder.tvNgay.setText("");
+        }
+
+        float soSaoVal = (soSao == null) ? 0f : soSao.floatValue();
+        holder.rbSoSao.setRating(soSaoVal);
+
+        holder.tvTrangThai.setText("Trạng thái: " + trangThai);
+
+        if ("vi_pham".equals(trangThai)) {
+            holder.tvTrangThai.setTextColor(Color.RED);
             holder.btnAnHien.setText("Hiện");
         } else {
+            holder.tvTrangThai.setTextColor(Color.parseColor("#2E7D32"));
             holder.btnAnHien.setText("Ẩn");
         }
 
@@ -75,96 +91,79 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
 
             DocumentSnapshot currentDoc = danhGiaList.get(currentPosition);
             String currentId = currentDoc.getId();
-            String currentTrangThai = currentDoc.getString("trang_thai");
 
-            if (currentTrangThai == null || currentTrangThai.isEmpty()) {
-                currentTrangThai = "hien_thi";
-            }
-
-            String trangThaiMoi;
-
-            if ("hien_thi".equals(currentTrangThai)) {
-                trangThaiMoi = "an";
-            } else {
-                trangThaiMoi = "hien_thi";
-            }
-
-            capNhatTrangThai(currentId, trangThaiMoi);
-        });
-
-        holder.btnViPham.setOnClickListener(v -> {
-            int currentPosition = holder.getBindingAdapterPosition();
-            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= danhGiaList.size()) return;
-
-            DocumentSnapshot currentDoc = danhGiaList.get(currentPosition);
-            String currentId = currentDoc.getId();
-
+            String[] options = {"Hiển thị", "Ẩn", "Vi phạm"};
             new AlertDialog.Builder(context)
-                    .setTitle("Đánh dấu vi phạm")
-                    .setMessage("Bạn muốn đánh dấu bình luận này là vi phạm?")
-                    .setPositiveButton("Đồng ý", (dialog, which) -> capNhatTrangThai(currentId, "vi_pham"))
-                    .setNegativeButton("Hủy", null)
+                    .setTitle("Chọn trạng thái")
+                    .setItems(options, (dialog, which) -> {
+                        String trangThaiMoi;
+                        if (which == 0) trangThaiMoi = "hien_thi";
+                        else if (which == 1) trangThaiMoi = "an";
+                        else trangThaiMoi = "vi_pham";
+
+                        db.collection("danh_gia")
+                                .document(currentId)
+                                .update("trang_thai", trangThaiMoi)
+                                .addOnSuccessListener(unused -> {
+                                    Toast.makeText(context, "Đã cập nhật: " + options[which], Toast.LENGTH_SHORT).show();
+                                    db.collection("danh_gia").document(currentId).get()
+                                            .addOnSuccessListener(newDoc -> capNhatItemTheoId(currentId, newDoc));
+                                })
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                                );
+                    })
                     .show();
         });
 
         holder.btnXoa.setOnClickListener(v -> {
             int currentPosition = holder.getBindingAdapterPosition();
-            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= danhGiaList.size()) return;
+
+            if (currentPosition == RecyclerView.NO_POSITION
+                    || currentPosition >= danhGiaList.size()) {
+                return;
+            }
 
             DocumentSnapshot currentDoc = danhGiaList.get(currentPosition);
             String currentId = currentDoc.getId();
 
             new AlertDialog.Builder(context)
-                    .setTitle("Xóa đánh giá")
+                    .setTitle("Xác nhận")
                     .setMessage("Bạn có chắc muốn xóa đánh giá này không?")
-                    .setPositiveButton("Xóa", (dialog, which) -> {
+                    .setPositiveButton("Có", (dialog, which) -> {
                         db.collection("danh_gia")
                                 .document(currentId)
                                 .delete()
-                                .addOnSuccessListener(unused ->
-                                        Toast.makeText(context, "Đã xóa đánh giá", Toast.LENGTH_SHORT).show()
-                                )
+                                .addOnSuccessListener(unused -> {
+                                    Toast.makeText(context, "Đã xóa đánh giá", Toast.LENGTH_SHORT).show();
+                                    xoaItemTheoId(currentId);
+                                })
                                 .addOnFailureListener(e ->
                                         Toast.makeText(context, "Lỗi xóa: " + e.getMessage(), Toast.LENGTH_LONG).show()
                                 );
                     })
-                    .setNegativeButton("Hủy", null)
+                    .setNegativeButton("Không", null)
                     .show();
         });
     }
 
-    private void capNhatTrangThai(String idDanhGia, String trangThaiMoi) {
-        db.collection("danh_gia")
-                .document(idDanhGia)
-                .update("trang_thai", trangThaiMoi)
-                .addOnSuccessListener(unused ->
-                        Toast.makeText(context, "Đã cập nhật trạng thái", Toast.LENGTH_SHORT).show()
-                )
-                .addOnFailureListener(e ->
-                        Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
-    }
-
-    private String hienThiTrangThai(String trangThai) {
-        switch (trangThai) {
-            case "hien_thi":
-                return "Đang hiển thị";
-            case "an":
-                return "Đã ẩn";
-            case "vi_pham":
-                return "Vi phạm";
-            default:
-                return trangThai;
+    private void capNhatItemTheoId(String id, DocumentSnapshot newDoc) {
+        for (int i = 0; i < danhGiaList.size(); i++) {
+            if (danhGiaList.get(i).getId().equals(id)) {
+                danhGiaList.set(i, newDoc);
+                notifyItemChanged(i);
+                return;
+            }
         }
     }
 
-    private void doiMauTrangThai(DanhGiaViewHolder holder, String trangThai) {
-        if ("vi_pham".equals(trangThai)) {
-            holder.tvTrangThai.setTextColor(Color.parseColor("#C62828"));
-        } else if ("an".equals(trangThai)) {
-            holder.tvTrangThai.setTextColor(Color.parseColor("#EF6C00"));
-        } else {
-            holder.tvTrangThai.setTextColor(Color.parseColor("#2E7D32"));
+    private void xoaItemTheoId(String id) {
+        for (int i = 0; i < danhGiaList.size(); i++) {
+            if (danhGiaList.get(i).getId().equals(id)) {
+                danhGiaList.remove(i);
+                notifyDataSetChanged();
+                return;
+            }
         }
     }
 
@@ -174,18 +173,20 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
     }
 
     static class DanhGiaViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTenNguoiDung, tvNoiDung, tvSoSao, tvTrangThai;
-        Button btnAnHien, btnViPham, btnXoa;
+        TextView tvTenNguoiDung, tvNoiDung, tvTrangThai, tvMonAn, tvNgay;
+        RatingBar rbSoSao;
+        Button btnAnHien, btnXoa;
 
         public DanhGiaViewHolder(@NonNull View itemView) {
             super(itemView);
 
             tvTenNguoiDung = itemView.findViewById(R.id.tv_ten_nguoi_dung_dg);
             tvNoiDung = itemView.findViewById(R.id.tv_noi_dung_dg);
-            tvSoSao = itemView.findViewById(R.id.tv_so_sao_dg);
+            rbSoSao = itemView.findViewById(R.id.rb_so_sao_dg);
             tvTrangThai = itemView.findViewById(R.id.tv_trang_thai_dg);
+            tvMonAn = itemView.findViewById(R.id.tv_mon_an_dg);
+            tvNgay = itemView.findViewById(R.id.tv_ngay_dg);
             btnAnHien = itemView.findViewById(R.id.btn_an_hien_dg);
-            btnViPham = itemView.findViewById(R.id.btn_vi_pham_dg);
             btnXoa = itemView.findViewById(R.id.btn_xoa_dg);
         }
     }

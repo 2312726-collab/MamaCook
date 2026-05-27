@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginBottom="8dp">
+
+    <EditText
+        android:id="@+id/edtIngredientName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:hint="Tên NL"
+        android:background="@drawable/bg_edittext"
+        android:padding="10dp"
+        android:textSize="14sp"/>
+
+    <EditText
+        android:id="@+id/edtIngredientQty"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="4dp"
+        android:hint="SL"
+        android:inputType="numberDecimal"
+        android:background="@drawable/bg_edittext"
+        android:padding="10dp"
+        android:textSize="14sp"/>
+
+    <EditText
+        android:id="@+id/edtIngredientUnit"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="4dp"
+        android:hint="Đơn vị"
+        android:background="@drawable/bg_edittext"
+        android:padding="10dp"
+        android:textSize="14sp"/>
+
+    <ImageButton
+        android:id="@+id/btnRemoveIngredient"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_delete"
+        app:tint="#D32F2F"
+        xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+</LinearLayout>

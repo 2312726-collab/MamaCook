@@ -1,10 +1,12 @@
 package com.example.mamacook.activities;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -12,26 +14,24 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mamacook.R;
 import com.example.mamacook.adapters.UserAdminAdapter;
-import com.google.firebase.firestore.DocumentSnapshot;
+import com.example.mamacook.models.User;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class QuanLyTaiKhoanActivity extends AppCompatActivity {
+public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdminAdapter.OnUserActionListener {
 
     private EditText edtSearchUser;
     private RecyclerView rvUsers;
-
-    private Button btnTatCa;
-    private Button btnViPham;
-
+    private Button btnTatCa, btnViPham;
     private UserAdminAdapter adapter;
     private FirebaseFirestore db;
+    private com.google.firebase.firestore.ListenerRegistration userListener; // Bộ lắng nghe realtime
 
-    private final List<DocumentSnapshot> fullList = new ArrayList<>();
-    private final List<DocumentSnapshot> filteredList = new ArrayList<>();
-
+    private final List<User> fullList = new ArrayList<>();
+    private final List<User> filteredList = new ArrayList<>();
     private boolean dangLocViPham = false;
     private String keywordHienTai = "";
 
@@ -41,15 +41,12 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity {
         setContentView(R.layout.activity_quan_ly_tai_khoan);
 
         db = FirebaseFirestore.getInstance();
-
         edtSearchUser = findViewById(R.id.edt_search_user);
         rvUsers = findViewById(R.id.rv_users_admin);
-
         btnTatCa = findViewById(R.id.btn_tat_ca_tai_khoan);
         btnViPham = findViewById(R.id.btn_tai_khoan_vi_pham);
 
-        adapter = new UserAdminAdapter(this, filteredList);
-
+        adapter = new UserAdminAdapter(this, filteredList, this);
         rvUsers.setLayoutManager(new LinearLayoutManager(this));
         rvUsers.setAdapter(adapter);
 
@@ -59,130 +56,126 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity {
     }
 
     private void loadUsers() {
-        db.collection("nguoi_dung")
-                .addSnapshotListener((query, error) -> {
+        // Gán listener vào biến để có thể gỡ bỏ khi đóng Activity
+        android.util.Log.d("QuanLyTaiKhoan", "Bắt đầu load users...");
 
-                    if (error != null || query == null) {
+        // Kiểm tra user đã đăng nhập chưa
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            android.util.Log.e("QuanLyTaiKhoan", "User chưa đăng nhập!");
+            Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
+            return;
+        }
+        android.util.Log.d("QuanLyTaiKhoan", "User đã đăng nhập: " + currentUser.getEmail());
+
+        userListener = db.collection("nguoi_dung")
+                .addSnapshotListener((query, error) -> {
+                    if (error != null) {
+                        android.util.Log.e("QuanLyTaiKhoan", "Lỗi: " + error.getMessage());
+                        Toast.makeText(this, "Lỗi tải dữ liệu: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    if (query == null) {
+                        android.util.Log.e("QuanLyTaiKhoan", "Query null");
+                        Toast.makeText(this, "Query null - Không có dữ liệu", Toast.LENGTH_LONG).show();
                         return;
                     }
 
+                    android.util.Log.d("QuanLyTaiKhoan", "Số user: " + query.size());
+                    Toast.makeText(this, "Đã load " + query.size() + " users", Toast.LENGTH_SHORT).show();
                     fullList.clear();
-                    fullList.addAll(query.getDocuments());
-
-                    if (dangLocViPham) {
-                        hienThiTaiKhoanViPham(keywordHienTai);
-                    } else {
-                        hienThiTatCa(keywordHienTai);
+                    for (QueryDocumentSnapshot doc : query) {
+                        User u = doc.toObject(User.class);
+                        u.setId_nguoi_dung(doc.getId());
+                        fullList.add(u);
+                        android.util.Log.d("QuanLyTaiKhoan", "User: " + u.getHo_ten());
                     }
+                    applyFilters();
                 });
     }
 
-    private void setupButtons() {
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Giải phóng bộ lắng nghe để tránh rò rỉ bộ nhớ (Memory Leak)
+        if (userListener != null) {
+            userListener.remove();
+        }
+    }
 
+    private void setupButtons() {
         btnTatCa.setOnClickListener(v -> {
             dangLocViPham = false;
-            hienThiTatCa(keywordHienTai);
+            applyFilters();
         });
-
         btnViPham.setOnClickListener(v -> {
             dangLocViPham = true;
-            hienThiTaiKhoanViPham(keywordHienTai);
+            applyFilters();
         });
     }
 
     private void setupSearch() {
-
         edtSearchUser.addTextChangedListener(new TextWatcher() {
-
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
-            public void beforeTextChanged(CharSequence s,
-                                          int start,
-                                          int count,
-                                          int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s,
-                                      int start,
-                                      int before,
-                                      int count) {
-
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
                 keywordHienTai = s.toString().trim().toLowerCase();
-
-                if (dangLocViPham) {
-                    hienThiTaiKhoanViPham(keywordHienTai);
-                } else {
-                    hienThiTatCa(keywordHienTai);
-                }
+                applyFilters();
             }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
+            @Override public void afterTextChanged(Editable s) {}
         });
     }
 
-    private void hienThiTatCa(String keyword) {
+    private void applyFilters() {
+        android.util.Log.d("QuanLyTaiKhoan", "applyFilters called - fullList size: " + fullList.size());
+        List<User> newFilteredList = new ArrayList<>();
+        for (User u : fullList) {
+            boolean matchesSearch = u.getHo_ten() != null && u.getHo_ten().toLowerCase().contains(keywordHienTai)
+                    || u.getEmail() != null && u.getEmail().toLowerCase().contains(keywordHienTai);
 
-        filteredList.clear();
+            if (keywordHienTai.isEmpty()) matchesSearch = true;
 
-        for (DocumentSnapshot doc : fullList) {
-
-            if (kiemTraTimKiem(doc, keyword)) {
-                filteredList.add(doc);
+            if (matchesSearch) {
+                if (dangLocViPham) {
+                    if (u.getSo_lan_vi_pham() > 0) newFilteredList.add(u);
+                } else {
+                    newFilteredList.add(u);
+                }
             }
         }
-
-        adapter.notifyDataSetChanged();
-    }
-
-    private void hienThiTaiKhoanViPham(String keyword) {
-
+        android.util.Log.d("QuanLyTaiKhoan", "After filter - newFilteredList size: " + newFilteredList.size());
         filteredList.clear();
-        adapter.notifyDataSetChanged();
-
-        for (DocumentSnapshot doc : fullList) {
-
-            if (!kiemTraTimKiem(doc, keyword)) {
-                continue;
-            }
-
-            String userId = doc.getId();
-
-            db.collection("danh_gia")
-                    .whereEqualTo("id_nguoi_dung", userId)
-                    .whereEqualTo("trang_thai", "vi_pham")
-                    .get()
-                    .addOnSuccessListener(queryDocumentSnapshots -> {
-
-                        if (!queryDocumentSnapshots.isEmpty()) {
-
-                            if (!filteredList.contains(doc)) {
-                                filteredList.add(doc);
-                                adapter.notifyDataSetChanged();
-                            }
-                        }
-                    });
-        }
+        filteredList.addAll(newFilteredList);
+        adapter.updateList(newFilteredList);
     }
 
-    private boolean kiemTraTimKiem(DocumentSnapshot doc, String keyword) {
+    @Override
+    public void onToggleStatus(User user) {
+        String newStatus = "bi_khoa".equals(user.getTrang_thai_tai_khoan()) ? "dang_hoat_dong" : "bi_khoa";
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận")
+                .setMessage("Bạn có chắc muốn cập nhật trạng thái?")
+                .setPositiveButton("Có", (d, w) -> {
+                    db.collection("nguoi_dung").document(user.getId_nguoi_dung())
+                            .update("trang_thai_tai_khoan", newStatus)
+                            .addOnSuccessListener(a -> Toast.makeText(this, "Đã cập nhật", Toast.LENGTH_SHORT).show());
+                })
+                .setNegativeButton("Không", null)
+                .show();
+    }
 
-        if (keyword == null || keyword.isEmpty()) {
-            return true;
-        }
-
-        String ten = doc.getString("ho_ten");
-        String email = doc.getString("email");
-
-        boolean matchTen =
-                ten != null &&
-                        ten.toLowerCase().contains(keyword);
-
-        boolean matchEmail =
-                email != null &&
-                        email.toLowerCase().contains(keyword);
-
-        return matchTen || matchEmail;
+    @Override
+    public void onChangeRole(User user) {
+        String newRole = "admin".equals(user.getRole()) ? "user" : "admin";
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận")
+                .setMessage("Đổi vai trò người dùng này?")
+                .setPositiveButton("Có", (d, w) -> {
+                    db.collection("nguoi_dung").document(user.getId_nguoi_dung())
+                            .update("role", newRole)
+                            .addOnSuccessListener(a -> Toast.makeText(this, "Đã đổi role", Toast.LENGTH_SHORT).show());
+                })
+                .setNegativeButton("Không", null)
+                .show();
     }
 }

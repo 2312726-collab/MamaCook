@@ -40,7 +40,7 @@ public class TatCaBinhLuanActivity extends AppCompatActivity {
         rvTatCa = findViewById(R.id.rvTatCaBinhLuan);
         rvTatCa.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new BinhLuanDocAdapter(listDanhGia); 
+        adapter = new BinhLuanDocAdapter(listDanhGia);
         rvTatCa.setAdapter(adapter);
 
         ImageView imgBack = findViewById(R.id.imgBack);
@@ -87,6 +87,7 @@ public class TatCaBinhLuanActivity extends AppCompatActivity {
     }
 
     private void loadDuLieuTheoBoLoc(String theLoai) {
+        // Chỉ lấy bình luận đã được duyệt "hien_thi" — không cho "cho_duyet" hay "vi_pham" lọt qua
         Query query = db.collection("danh_gia")
                 .whereEqualTo("id_mon_an", idMonAn)
                 .whereEqualTo("trang_thai", "hien_thi");

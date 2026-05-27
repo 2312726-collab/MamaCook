@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.mamacook">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
 
     <application
         android:allowBackup="true"
@@ -11,6 +23,7 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MamaCook">
+
         <activity android:name=".activities.AdminActivity" />
         <activity android:name=".activities.ThongKeAdminActivity" />
         <activity android:name=".activities.QuanLyTaiKhoanActivity" />
@@ -20,6 +33,9 @@
         <activity android:name=".activities.ThongBaoActivity" />
         <activity android:name=".activities.DanhSachChatActivity" />
         <activity android:name=".activities.ChatActivity" />
+        <activity android:name=".activities.ScanQRCodeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MamaCook"/>
 
         <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
         <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
@@ -50,12 +66,43 @@
         <activity android:name=".activities.MainActivity" android:exported="true" />
         <activity android:name=".activities.HomeActivity" android:exported="false" />
         <activity android:name=".activities.RegisterActivity" android:exported="false" />
-        <activity android:name=".activities.DetailMonAnActivity" android:exported="false" />
+        <activity
+            android:name=".activities.DetailMonAnActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".activities.TatCaBinhLuanActivity" android:exported="false" />
         <activity android:name=".activities.SeeAllActivity" android:exported="false" />
-
-        <!-- nam làm cái này: Khai báo FavoriteActivity để không bị crash khi mở -->
+        <activity android:name=".activities.ForgotPasswordActivity" android:exported="false" />
+        <activity android:name=".activities.EditAccountActivity" android:exported="false" />
+        <activity android:name=".activities.ChangePasswordActivity" android:exported="false" />
+        <activity android:name=".activities.GioHangActivity" android:exported="false" />
+        <activity android:name=".activities.ChuanBiNauActivity" android:exported="false" />
         <activity android:name=".activities.FavoriteActivity" android:exported="false" />
+        <activity
+            android:name=".activities.AddEditMonAnActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.QRCodeViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Translucent" />
+        <activity android:name=".activities.AccountActivity" android:exported="false" />
+        <activity android:name=".activities.PreviewAvatarActivity" android:exported="false" />
+
+        <activity
+            android:name="com.canhub.cropper.CropImageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light"
+            tools:replace="android:exported"/>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.mamacook.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

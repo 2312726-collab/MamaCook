@@ -18,6 +18,12 @@
         <item name="cornerSize">10dp</item>
     </style>
 
+    <!-- STYLE BO GÓC CHO HÌNH ẢNH MÓN ĂN TRONG KẾ HOẠCH -->
+    <style name="RoundedCornerImage" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
     <!-- Style cho chữ khi được chọn -->
     <style name="BottomNavTextActive">
         <item name="android:textSize">14sp</item>
@@ -62,5 +68,13 @@
     <style name="RatingBarTheme" parent="Theme.AppCompat">
         <item name="colorControlNormal">#D1D1D1</item>
         <item name="colorControlActivated">#FFC107</item>
+    </style>
+
+    <style name="Theme.AppCompat.Translucent" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
     </style>
 </resources>
