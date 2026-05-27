@@ -61,10 +61,16 @@ public class QuanLyMonAnActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         adapter = new MonAnVerticalAdapter(filteredList);
         adapter.setAdminMode(true);
+
+        // ✅ THÊM: Xử lý khi bấm nút AI
+        adapter.setOnItemLongClickListener(monAn -> {
+            Toast.makeText(this, "AI xử lý: " + monAn.getTen_mon(), Toast.LENGTH_SHORT).show();
+            // Thêm xử lý AI của bạn vào đây
+        });
+
         rvMonAnAdmin.setLayoutManager(new LinearLayoutManager(this));
         rvMonAnAdmin.setAdapter(adapter);
     }
-
     private void setupListeners() {
         btnTatCaMon.setOnClickListener(v -> {
             dangLocDanhGiaThap = false;
