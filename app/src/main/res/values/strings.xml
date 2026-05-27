@@ -36,4 +36,27 @@
     <string name="diff_hard">Khó</string>
     <string name="apply_filter">Áp dụng bộ lọc</string>
     <string name="recipe_unit">%1$d món</string>
+
+    <!-- Add, Edit món ăn Strings -->
+    <string name="title_add_mon_an">Thêm Món Ăn Mới</string>
+    <string name="btn_save">Lưu Món Ăn</string>
+    <string name="btn_capture">Chụp ảnh trực tiếp</string>
+    <string name="btn_select_gallery">Chọn từ thư viện</string>
+
+    <string name="sec_basic_info">1. Thông tin cơ bản món ăn</string>
+    <string name="hint_ten_mon">Tên món ăn</string>
+    <string name="hint_thoi_gian">Thời gian nấu (phút)</string>
+    <string name="hint_khau_phan">Khẩu phần (người)</string>
+    <string name="hint_gia_tien">Giá tiền dự kiến (VNĐ)</string>
+    <string name="hint_danh_muc">Danh mục món ăn</string>
+    <string name="hint_do_kho">Độ khó</string>
+    <string name="hint_vung_mien">Vùng miền</string>
+
+    <string name="sec_nguyen_lieu">2. Danh sách nguyên liệu</string>
+    <string name="sec_so_che">3. Công đoạn sơ chế</string>
+    <string name="sec_buoc_nau">4. Các bước thực hiện</string>
+
+    <string name="desc_back">Quay lại</string>
+    <string name="desc_dish_image">Hình ảnh món ăn</string>
+    <string name="desc_add">Thêm phần tử</string>
 </resources>

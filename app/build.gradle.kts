@@ -89,10 +89,16 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
+    // AI Gemini
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("com.google.guava:guava:31.1-android")
+
     // Thư viện hỗ trợ Java 8
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
-    // Retrofit
+    // AI & Retrofit
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation("com.google.guava:guava:33.0.0-android")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
@@ -101,6 +107,10 @@ dependencies {
     // Luban - Nén ảnh siêu tốc độ
     implementation("com.github.Curzibn:Luban:1.1.8")
 
+
+    // ZXing QR Code Scanner
+    implementation(libs.zxing.android.embedded)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

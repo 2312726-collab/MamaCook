@@ -40,19 +40,58 @@
                 android:layout_height="?attr/actionBarSize"
                 android:layout_marginTop="35dp"
                 app:layout_collapseMode="pin"
-                app:navigationIcon="@drawable/abc_ic_ab_back_material"
+                app:navigationIcon="@drawable/ic_back_arrow"
                 app:navigationIconTint="@color/white">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Chi tiết món ăn"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingEnd="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Chi tiết món ăn"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/btn_qr_code"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_qr_code"
+                        app:tint="@color/white" />
+
+                    <ImageView
+                        android:id="@+id/btn_edit_mon_an"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_edit"
+                        app:tint="@color/white"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/btn_delete_mon_an"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_delete"
+                        app:tint="@color/white"
+                        android:visibility="gone" />
+                </LinearLayout>
             </androidx.appcompat.widget.Toolbar>
 
-            <!-- Nút Tim và Kế hoạch đưa xuống cuối để nằm đè lên trên, đảm bảo Click được -->
             <ImageView
                 android:id="@+id/btn_favorite_detail"
                 android:layout_width="48dp"
@@ -62,7 +101,7 @@
                 android:layout_marginTop="60dp"
                 android:background="@drawable/bg_circle_white"
                 android:padding="12dp"
-                android:src="@drawable/ic_heart_filled"
+                android:src="@drawable/ic_heart_outline"
                 app:tint="@color/white"
                 android:clickable="true"
                 android:focusable="true" />
@@ -77,6 +116,20 @@
                 android:background="@drawable/bg_circle_white"
                 android:padding="12dp"
                 android:src="@drawable/ic_add_food_list"
+                app:tint="@color/brand_primary"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <ImageView
+                android:id="@+id/btn_qr_code_fab"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="end|top"
+                android:layout_marginTop="180dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/bg_circle_white"
+                android:padding="12dp"
+                android:src="@drawable/ic_qr_code"
                 app:tint="@color/brand_primary"
                 android:clickable="true"
                 android:focusable="true" />
@@ -96,13 +149,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Info Card Overlap -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="20dp"
                 android:layout_marginEnd="20dp"
-                android:layout_marginTop="0dp"
                 app:cardCornerRadius="24dp"
                 app:cardElevation="6dp">
 
@@ -113,7 +164,6 @@
                     android:padding="20dp"
                     android:background="@color/white">
 
-                    <!-- Rating + Region -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -139,7 +189,6 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Divider -->
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
@@ -147,78 +196,76 @@
                         android:layout_marginTop="12dp"
                         android:layout_marginBottom="12dp" />
 
-                    <!-- 3 columns: Time | Difficulty | Servings -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:baselineAligned="false">
 
-                        <!-- Column 1: Time -->
+                        <!-- Cột Thời gian -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Thời gian:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
 
                             <TextView
                                 android:id="@+id/tv_detail_thoi_gian"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="45 phút"
-                                android:textColor="@color/text_brown"
-                                android:textSize="18sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="Chuẩn bị"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:text="⌛ 45 phút"
+                                android:textColor="@color/text_brown"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
-                        <!-- Divider -->
                         <View
                             android:layout_width="1dp"
                             android:layout_height="match_parent"
                             android:background="#E0E0E0" />
 
-                        <!-- Column 2: Difficulty -->
+                        <!-- Cột Độ khó -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Độ khó:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
 
                             <TextView
                                 android:id="@+id/tv_detail_do_kho"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
                                 android:text="Trung bình"
                                 android:textColor="@color/text_brown"
-                                android:textSize="18sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Độ khó"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
                         </LinearLayout>
 
-                        <!-- Divider -->
                         <View
                             android:layout_width="1dp"
                             android:layout_height="match_parent"
                             android:background="#E0E0E0" />
 
-                        <!-- Column 3: Servings -->
+                        <!-- Cột Khẩu phần -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -227,36 +274,32 @@
                             android:orientation="vertical">
 
                             <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Khẩu phần:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                            <TextView
                                 android:id="@+id/tv_detail_khau_phan"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
                                 android:text="4 người"
                                 android:textColor="@color/text_brown"
-                                android:textSize="18sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Khẩu phần"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
                         </LinearLayout>
-
                     </LinearLayout>
-
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Content Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Tên món ăn -->
                 <TextView
                     android:id="@+id/tv_detail_ten"
                     android:layout_width="match_parent"
@@ -267,7 +310,6 @@
                     android:textSize="28sp"
                     android:textStyle="bold" />
 
-                <!-- Nguyên liệu Section -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -279,27 +321,24 @@
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
-                <!-- RecyclerView Grid 2 cột -->
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_nguyen_lieu"
+                    android:id="@+id/rv_detail_nguyen_lieu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false" />
 
-                <!-- Nút xem thêm -->
                 <TextView
-                    android:id="@+id/btn_xem_them_nguyen_lieu"
+                    android:id="@+id/btn_detail_xem_them_nguyen_lieu"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="12dp"
-                    android:text="+ Xem thêm 6 nguyên liệu"
+                    android:text="+ Xem thêm nguyên liệu"
                     android:textColor="@color/brand_primary"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
 
-                <!-- Chuẩn bị Section -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -311,7 +350,6 @@
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
-                <!-- Card chuẩn bị xanh lá -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -324,15 +362,14 @@
                         android:layout_height="wrap_content"
                         android:background="#E8F5E9"
                         android:padding="16dp"
-                        android:text="Cá đuôi làm sạch, rửa với muối + gừng để khử mùi..."
+                        android:text="Nội dung sơ chế..."
                         android:textColor="#2E7D32"
                         android:textSize="15sp"
                         android:lineSpacingExtra="4dp" />
                 </androidx.cardview.widget.CardView>
 
-                <!-- Các bước nấu Section -->
                 <LinearLayout
-                    android:id="@+id/layout_buoc_nau_header"
+                    android:id="@+id/layout_detail_buoc_nau_header"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="32dp"
@@ -354,22 +391,20 @@
                         android:textStyle="bold" />
 
                     <ImageView
-                        android:id="@+id/iv_buoc_nau_arrow"
+                        android:id="@+id/iv_detail_buoc_nau_arrow"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/arrow_down_float"
-                        android:tint="@color/text_brown" />
+                        app:tint="@color/text_brown" />
                 </LinearLayout>
 
-                <!-- RecyclerView bước nấu -->
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_buoc_nau"
+                    android:id="@+id/rv_detail_buoc_nau"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false"
                     android:visibility="gone" />
 
-                <!-- Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -377,7 +412,6 @@
                     android:layout_marginTop="32dp"
                     android:layout_marginBottom="24dp" />
 
-                <!-- Đánh giá Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -402,7 +436,7 @@
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/tvXemTatCa"
+                        android:id="@+id/tv_detail_xem_tat_ca"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Xem tất cả >"
@@ -411,7 +445,6 @@
                         android:padding="8dp"/>
                 </LinearLayout>
 
-                <!-- Rating lớn -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -420,7 +453,7 @@
                     android:gravity="center_vertical">
 
                     <TextView
-                        android:id="@+id/tvDiemTrungBinh"
+                        android:id="@+id/tv_detail_diem_trung_binh"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="5.0"
@@ -429,18 +462,17 @@
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/tv_so_danh_gia"
+                        android:id="@+id/tv_detail_so_danh_gia"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
-                        android:text="(2 đánh giá)"
+                        android:text="(0 đánh giá)"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
                 </LinearLayout>
 
-                <!-- RecyclerView comment -->
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_danh_gia"
+                    android:id="@+id/rv_detail_danh_gia"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
@@ -448,7 +480,6 @@
                     android:paddingHorizontal="20dp"
                     android:layout_marginHorizontal="-20dp" />
 
-                <!-- Comment Form -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -456,7 +487,7 @@
                     android:orientation="vertical">
 
                     <RelativeLayout
-                        android:id="@+id/layout_preview_image"
+                        android:id="@+id/layout_detail_preview_image"
                         android:layout_width="100dp"
                         android:layout_height="100dp"
                         android:layout_gravity="center_horizontal"
@@ -464,14 +495,14 @@
                         android:visibility="gone">
 
                         <ImageView
-                            android:id="@+id/img_preview_comment"
+                            android:id="@+id/img_detail_preview_comment"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="centerCrop"
                             android:background="@drawable/bg_ingredient_item" />
 
                         <ImageView
-                            android:id="@+id/btn_remove_preview"
+                            android:id="@+id/btn_detail_remove_preview"
                             android:layout_width="28dp"
                             android:layout_height="28dp"
                             android:layout_alignParentEnd="true"
@@ -483,7 +514,7 @@
                     </RelativeLayout>
 
                     <RatingBar
-                        android:id="@+id/rb_chon_sao"
+                        android:id="@+id/rb_detail_chon_sao"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
@@ -493,24 +524,20 @@
                         android:stepSize="1.0"
                         android:progressTint="#FFC107"
                         android:secondaryProgressTint="#FFC107"
-                        style="@android:style/Widget.DeviceDefault.RatingBar"
-                        android:visibility="visible" />
+                        style="@android:style/Widget.DeviceDefault.RatingBar" />
 
-                    <!-- Input comment -->
                     <LinearLayout
-                        android:id="@+id/layout_input_comment"
+                        android:id="@+id/layout_detail_input_comment"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_input_field"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingHorizontal="16dp"
-                        android:paddingVertical="12dp"
-                        android:clickable="true"
-                        android:focusable="true">
+                        android:paddingVertical="12dp">
 
                         <EditText
-                            android:id="@+id/et_binh_luan"
+                            android:id="@+id/et_detail_binh_luan"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -521,18 +548,17 @@
                             android:textSize="15sp" />
 
                         <ImageView
-                            android:id="@+id/btn_add_attachment"
+                            android:id="@+id/btn_detail_add_attachment"
                             android:layout_width="32dp"
                             android:layout_height="32dp"
                             android:layout_marginEnd="8dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:padding="4dp"
                             android:src="@android:drawable/ic_menu_add"
-                            app:tint="@color/text_secondary"
-                            android:visibility="visible" />
+                            app:tint="@color/text_secondary" />
 
                         <ImageView
-                            android:id="@+id/btn_gui_binh_luan"
+                            android:id="@+id/btn_detail_gui_binh_luan"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:background="@drawable/bg_send_button"
@@ -540,11 +566,8 @@
                             android:src="@android:drawable/ic_menu_send"
                             app:tint="@color/white" />
                     </LinearLayout>
-
                 </LinearLayout>
-
             </LinearLayout>
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

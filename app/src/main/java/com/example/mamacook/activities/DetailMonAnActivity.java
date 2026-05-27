@@ -29,12 +29,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 import androidx.core.widget.NestedScrollView;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.mamacook.R;
 import com.example.mamacook.adapters.BinhLuanNgangAdapter;
+import com.example.mamacook.adapters.BuocNauAdapter;
+import com.example.mamacook.adapters.NguyenLieuAdapter;
 import com.example.mamacook.models.DanhGia;
 import com.example.mamacook.models.MonAn;
 import com.example.mamacook.utils.RatingUtils;
@@ -45,6 +48,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.FirebaseStorage;
@@ -80,7 +84,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
     public static final String EXTRA_NGUYEN_LIEU  = "NGUYEN_LIEU";
 
     private FirebaseFirestore db;
-    private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment;
+    private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment, btnQrCode, btnQrCodeFab;
+    private ImageView btnEditMonAn, btnDeleteMonAn;
     private TextView tvTen, tvRatingInfo, tvThoiGian, tvDiemTrungBinh, tvXemTatCa;
     private RelativeLayout layoutPreviewImage;
     private LinearLayout layoutInputComment;
@@ -96,6 +101,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private boolean isInPlan = false;
     private MonAn currentMonAn;
     private String preSelectedDate, preSelectedMeal;
+    private ListenerRegistration monAnListener;
 
     private Uri imageUri;
     private ActivityResultLauncher<Intent> galleryLauncher;
@@ -119,7 +125,12 @@ public class DetailMonAnActivity extends AppCompatActivity {
         intent.putExtra(EXTRA_THOI_GIAN,    monAn.getThoi_gian_nau());
         intent.putExtra(EXTRA_RATING,       RatingUtils.getRatingOnly(monAn));
         intent.putExtra(EXTRA_REVIEW_COUNT, monAn.getReviewCount());
-        intent.putExtra(EXTRA_NGUYEN_LIEU,  buildNguyenLieuTextStatic(monAn));
+        return intent;
+    }
+
+    public static Intent createIntent(Context context, String dishId) {
+        Intent intent = new Intent(context, DetailMonAnActivity.class);
+        intent.putExtra(EXTRA_ID, dishId);
         return intent;
     }
 
@@ -166,6 +177,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
         setupScrollBehavior();
         setupClickListeners();
         initImageLaunchers();
+
+        checkUserRole();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -269,6 +282,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
         imgPreviewComment  = findViewById(R.id.img_preview_comment);
         layoutPreviewImage = findViewById(R.id.layout_preview_image);
         layoutInputComment = findViewById(R.id.layout_input_comment);
+        btnQrCode          = findViewById(R.id.btn_qr_code);
+        btnQrCodeFab       = findViewById(R.id.btn_qr_code_fab);
         rvNguyenLieu = findViewById(R.id.rv_nguyen_lieu);
         rvBuocNau = findViewById(R.id.rv_buoc_nau);
         tvDoKho = findViewById(R.id.tv_detail_do_kho);
@@ -276,9 +291,81 @@ public class DetailMonAnActivity extends AppCompatActivity {
         tvRegion = findViewById(R.id.tv_detail_region);
         tvSoDanhGia = findViewById(R.id.tv_so_danh_gia);
         tvChuanBi = findViewById(R.id.tv_detail_chuan_bi);
-        btnXemThemNguyenLieu = findViewById(R.id.btn_xem_them_nguyen_lieu);
-        layoutBuocNauHeader = findViewById(R.id.layout_buoc_nau_header);
-        ivBuocNauArrow = findViewById(R.id.iv_buoc_nau_arrow);
+        btnXemThemNguyenLieu = findViewById(R.id.btn_detail_xem_them_nguyen_lieu);
+        layoutBuocNauHeader = findViewById(R.id.layout_detail_buoc_nau_header);
+        ivBuocNauArrow = findViewById(R.id.iv_detail_buoc_nau_arrow);
+
+        btnEditMonAn = findViewById(R.id.btn_edit_mon_an);
+        btnDeleteMonAn = findViewById(R.id.btn_delete_mon_an);
+    }
+
+    private void checkUserRole() {
+        // 1. Mặc định ban đầu (Dành cho User thường hoặc chưa đăng nhập)
+        if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
+        if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
+        if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
+        if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
+
+        if (currentUserId == null) return;
+
+        // 2. Gọi đúng bảng "nguoi_dung" bằng Document ID (UID)
+        db.collection("nguoi_dung").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        String role = documentSnapshot.getString("role");
+
+                        // 3. Nếu kiểm tra đúng là Admin
+                        if ("admin".equalsIgnoreCase(role)) {
+            // BẬT 3 nút của Admin (Sửa, Xóa, QR)
+            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.VISIBLE);
+            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.VISIBLE);
+            if (btnQrCode != null) btnQrCode.setVisibility(View.VISIBLE);
+            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.GONE);
+
+            // ẨN 2 nút của User (Yêu thích, Kế hoạch)
+            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.GONE);
+            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.GONE);
+        } else {
+            // Nếu role không phải admin hoặc null -> giữ nguyên mặc định user
+            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
+            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
+            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
+            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
+            if (btnQrCode != null) btnQrCode.setVisibility(View.GONE);
+            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.VISIBLE);
+        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Lỗi kiểm tra quyền: " + e.getMessage());
+                    // Mặc định an toàn nếu lỗi mạng/DB
+                    if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
+                    if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
+                });
+    }
+
+    private void renderFromIntent() {
+        Intent i = getIntent();
+        String hinhAnh = i.getStringExtra(EXTRA_HINH_ANH);
+        if (!TextUtils.isEmpty(hinhAnh)) {
+            if (hinhAnh.startsWith("http")) {
+                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            } else {
+                StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            }
+        }
+        tvTen.setText(i.getStringExtra(EXTRA_TEN_MON));
+        int thoiGian = i.getIntExtra(EXTRA_THOI_GIAN, 0);
+        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", thoiGian));
+        updateRatingUI(i.getStringExtra(EXTRA_RATING), i.getIntExtra(EXTRA_REVIEW_COUNT, 0));
+    }
+
+    private void updateRatingUI(String rating, int count) {
+        // Ẩn các thông tin rating dư thừa theo yêu cầu tinh chỉnh UI
+        if (tvRatingInfo != null) tvRatingInfo.setVisibility(View.GONE);
+        if (tvDiemTrungBinh != null) tvDiemTrungBinh.setVisibility(View.GONE);
+        if (tvSoDanhGia != null) tvSoDanhGia.setVisibility(View.GONE);
     }
 
     private void setupToolbar() {
@@ -382,6 +469,26 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (layoutBuocNauHeader != null) {
             layoutBuocNauHeader.setOnClickListener(v -> toggleBuocNau());
         }
+        Intent intent = new Intent(this, QRCodeViewerActivity.class);
+        intent.putExtra("EXTRA_ID", currentDishId);
+        startActivity(intent);
+    }
+
+    private void deleteMonAn() {
+        if (currentDishId == null) return;
+        ProgressDialog pd = new ProgressDialog(this);
+        pd.setMessage("Đang xóa...");
+        pd.show();
+        db.collection("mon_an").document(currentDishId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    pd.dismiss();
+                    Toast.makeText(this, "Đã xóa món ăn thành công!", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    pd.dismiss();
+                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void initImageLaunchers() {
@@ -684,14 +791,12 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void checkIfInPlan() {
         if (currentUserId == null) return;
-        // Kiểm tra xem món này có trong bất kỳ kế hoạch nào của người dùng không
         db.collection("ke_hoach_nau_an")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("id_mon_an", currentDishId)
-                .addSnapshotListener(this, (value, error) -> {
+                .document(currentUserId + "_" + currentDishId)
+                .addSnapshotListener(this, (doc, error) -> {
                     if (isFinishing() || isDestroyed()) return;
-                    if (value != null) {
-                        isInPlan = !value.isEmpty();
+                    if (doc != null) {
+                        isInPlan = doc.exists();
                         updatePlanButtonUI();
                     }
                 });
@@ -716,114 +821,33 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
         if (currentMonAn == null) return;
 
-        // CẢI TIẾN: Nếu đã có thông tin ngày và buổi từ trước, lưu thẳng
-        if (preSelectedDate != null && preSelectedMeal != null) {
-            saveToCookingPlan(preSelectedDate, preSelectedMeal);
-            return;
-        }
+        String idPlan = currentUserId + "_" + currentDishId;
+        if (isInPlan) {
+            db.collection("ke_hoach_nau_an").document(idPlan).delete()
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã xóa khỏi kế hoạch!", Toast.LENGTH_SHORT).show());
+        } else {
+            String[] types = {"Sáng", "Trưa", "Tối"};
+            new AlertDialog.Builder(this)
+                    .setTitle("Chọn buổi nấu ăn")
+                    .setItems(types, (dialog, which) -> {
+                        String mealType;
+                        if (which == 0) mealType = "Sang";
+                        else if (which == 1) mealType = "Trua";
+                        else mealType = "Toi";
 
-        // 1. Tạo danh sách 7 ngày trong tuần hiện tại
-        List<String> dateList = new ArrayList<>();
-        List<String> dateDisplayList = new ArrayList<>();
-        Calendar cal = Calendar.getInstance();
-        
-        // Điều chỉnh về Thứ 2 đầu tuần
-        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-        if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-             cal.add(Calendar.DAY_OF_YEAR, -6); // Nếu hôm nay là CN, quay lại T2 tuần trước? 
-             // Thường tuần hiện tại tính từ T2 đến CN.
+                        saveToCookingPlan(idPlan, mealType);
+                    })
+                    .show();
         }
-        
-        // Cách đơn giản nhất: Lấy 7 ngày kể từ hôm nay hoặc từ đầu tuần này.
-        // User muốn "các ngày trong tuần hiện tại"
-        cal = Calendar.getInstance();
-        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-        
-        SimpleDateFormat sdfDisplay = new SimpleDateFormat("EEEE (dd/MM)", new Locale("vi", "VN"));
-        SimpleDateFormat sdfDatabase = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-
-        for (int i = 0; i < 7; i++) {
-            dateList.add(sdfDatabase.format(cal.getTime()));
-            dateDisplayList.add(sdfDisplay.format(cal.getTime()));
-            cal.add(Calendar.DAY_OF_YEAR, 1);
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Chọn ngày nấu")
-                .setItems(dateDisplayList.toArray(new String[0]), (dialog, which) -> {
-                    String selectedDate = dateList.get(which);
-                    showMealTypeDialog(selectedDate);
-                })
-                .show();
     }
 
-    private void showMealTypeDialog(String selectedDate) {
-        String[] types = {"Sáng", "Trưa", "Tối"};
-        new AlertDialog.Builder(this)
-                .setTitle("Chọn buổi nấu ăn")
-                .setItems(types, (dialog, which) -> {
-                    String mealType = (which == 0) ? "Sang" : (which == 1) ? "Trua" : "Toi";
-                    saveToCookingPlan(selectedDate, mealType);
-                })
-                .show();
-    }
-
-    private void saveToCookingPlan(String selectedDate, String mealType) {
-        String buoiTiengViet = mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối";
-        
-        // Lấy thông tin Thứ mấy từ selectedDate (yyyy-MM-dd)
-        String thuMay = "";
-        try {
-            SimpleDateFormat dbFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-            Date date = dbFormat.parse(selectedDate);
-            if (date != null) {
-                SimpleDateFormat thuFormat = new SimpleDateFormat("EEEE", new Locale("vi", "VN"));
-                thuMay = thuFormat.format(date);
-            }
-        } catch (Exception e) {
-            thuMay = selectedDate; // Fallback nếu có lỗi
-        }
-
-        String finalThuMay = thuMay;
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận thêm món")
-                .setMessage("Bạn có chắc chắn muốn thêm món '" + currentMonAn.getTen_mon() + "' vào " + buoiTiengViet + " " + finalThuMay + " không?")
-                .setPositiveButton("Thêm ngay", (dialog, which) -> {
-                    checkDuplicateAndSave(selectedDate, mealType, finalThuMay);
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void checkDuplicateAndSave(String selectedDate, String mealType, String thuMay) {
-        db.collection("ke_hoach_nau_an")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("id_mon_an", currentDishId)
-                .whereEqualTo("ngay_chi_tiet", selectedDate)
-                .whereEqualTo("buoi", mealType)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        String buoiTiengViet = mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối";
-                        Toast.makeText(this, "Món ăn này đã có trong " + buoiTiengViet + " " + thuMay + "!", Toast.LENGTH_LONG).show();
-                    } else {
-                        performSavePlan(selectedDate, mealType, thuMay);
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Lỗi kiểm tra dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    private void performSavePlan(String selectedDate, String mealType, String thuMay) {
+    private void saveToCookingPlan(String idPlan, String mealType) {
         Map<String, Object> plan = new HashMap<>();
-        // ... (phần code map vẫn giữ nguyên)
         plan.put("id_nguoi_dung", currentUserId);
         plan.put("id_mon_an", currentDishId);
         plan.put("ten_mon", currentMonAn.getTen_mon());
         plan.put("hinh_anh", currentMonAn.getHinh_anh());
         plan.put("ngay_lap_ke_hoach", FieldValue.serverTimestamp());
-        plan.put("ngay_chi_tiet", selectedDate);
         plan.put("trang_thai", "dang_di_cho");
         plan.put("buoi", mealType);
 
@@ -840,9 +864,8 @@ public class DetailMonAnActivity extends AppCompatActivity {
         }
         plan.put("danh_sach_nguyen_lieu", listNL);
 
-        db.collection("ke_hoach_nau_an").add(plan)
-                .addOnSuccessListener(docRef -> Toast.makeText(this, "Đã thêm vào kế hoạch " + (mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối") + " " + thuMay + "!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        db.collection("ke_hoach_nau_an").document(idPlan).set(plan)
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã thêm vào kế hoạch " + (mealType.equals("Sang") ? "Sáng" : mealType.equals("Trua") ? "Trưa" : "Tối") + "!", Toast.LENGTH_SHORT).show());
     }
 
     private void listenRatingRealtime(String id) {
@@ -879,36 +902,69 @@ public class DetailMonAnActivity extends AppCompatActivity {
                             rvBuocNau.setVisibility(View.VISIBLE);
                         }
 
-                        // Cập nhật info card - MỚI
-                        if (tvDoKho != null && currentMonAn.getDo_kho() != null) {
-                            tvDoKho.setText(currentMonAn.getDo_kho());
-                        }
-                        if (tvKhauPhan != null) {
-                            tvKhauPhan.setText(String.format(Locale.getDefault(), "%d người", currentMonAn.getKhau_phan()));
-                        }
-                        if (tvRegion != null && currentMonAn.getVung_mien() != null) {
-                            tvRegion.setText(currentMonAn.getVung_mien());
-                        }
+    private void updateUI(MonAn monAn) {
+        if (monAn == null) return;
 
-                        // Cập nhật chuẩn bị/sơ chế - MỚI
-                        if (tvChuanBi != null) {
-                            if (currentMonAn.getDanh_sach_so_che() != null && !currentMonAn.getDanh_sach_so_che().isEmpty()) {
-                                StringBuilder sb = new StringBuilder();
-                                for (MonAn.SoChe sc : currentMonAn.getDanh_sach_so_che()) {
-                                    if (sc.tieu_de != null && !sc.tieu_de.isEmpty()) {
-                                        sb.append(sc.tieu_de).append(": ");
-                                    }
-                                    sb.append(sc.noi_dung).append("\n\n");
-                                }
-                                tvChuanBi.setText(sb.toString().trim());
-                                ((View)tvChuanBi.getParent()).setVisibility(View.VISIBLE);
-                            } else {
-                                ((View)tvChuanBi.getParent()).setVisibility(View.GONE);
-                            }
-                        }
-                    }
-                    adapterBinhLuan.notifyDataSetChanged();
-                });
+        // 1. Cập nhật Tên và Ảnh
+        tvTen.setText(monAn.getTen_mon());
+        String hinhAnh = monAn.getHinh_anh();
+        if (!TextUtils.isEmpty(hinhAnh)) {
+            if (hinhAnh.startsWith("http")) {
+                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            } else {
+                StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            }
+        }
+
+        // 2. Cập nhật 3 cột thông tin (Thời gian, Độ khó, Khẩu phần)
+        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", monAn.getThoi_gian_nau()));
+
+        String dk = monAn.getDo_kho();
+        tvDoKho.setText(TextUtils.isEmpty(dk) ? "Chưa rõ" : dk);
+
+        int kp = monAn.getKhau_phan();
+        tvKhauPhan.setText(kp > 0 ? kp + " người" : "Chưa rõ");
+
+        String vm = monAn.getVung_mien();
+        tvRegion.setText("Vùng miền: " + (TextUtils.isEmpty(vm) ? "Chưa rõ" : vm));
+
+        // 3. Cập nhật phần Sơ chế (Chuẩn bị) - Xử lý List SoChe
+        if (monAn.getDanh_sach_so_che() != null && !monAn.getDanh_sach_so_che().isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (MonAn.SoChe sc : monAn.getDanh_sach_so_che()) {
+                if (!TextUtils.isEmpty(sc.tieu_de)) {
+                    sb.append("• ").append(sc.tieu_de).append(":\n");
+                }
+                sb.append(sc.noi_dung).append("\n\n");
+            }
+            tvChuanBi.setText(sb.toString().trim());
+            tvChuanBi.setVisibility(View.VISIBLE);
+        } else {
+            tvChuanBi.setText("Không có thông tin sơ chế.");
+        }
+
+        // 4. Cập nhật Nguyên liệu & Bước nấu
+        if (monAn.getDanh_sach_nguyen_lieu() != null) {
+            fullNguyenLieuList = monAn.getDanh_sach_nguyen_lieu();
+            updateNguyenLieuDisplay();
+        }
+
+        if (monAn.getDanh_sach_buoc_nau() != null) {
+            buocNauAdapter = new BuocNauAdapter(monAn.getDanh_sach_buoc_nau());
+            rvBuocNau.setAdapter(buocNauAdapter);
+        }
+
+        updateRatingUI(null, 0); // Ẩn các view rating theo thiết kế mới
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (monAnListener != null) {
+            monAnListener.remove();
+            monAnListener = null;
+        }
     }
 
     private void checkIfSaved() {
