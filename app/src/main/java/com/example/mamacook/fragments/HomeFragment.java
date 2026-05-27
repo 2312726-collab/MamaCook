@@ -180,6 +180,14 @@ public class HomeFragment extends Fragment {
                 startActivity(intent);
             });
         }
+
+        FrameLayout btnScanQr = v.findViewById(R.id.btn_scan_qr);
+        if (btnScanQr != null) {
+            btnScanQr.setOnClickListener(view -> {
+                Intent intent = new Intent(getActivity(), com.example.mamacook.activities.ScanQRCodeActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private MonAn parseMonAn(DocumentSnapshot doc) {
@@ -616,7 +624,7 @@ public class HomeFragment extends Fragment {
         if (!isAdded()) return;
         if (pbAiLoading != null) pbAiLoading.setVisibility(show ? View.VISIBLE : View.GONE);
         if (rvCategory != null) rvCategory.setVisibility(show ? View.GONE : View.VISIBLE);
-    }
+        }
 
     private void checkAdminRole() {
         FirebaseUser user = mAuth.getCurrentUser();

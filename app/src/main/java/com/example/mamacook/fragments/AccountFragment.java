@@ -46,7 +46,7 @@ public class AccountFragment extends Fragment {
     private ImageView imgAvatar;
     private TextView tvDisplayName, tvDisplayEmail, tvInfoName, tvInfoEmail, tvInfoPhone, tvInfoRole, tvInfoDate;
     private TextView tvInfoDob, tvInfoGender; // Hiếu thêm: Hai trường mới
-    private LinearLayout btnEditProfile, btnChangePassword;
+    private LinearLayout btnEditProfile, btnChangePassword, btnAdminDashboard;
     private com.google.android.material.button.MaterialButton btnLogout;
 
     private FirebaseAuth mAuth;
@@ -100,6 +100,7 @@ public class AccountFragment extends Fragment {
         tvInfoGender = view.findViewById(R.id.tv_info_gender); // Ánh xạ giới tính
         btnEditProfile = view.findViewById(R.id.btn_edit_profile);
         btnChangePassword = view.findViewById(R.id.btn_change_password);
+        btnAdminDashboard = view.findViewById(R.id.btn_admin_dashboard);
         btnLogout = view.findViewById(R.id.btn_logout);
     }
 
@@ -114,6 +115,7 @@ public class AccountFragment extends Fragment {
 
         btnEditProfile.setOnClickListener(v -> startActivity(new Intent(getActivity(), com.example.mamacook.activities.EditAccountActivity.class)));
         btnChangePassword.setOnClickListener(v -> startActivity(new Intent(getActivity(), com.example.mamacook.activities.ChangePasswordActivity.class)));
+        btnAdminDashboard.setOnClickListener(v -> startActivity(new Intent(getActivity(), com.example.mamacook.activities.AdminActivity.class)));
         imgAvatar.setOnClickListener(v -> showAvatarOptions());
     }
 
@@ -142,12 +144,20 @@ public class AccountFragment extends Fragment {
         tvInfoName.setText(user.getHo_ten());
         tvInfoEmail.setText(user.getEmail());
         tvInfoPhone.setText(user.getSo_dien_thoai() != null && !user.getSo_dien_thoai().isEmpty() ? user.getSo_dien_thoai() : "Chưa cập nhật");
-        
+
         // Hiển thị Ngày sinh và Giới tính
         tvInfoDob.setText(user.getNgay_sinh() != null && !user.getNgay_sinh().isEmpty() ? user.getNgay_sinh() : "Chưa cập nhật");
         tvInfoGender.setText(user.getGioi_tinh() != null && !user.getGioi_tinh().isEmpty() ? user.getGioi_tinh() : "Chưa cập nhật");
 
         tvInfoRole.setText("admin".equals(user.getRole()) ? "Quản trị viên" : "Người dùng");
+
+        // Hiển thị nút Admin Dashboard nếu là admin
+        if ("admin".equals(user.getRole())) {
+            btnAdminDashboard.setVisibility(View.VISIBLE);
+        } else {
+            btnAdminDashboard.setVisibility(View.GONE);
+        }
+
         if (user.getNgay_tao() != null) {
             tvInfoDate.setText(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(user.getNgay_tao().toDate()));
         }

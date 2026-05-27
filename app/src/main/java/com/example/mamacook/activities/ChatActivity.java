@@ -1,6 +1,9 @@
 package com.example.mamacook.activities;
 
+import android.graphics.Rect;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -76,14 +79,41 @@ public class ChatActivity extends AppCompatActivity {
                 : "Chat với Admin");
 
         adapter = new TinNhanAdapter(this, tinNhanList, cheDo);
-        rvTinNhan.setLayoutManager(new LinearLayoutManager(this));
+
+        // --- CẤU HÌNH RECYCLERVIEW BẮT ĐẦU TỪ ĐÁY LÊN ---
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setStackFromEnd(true); // Đẩy danh sách bắt đầu từ cuối lên
+        rvTinNhan.setLayoutManager(layoutManager);
         rvTinNhan.setAdapter(adapter);
+
+        // --- TỰ ĐỘNG CUỘN XUỐNG KHI NGƯỜI DÙNG CLICK VÀO Ô NHẬP ---
+        edtTinNhan.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && adapter.getItemCount() > 0) {
+                rvTinNhan.postDelayed(() -> rvTinNhan.scrollToPosition(adapter.getItemCount() - 1), 200);
+            }
+        });
 
         btnBack.setOnClickListener(v -> finish());
         btnGuiTinNhan.setOnClickListener(v -> guiTinNhan());
 
         taoCuocTroChuyenNeuChuaCo();
         loadTinNhanRealtime();
+
+        // --- ĐOẠN CODE ÉP CO GIÃN THEO CHIỀU CAO BÀN PHÍM THỰC TẾ ---
+        View rootLayout = findViewById(android.R.id.content);
+        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            Rect r = new Rect();
+            rootLayout.getWindowVisibleDisplayFrame(r);
+            int screenHeight = rootLayout.getRootView().getHeight();
+            int keypadHeight = screenHeight - r.bottom;
+
+            // Nếu bàn phím mở ra (lớn hơn 15% chiều cao màn hình)
+            if (keypadHeight > screenHeight * 0.15) {
+                rootLayout.setPadding(0, 0, 0, keypadHeight);
+            } else {
+                rootLayout.setPadding(0, 0, 0, 0);
+            }
+        });
     }
 
     private void taoCuocTroChuyenNeuChuaCo() {
@@ -118,7 +148,6 @@ public class ChatActivity extends AppCompatActivity {
 
                     tinNhanList.clear();
                     tinNhanList.addAll(querySnapshot.getDocuments());
-
                     Collections.sort(tinNhanList, (d1, d2) -> {
                         Timestamp t1 = d1.getTimestamp("thoi_gian");
                         Timestamp t2 = d2.getTimestamp("thoi_gian");

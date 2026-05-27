@@ -32,7 +32,9 @@
         <activity android:name=".activities.AdminGuiThongBaoActivity"/>
         <activity android:name=".activities.ThongBaoActivity" />
         <activity android:name=".activities.DanhSachChatActivity" />
-        <activity android:name=".activities.ChatActivity" />
+        <activity android:name=".activities.ChatActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            />
         <activity android:name=".activities.ScanQRCodeActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MamaCook"/>

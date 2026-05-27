@@ -136,9 +136,18 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
         public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
             User oldUser = oldList.get(oldItemPosition);
             User newUser = newList.get(newItemPosition);
-            return oldUser.getRole().equals(newUser.getRole()) &&
-                   oldUser.getTrang_thai_tai_khoan().equals(newUser.getTrang_thai_tai_khoan()) &&
-                   oldUser.getSo_lan_vi_pham() == newUser.getSo_lan_vi_pham();
+            String oldRole = oldUser.getRole();
+            String newRole = newUser.getRole();
+            String oldStatus = oldUser.getTrang_thai_tai_khoan();
+            String newStatus = newUser.getTrang_thai_tai_khoan();
+
+            boolean roleSame = (oldRole == null && newRole == null) ||
+                    (oldRole != null && oldRole.equals(newRole));
+            boolean statusSame = (oldStatus == null && newStatus == null) ||
+                    (oldStatus != null && oldStatus.equals(newStatus));
+            boolean viPhamSame = oldUser.getSo_lan_vi_pham() == newUser.getSo_lan_vi_pham();
+
+            return roleSame && statusSame && viPhamSame;
         }
     }
 }

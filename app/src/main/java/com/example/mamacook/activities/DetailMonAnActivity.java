@@ -85,8 +85,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
     public static final String EXTRA_NGUYEN_LIEU  = "NGUYEN_LIEU";
 
     private FirebaseFirestore db;
-    private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment, btnQrCode, btnQrCodeFab;
+    private ImageView imgMonAn, btnAddAttachment, imgPreviewComment;
     private ImageView btnEditMonAn, btnDeleteMonAn;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnFavoriteDetail, btnAddToPlan, btnQrCode;
     private TextView tvTen, tvRatingInfo, tvThoiGian, tvDiemTrungBinh, tvXemTatCa;
     private RelativeLayout layoutPreviewImage;
     private LinearLayout layoutInputComment;
@@ -112,9 +113,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private NguyenLieuAdapter nguyenLieuAdapter;
     private BuocNauAdapter buocNauAdapter;
     private TextView tvDoKho, tvKhauPhan, tvRegion, tvSoDanhGia, tvChuanBi, btnXemThemNguyenLieu;
-    private LinearLayout layoutBuocNauHeader;
-    private ImageView ivBuocNauArrow;
-    private boolean isBuocNauExpanded = true;
     private List<MonAn.ChiTietNguyenLieu> fullNguyenLieuList = new ArrayList<>();
     private boolean isShowingAllNguyenLieu = false;
 
@@ -211,7 +209,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         imgPreviewComment  = findViewById(R.id.img_detail_preview_comment);
         layoutPreviewImage = findViewById(R.id.layout_detail_preview_image);
         btnQrCode          = findViewById(R.id.btn_qr_code);
-        btnQrCodeFab       = findViewById(R.id.btn_qr_code_fab);
         layoutInputComment = findViewById(R.id.layout_detail_input_comment);
         rvNguyenLieu = findViewById(R.id.rv_detail_nguyen_lieu);
         rvBuocNau = findViewById(R.id.rv_detail_buoc_nau);
@@ -221,8 +218,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         tvSoDanhGia = findViewById(R.id.tv_detail_so_danh_gia);
         tvChuanBi = findViewById(R.id.tv_detail_chuan_bi);
         btnXemThemNguyenLieu = findViewById(R.id.btn_detail_xem_them_nguyen_lieu);
-        layoutBuocNauHeader = findViewById(R.id.layout_detail_buoc_nau_header);
-        ivBuocNauArrow = findViewById(R.id.iv_detail_buoc_nau_arrow);
 
         btnEditMonAn = findViewById(R.id.btn_edit_mon_an);
         btnDeleteMonAn = findViewById(R.id.btn_delete_mon_an);
@@ -234,8 +229,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
         if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
         if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
-        if (btnQrCode != null) btnQrCode.setVisibility(View.GONE);
-        if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.VISIBLE);
 
         if (currentUserId == null) return;
 
@@ -248,8 +241,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                             // Hiện nút Admin
                             if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.VISIBLE);
                             if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.VISIBLE);
-                            if (btnQrCode != null) btnQrCode.setVisibility(View.VISIBLE);
-                            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.GONE);
                             // Ẩn nút User
                             if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.GONE);
                             if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.GONE);
@@ -298,9 +289,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         rvBuocNau.setLayoutManager(new LinearLayoutManager(this));
         buocNauAdapter = new BuocNauAdapter(new ArrayList<>());
         rvBuocNau.setAdapter(buocNauAdapter);
-        
-        rvBuocNau.setVisibility(isBuocNauExpanded ? View.VISIBLE : View.GONE);
-        if (ivBuocNauArrow != null) ivBuocNauArrow.setRotation(isBuocNauExpanded ? 180 : 0);
 
         rvDanhGia.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         adapterBinhLuan = new BinhLuanNgangAdapter(danhSachBinhLuan);
@@ -327,7 +315,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (btnAddToPlan != null) btnAddToPlan.setOnClickListener(v -> toggleCookingPlan());
         btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
         if (btnQrCode != null) btnQrCode.setOnClickListener(v -> openQRCode());
-        if (btnQrCodeFab != null) btnQrCodeFab.setOnClickListener(v -> openQRCode());
+        if (btnQrCode != null) btnQrCode.setOnClickListener(v -> openQRCode());
         if (tvXemTatCa != null) tvXemTatCa.setOnClickListener(v -> {
             Intent intent = new Intent(this, TatCaBinhLuanActivity.class);
             intent.putExtra(EXTRA_ID, currentDishId);
@@ -338,7 +326,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
             layoutPreviewImage.setVisibility(View.GONE);
         });
         if (btnXemThemNguyenLieu != null) btnXemThemNguyenLieu.setOnClickListener(v -> toggleNguyenLieu());
-        if (layoutBuocNauHeader != null) layoutBuocNauHeader.setOnClickListener(v -> toggleBuocNau());
 
         if (btnEditMonAn != null) {
             btnEditMonAn.setOnClickListener(v -> {
@@ -518,21 +505,40 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void saveReviewToFirestore(String content, float stars, String imageUrl) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        Map<String, Object> review = new HashMap<>();
-        review.put("id_nguoi_dung", currentUserId);
-        review.put("ten_nguoi_dung", user != null ? user.getDisplayName() : "Ẩn danh");
-        review.put("id_mon_an", currentDishId);
-        review.put("noi_dung", content);
-        review.put("so_sao", stars);
-        review.put("hinh_anh_url", imageUrl);
-        review.put("trang_thai", "cho_duyet");
-        review.put("ngay_danh_gia", FieldValue.serverTimestamp());
-        db.collection("danh_gia").add(review).addOnSuccessListener(docRef -> {
-            progressDialog.dismiss();
-            etBinhLuan.setText("");
-            Toast.makeText(this, "Đã gửi bình luận!", Toast.LENGTH_SHORT).show();
-        });
+        // Lấy tên người dùng từ Firestore
+        db.collection("nguoi_dung").document(currentUserId).get()
+                .addOnSuccessListener(userDoc -> {
+                    String tenNguoiDung = "Ẩn danh";
+                    if (userDoc.exists()) {
+                        tenNguoiDung = userDoc.getString("ho_ten");
+                        if (tenNguoiDung == null || tenNguoiDung.isEmpty()) {
+                            tenNguoiDung = "Ẩn danh";
+                        }
+                    }
+
+                    Map<String, Object> review = new HashMap<>();
+                    review.put("id_nguoi_dung", currentUserId);
+                    review.put("ten_nguoi_dung", tenNguoiDung);
+                    review.put("id_mon_an", currentDishId);
+                    review.put("noi_dung", content);
+                    review.put("so_sao", stars);
+                    review.put("hinh_anh_url", imageUrl);
+                    review.put("trang_thai", "cho_duyet");
+                    review.put("ngay_danh_gia", FieldValue.serverTimestamp());
+
+                    db.collection("danh_gia").add(review).addOnSuccessListener(docRef -> {
+                        progressDialog.dismiss();
+                        etBinhLuan.setText("");
+                        rbChonSao.setRating(5);
+                        imageUri = null;
+                        layoutPreviewImage.setVisibility(View.GONE);
+                        Toast.makeText(this, "Đã gửi bình luận!", Toast.LENGTH_SHORT).show();
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    progressDialog.dismiss();
+                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void checkIfInPlan() {
@@ -683,8 +689,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     if (currentMonAn.getDanh_sach_buoc_nau() != null) {
                         buocNauAdapter = new BuocNauAdapter(currentMonAn.getDanh_sach_buoc_nau());
                         rvBuocNau.setAdapter(buocNauAdapter);
-                        rvBuocNau.setVisibility(isBuocNauExpanded ? View.VISIBLE : View.GONE);
-                        ivBuocNauArrow.setRotation(isBuocNauExpanded ? 180 : 0);
                     }
 
                     if (currentMonAn.getDanh_sach_so_che() != null && !currentMonAn.getDanh_sach_so_che().isEmpty()) {
@@ -723,22 +727,45 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private void updateSaveButtonUI() {
         if (isSaved) {
             btnFavoriteDetail.setImageResource(R.drawable.ic_heart_filled);
-            btnFavoriteDetail.setColorFilter(Color.RED);
+            btnFavoriteDetail.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#FF1744")));
+            btnFavoriteDetail.setColorFilter(Color.WHITE);
         } else {
             btnFavoriteDetail.setImageResource(R.drawable.ic_heart_outline);
-            btnFavoriteDetail.setColorFilter(Color.WHITE);
+            btnFavoriteDetail.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#FFFFFF")));
+            btnFavoriteDetail.setColorFilter(Color.parseColor("#FF5252"));
         }
     }
 
     private void toggleSaveRecipe() {
         if (currentUserId == null) return;
         String idLuu = currentUserId + "_" + currentDishId;
-        if (isSaved) db.collection("mon_da_luu").document(idLuu).delete();
-        else {
+
+        if (isSaved) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Xác nhận")
+                    .setMessage("Bạn có muốn bỏ yêu thích món ăn này không?")
+                    .setPositiveButton("Có", (dialog, which) -> {
+                        db.collection("mon_da_luu").document(idLuu).delete()
+                                .addOnSuccessListener(unused -> {
+                                    Toast.makeText(this, "Đã bỏ yêu thích", Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                });
+                    })
+                    .setNegativeButton("Không", null)
+                    .show();
+        } else {
             Map<String, Object> data = new HashMap<>();
             data.put("id_nguoi_dung", currentUserId);
             data.put("id_mon_an", currentDishId);
-            db.collection("mon_da_luu").document(idLuu).set(data);
+            db.collection("mon_da_luu").document(idLuu).set(data)
+                    .addOnSuccessListener(unused -> {
+                        Toast.makeText(this, "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
         }
     }
 
@@ -767,9 +794,4 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void toggleNguyenLieu() { isShowingAllNguyenLieu = !isShowingAllNguyenLieu; updateNguyenLieuDisplay(); }
-    private void toggleBuocNau() {
-        isBuocNauExpanded = !isBuocNauExpanded;
-        rvBuocNau.setVisibility(isBuocNauExpanded ? View.VISIBLE : View.GONE);
-        ivBuocNauArrow.setRotation(isBuocNauExpanded ? 180 : 0);
-    }
 }

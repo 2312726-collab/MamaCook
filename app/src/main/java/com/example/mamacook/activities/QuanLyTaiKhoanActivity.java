@@ -115,6 +115,24 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
                     for (QueryDocumentSnapshot doc : query) {
                         User u = doc.toObject(User.class);
                         u.setId_nguoi_dung(doc.getId());
+
+                        // Đếm số lần vi phạm từ collection danh_gia
+                        String userId = doc.getId();
+                        db.collection("danh_gia")
+                                .whereEqualTo("id_nguoi_dung", userId)
+                                .whereEqualTo("trang_thai", "vi_pham")
+                                .get()
+                                .addOnSuccessListener(querySnapshot -> {
+                                    int soLanViPham = querySnapshot.size();
+                                    u.setSo_lan_vi_pham(soLanViPham);
+
+                                    // Cập nhật vào Firestore
+                                    db.collection("nguoi_dung").document(userId)
+                                            .update("so_lan_vi_pham", soLanViPham);
+
+                                    adapter.notifyDataSetChanged();
+                                });
+
                         fullList.add(u);
                     }
                     applyFilters();

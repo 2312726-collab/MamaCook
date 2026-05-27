@@ -64,8 +64,27 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
         holder.tvTenNguoiDung.setText(tenNguoiDung == null ? "Ẩn danh" : tenNguoiDung);
         holder.tvNoiDung.setText(noiDung == null ? "Không có nội dung" : noiDung);
 
+        String idMonAn = doc.getString("id_mon_an");
         String tenMon = doc.getString("ten_mon_an");
-        holder.tvMonAn.setText("Món: " + (tenMon == null ? "N/A" : tenMon));
+
+        if (tenMon == null || tenMon.isEmpty()) {
+            if (idMonAn != null && !idMonAn.isEmpty()) {
+                db.collection("mon_an").document(idMonAn).get()
+                        .addOnSuccessListener(monAnDoc -> {
+                            if (monAnDoc.exists()) {
+                                String tenMonAn = monAnDoc.getString("ten_mon");
+                                holder.tvMonAn.setText("Món: " + (tenMonAn != null ? tenMonAn : "N/A"));
+                            } else {
+                                holder.tvMonAn.setText("Món: N/A");
+                            }
+                        })
+                        .addOnFailureListener(e -> holder.tvMonAn.setText("Món: N/A"));
+            } else {
+                holder.tvMonAn.setText("Món: N/A");
+            }
+        } else {
+            holder.tvMonAn.setText("Món: " + tenMon);
+        }
 
         com.google.firebase.Timestamp timestamp = doc.getTimestamp("ngay_danh_gia");
         if (timestamp != null) {
@@ -144,6 +163,33 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
                     .show();
         });
 
+        holder.btnViPham.setOnClickListener(v -> {
+            int currentPosition = holder.getBindingAdapterPosition();
+            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= danhGiaList.size()) return;
+
+            DocumentSnapshot currentDoc = danhGiaList.get(currentPosition);
+            String currentId = currentDoc.getId();
+
+            new AlertDialog.Builder(context)
+                    .setTitle("Xác nhận")
+                    .setMessage("Đánh dấu đánh giá này là vi phạm?")
+                    .setPositiveButton("Có", (dialog, which) -> {
+                        db.collection("danh_gia")
+                                .document(currentId)
+                                .update("trang_thai", "vi_pham")
+                                .addOnSuccessListener(unused -> {
+                                    Toast.makeText(context, "Đã đánh dấu vi phạm", Toast.LENGTH_SHORT).show();
+                                    db.collection("danh_gia").document(currentId).get()
+                                            .addOnSuccessListener(newDoc -> capNhatItemTheoId(currentId, newDoc));
+                                })
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                                );
+                    })
+                    .setNegativeButton("Không", null)
+                    .show();
+        });
+
         holder.btnXoa.setOnClickListener(v -> {
             int currentPosition = holder.getBindingAdapterPosition();
 
@@ -185,6 +231,16 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
         }
     }
 
+    private void capNhatItemTheoId(String id, DocumentSnapshot newDoc) {
+        for (int i = 0; i < danhGiaList.size(); i++) {
+            if (danhGiaList.get(i).getId().equals(id)) {
+                danhGiaList.set(i, newDoc);
+                notifyItemChanged(i);
+                return;
+            }
+        }
+    }
+
     @Override
     public int getItemCount() {
         return danhGiaList == null ? 0 : danhGiaList.size();
@@ -193,7 +249,7 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
     static class DanhGiaViewHolder extends RecyclerView.ViewHolder {
         TextView tvTenNguoiDung, tvNoiDung, tvTrangThai, tvMonAn, tvNgay;
         RatingBar rbSoSao;
-        Button btnAnHien, btnXoa;
+        Button btnAnHien, btnViPham, btnXoa;
 
         public DanhGiaViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -205,6 +261,7 @@ public class DanhGiaAdminAdapter extends RecyclerView.Adapter<DanhGiaAdminAdapte
             tvMonAn = itemView.findViewById(R.id.tv_mon_an_dg);
             tvNgay = itemView.findViewById(R.id.tv_ngay_dg);
             btnAnHien = itemView.findViewById(R.id.btn_an_hien_dg);
+            btnViPham = itemView.findViewById(R.id.btn_vi_pham_dg);
             btnXoa = itemView.findViewById(R.id.btn_xoa_dg);
         }
     }
