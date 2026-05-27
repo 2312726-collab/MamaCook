@@ -95,6 +95,10 @@ dependencies {
     // Luban - Nén ảnh siêu tốc độ
     implementation("com.github.Curzibn:Luban:1.1.8")
 
+    // ZXing QR Code Scanner
+    implementation(libs.zxing.android.embedded)
+    implementation(libs.zxing.core)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

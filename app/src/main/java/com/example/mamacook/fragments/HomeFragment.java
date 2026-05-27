@@ -148,7 +148,7 @@ public class HomeFragment extends Fragment {
             loadNewRecipes();
             loadHistoryRecipes();
             loadWeeklyAttentionRecipes();
-            checkAdminRole();
+            //checkAdminRole();
         }, 300);
 
         return view;
