@@ -17,6 +17,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.mamacook.R;
@@ -37,6 +38,7 @@ import java.util.List;
 
 public class ScanQRCodeActivity extends AppCompatActivity {
 
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private CaptureManager capture;
     private DecoratedBarcodeView barcodeScannerView;
     private ImageButton btnFlash;
@@ -61,10 +63,20 @@ public class ScanQRCodeActivity extends AppCompatActivity {
         btnFlash = findViewById(R.id.btn_flash);
         scannerLine = findViewById(R.id.scanner_line);
 
+        // Kiểm tra quyền camera trước khi khởi tạo
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+            return;
+        }
+
+        initializeScanner(savedInstanceState);
+    }
+
+    private void initializeScanner(Bundle savedInstanceState) {
         // Khởi tạo CaptureManager để quản lý camera
         capture = new CaptureManager(this, barcodeScannerView);
         capture.initializeFromIntent(getIntent(), savedInstanceState);
-        
+
         // [HOTFIX 2] Lắng nghe kết quả quét từ Camera & Đảm bảo chạy trên UI Thread
         barcodeScannerView.decodeSingle(new BarcodeCallback() {
             @Override
@@ -87,6 +99,19 @@ public class ScanQRCodeActivity extends AppCompatActivity {
 
         // Hiệu ứng quét chạy lên xuống
         startScannerAnimation();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initializeScanner(null);
+            } else {
+                Toast.makeText(this, "Cần cấp quyền Camera để quét mã QR", Toast.LENGTH_LONG).show();
+                finish();
+            }
+        }
     }
 
     private void startScannerAnimation() {
@@ -123,13 +148,13 @@ public class ScanQRCodeActivity extends AppCompatActivity {
 
     private void decodeQRCode(Uri uri) {
         if (isHandled) return;
-        
+
         new Thread(() -> {
             // Sử dụng try-with-resources để tự động đóng InputStream
             try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inSampleSize = 2;
-                
+
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, options);
                 if (bitmap == null) {
                     runOnUiThread(() -> Toast.makeText(this, "Không thể đọc ảnh", Toast.LENGTH_SHORT).show());
@@ -146,7 +171,7 @@ public class ScanQRCodeActivity extends AppCompatActivity {
 
                 MultiFormatReader reader = new MultiFormatReader();
                 Result result = reader.decode(binaryBitmap);
-                
+
                 runOnUiThread(() -> handleScanResult(result.getText()));
 
             } catch (Throwable e) {
@@ -161,7 +186,7 @@ public class ScanQRCodeActivity extends AppCompatActivity {
 
     private void handleScanResult(String result) {
         if (isHandled) return;
-        
+
         if (result != null && !result.isEmpty()) {
             isHandled = true; // Đánh dấu đã xử lý
             Intent intent = DetailMonAnActivity.createIntent(this, result);
@@ -176,9 +201,9 @@ public class ScanQRCodeActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         // [HOTFIX 3] Kiểm tra quyền Camera trước khi Resume (Tránh crash khi user tắt quyền trong Settings)
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+        if (capture != null && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             capture.onResume();
-        } else {
+        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Vui lòng cấp quyền Camera để quét mã", Toast.LENGTH_LONG).show();
             finish();
         }
@@ -187,18 +212,24 @@ public class ScanQRCodeActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        capture.onPause();
+        if (capture != null) {
+            capture.onPause();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        capture.onDestroy();
+        if (capture != null) {
+            capture.onDestroy();
+        }
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        capture.onSaveInstanceState(outState);
+        if (capture != null) {
+            capture.onSaveInstanceState(outState);
+        }
     }
 }

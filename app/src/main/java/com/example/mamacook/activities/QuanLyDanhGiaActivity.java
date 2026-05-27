@@ -133,15 +133,31 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     }
 
     private void loadDanhGiaRealtime() {
+        android.util.Log.d("QuanLyDanhGia", "Bắt đầu load đánh giá từ Firebase...");
+
+        // Kiểm tra user đã đăng nhập chưa
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            android.util.Log.e("QuanLyDanhGia", "User chưa đăng nhập!");
+            Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
+            return;
+        }
+        android.util.Log.d("QuanLyDanhGia", "User đã đăng nhập: " + currentUser.getEmail());
+
         danhGiaListener = db.collection("danh_gia")
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
+                        android.util.Log.e("QuanLyDanhGia", "Lỗi: " + error.getMessage());
                         Toast.makeText(this, "Lỗi tải đánh giá: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
 
-                    if (querySnapshot == null) return;
+                    if (querySnapshot == null) {
+                        android.util.Log.e("QuanLyDanhGia", "querySnapshot null");
+                        return;
+                    }
 
+                    android.util.Log.d("QuanLyDanhGia", "Số đánh giá: " + querySnapshot.size());
                     danhGiaGocList.clear();
                     danhGiaGocList.addAll(querySnapshot.getDocuments());
 
@@ -150,6 +166,7 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
     }
 
     private void locDanhGia() {
+        android.util.Log.d("QuanLyDanhGia", "locDanhGia - danhGiaGocList size: " + danhGiaGocList.size());
         danhGiaLocList.clear();
 
         for (DocumentSnapshot doc : danhGiaGocList) {
@@ -170,6 +187,7 @@ public class QuanLyDanhGiaActivity extends AppCompatActivity {
                 danhGiaLocList.add(doc);
             }
         }
+        android.util.Log.d("QuanLyDanhGia", "After filter - danhGiaLocList size: " + danhGiaLocList.size());
         adapter.notifyDataSetChanged();
         tvSoLuongDanhGia.setText("Tổng: " + danhGiaLocList.size() + " đánh giá");
     }

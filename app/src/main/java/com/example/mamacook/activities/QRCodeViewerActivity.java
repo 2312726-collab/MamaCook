@@ -29,7 +29,7 @@ public class QRCodeViewerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_qr_code_viewer);
 
-        dishId = getIntent().getStringExtra("EXTRA_ID");
+        dishId = getIntent().getStringExtra("ID_MON_AN");
         if (dishId == null) {
             Toast.makeText(this, "Không tìm thấy ID món ăn", Toast.LENGTH_SHORT).show();
             finish();

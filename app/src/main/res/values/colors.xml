@@ -46,4 +46,8 @@
 
     <!-- Màu transparent -->
     <color name="transparent">#00000000</color>
+
+    <!-- [VALIDATION HOTFIX] -->
+    <color name="error_red">#D32F2F</color>
+    <color name="warning_orange">#FFA000</color>
 </resources>

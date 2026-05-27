@@ -180,6 +180,14 @@ public class HomeFragment extends Fragment {
                 startActivity(intent);
             });
         }
+
+        FrameLayout btnScanQr = v.findViewById(R.id.btn_scan_qr);
+        if (btnScanQr != null) {
+            btnScanQr.setOnClickListener(view -> {
+                Intent intent = new Intent(getActivity(), com.example.mamacook.activities.ScanQRCodeActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private MonAn parseMonAn(DocumentSnapshot doc) {
@@ -616,6 +624,17 @@ public class HomeFragment extends Fragment {
         if (!isAdded()) return;
         if (pbAiLoading != null) pbAiLoading.setVisibility(show ? View.VISIBLE : View.GONE);
         if (rvCategory != null) rvCategory.setVisibility(show ? View.GONE : View.VISIBLE);
+        }
+
+    private void checkAdminRole() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+        db.collection("nguoi_dung").document(user.getUid()).get().addOnSuccessListener(doc -> {
+            if (isAdded() && doc.exists()) {
+                // Implementation for HomeFragment if needed, e.g. show admin panel
+                // Currently just defined to resolve compilation error
+            }
+        });
     }
 
     private static class LabelSpinnerAdapter extends android.widget.ArrayAdapter<String> {

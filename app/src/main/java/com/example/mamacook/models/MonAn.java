@@ -19,6 +19,7 @@ public class MonAn implements Parcelable {
     private int luot_xem;
     private double rating;
     private int reviewCount;
+    private int tong_luot_danh_gia;
     private double totalScore;
     private double gia_tien;
     private int match_score;
@@ -187,12 +188,16 @@ public class MonAn implements Parcelable {
     // Getters và Setters
     public int getMatch_score() { return match_score; }
     public void setMatch_score(int match_score) { this.match_score = match_score; }
+
     public double getGia_tien() { return gia_tien; }
     public void setGia_tien(double gia_tien) { this.gia_tien = gia_tien; }
+
     public int getKhau_phan() { return khau_phan; }
     public void setKhau_phan(int khau_phan) { this.khau_phan = khau_phan; }
+
     public String getVung_mien() { return vung_mien; }
     public void setVung_mien(String vung_mien) { this.vung_mien = vung_mien; }
+
     public String getId_mon_an() { return id_mon_an; }
     public void setId_mon_an(String id_mon_an) { this.id_mon_an = id_mon_an; }
     public String getTen_mon() { return ten_mon; }
@@ -217,6 +222,10 @@ public class MonAn implements Parcelable {
     public void setRating(double rating) { this.rating = rating; }
     public int getReviewCount() { return reviewCount; }
     public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
+
+    public int getTong_luot_danh_gia() { return tong_luot_danh_gia; }
+    public void setTong_luot_danh_gia(int tong_luot_danh_gia) { this.tong_luot_danh_gia = tong_luot_danh_gia; }
+
     public double getTotalScore() { return totalScore; }
     public void setTotalScore(double totalScore) { this.totalScore = totalScore; }
     public List<BuocNau> getDanh_sach_buoc_nau() { return danh_sach_buoc_nau; }
@@ -227,5 +236,4 @@ public class MonAn implements Parcelable {
     public void setDanh_sach_so_che(List<SoChe> danh_sach_so_che) { this.danh_sach_so_che = danh_sach_so_che; }
     public List<String> getTu_khoa_tim_kiem() { return tu_khoa_tim_kiem; }
     public void setTu_khoa_tim_kiem(List<String> tu_khoa_tim_kiem) { this.tu_khoa_tim_kiem = tu_khoa_tim_kiem; }
-    public int getTong_luot_danh_gia() { return reviewCount; }
 }

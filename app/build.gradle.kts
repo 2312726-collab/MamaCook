@@ -10,6 +10,16 @@ android {
     namespace = "com.example.mamacook"
     compileSdk = 36
 
+    // Hiếu: Định nghĩa signingConfigs TRƯỚC KHI sử dụng trong buildTypes
+    signingConfigs {
+        create("sharedDebug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.mamacook"
         minSdk = 26
@@ -19,7 +29,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Đọc API Key từ local.properties
+        // Đọc API Key từ local.properties (Phần này giữ nguyên của người khác)
         val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
@@ -30,6 +40,10 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            // Sửa lỗi: Sử dụng toán tử [] để truy cập signingConfig một cách chắc chắn hơn
+            signingConfig = signingConfigs["sharedDebug"]
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -38,6 +52,7 @@ android {
             )
         }
     }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
@@ -103,7 +118,13 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // Thư viện cắt ảnh chuyên nghiệp
+    implementation("io.github.canhub:android-image-cropper:4.5.0")
+
+    // THƯ VIỆN CẦN THIẾT CHO AI VÀ KIỂM DUYỆT
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation("com.google.guava:guava:33.0.0-android")
+
     // Luban - Nén ảnh siêu tốc độ
     implementation("com.github.Curzibn:Luban:1.1.8")
 

@@ -54,10 +54,16 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         User user = userList.get(position);
 
+        android.util.Log.d("UserAdminAdapter", "Binding user: " + user.getHo_ten() + ", Role: " + user.getRole());
+
         holder.tvHoTen.setText(user.getHo_ten() != null ? user.getHo_ten() : "Chưa có tên");
         holder.tvEmail.setText(user.getEmail() != null ? user.getEmail() : "Chưa có email");
-        holder.tvVaiTro.setText("Role: " + user.getRole());
-        
+
+        String role = user.getRole();
+        if (role == null) role = user.getVai_tro(); // Fallback
+        if (role == null) role = "user"; // Default
+        holder.tvVaiTro.setText("Vai trò: " + role);
+
         String trangThai = user.getTrang_thai_tai_khoan();
         holder.tvTrangThai.setText("Trạng thái: " + (trangThai == null ? "dang_hoat_dong" : trangThai));
 
@@ -73,7 +79,7 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
             holder.btnKhoaMo.setText("Khóa");
         }
 
-        holder.btnDoiVaiTro.setText("admin".equals(user.getRole()) ? "Đổi thành user" : "Đổi thành admin");
+        holder.btnDoiVaiTro.setText("admin".equals(role) ? "Đổi thành user" : "Đổi thành admin");
 
         holder.btnKhoaMo.setOnClickListener(v -> {
             if (listener != null) listener.onToggleStatus(user);
@@ -130,9 +136,18 @@ public class UserAdminAdapter extends RecyclerView.Adapter<UserAdminAdapter.User
         public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
             User oldUser = oldList.get(oldItemPosition);
             User newUser = newList.get(newItemPosition);
-            return oldUser.getRole().equals(newUser.getRole()) &&
-                   oldUser.getTrang_thai_tai_khoan().equals(newUser.getTrang_thai_tai_khoan()) &&
-                   oldUser.getSo_lan_vi_pham() == newUser.getSo_lan_vi_pham();
+            String oldRole = oldUser.getRole();
+            String newRole = newUser.getRole();
+            String oldStatus = oldUser.getTrang_thai_tai_khoan();
+            String newStatus = newUser.getTrang_thai_tai_khoan();
+
+            boolean roleSame = (oldRole == null && newRole == null) ||
+                    (oldRole != null && oldRole.equals(newRole));
+            boolean statusSame = (oldStatus == null && newStatus == null) ||
+                    (oldStatus != null && oldStatus.equals(newStatus));
+            boolean viPhamSame = oldUser.getSo_lan_vi_pham() == newUser.getSo_lan_vi_pham();
+
+            return roleSame && statusSame && viPhamSame;
         }
     }
 }

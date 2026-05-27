@@ -24,37 +24,46 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_tin_nhan"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="14dp"
-        android:layout_weight="1" />
-
+    <!-- BỌC RECYCLERVIEW VÀ INPUT TRONG 1 LINEARLAYOUT -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/edt_tin_nhan"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_input_field"
-            android:hint="Nhập tin nhắn..."
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_tin_nhan"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="14dp"
+            android:layout_weight="1" />
 
-        <ImageButton
-            android:id="@+id/btn_gui_tin_nhan"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="10dp"
-            android:background="@drawable/bg_notification_circle"
-            android:padding="12dp"
-            android:src="@android:drawable/ic_menu_send" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/edt_tin_nhan"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input_field"
+                android:hint="Nhập tin nhắn..."
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp" />
+
+            <ImageButton
+                android:id="@+id/btn_gui_tin_nhan"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_notification_circle"
+                android:padding="12dp"
+                android:src="@android:drawable/ic_menu_send" />
+        </LinearLayout>
+
     </LinearLayout>
 
 </LinearLayout>
