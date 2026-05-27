@@ -1,5 +1,6 @@
 package com.example.mamacook.activities;
 
+import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -42,6 +43,7 @@ import com.example.mamacook.models.DanhGia;
 import com.example.mamacook.models.MonAn;
 import com.example.mamacook.utils.RatingUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -64,24 +66,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import androidx.recyclerview.widget.GridLayoutManager;
-import com.example.mamacook.adapters.NguyenLieuAdapter;
-import com.example.mamacook.adapters.BuocNauAdapter;
 
 public class DetailMonAnActivity extends AppCompatActivity {
 
     private static final String TAG = "DetailMonAnActivity";
 
-    // =========================================================================
-    // Keys cho Intent extras
-    // =========================================================================
     public static final String EXTRA_ID           = "ID_MON_AN";
     public static final String EXTRA_HINH_ANH     = "HINH_ANH";
     public static final String EXTRA_TEN_MON      = "TEN_MON";
     public static final String EXTRA_THOI_GIAN    = "THOI_GIAN";
     public static final String EXTRA_RATING       = "RATING";
     public static final String EXTRA_REVIEW_COUNT = "REVIEW_COUNT";
-    public static final String EXTRA_NGUYEN_LIEU  = "NGUYEN_LIEU";
 
     private FirebaseFirestore db;
     private ImageView imgMonAn, btnFavoriteDetail, btnAddToPlan, btnAddAttachment, imgPreviewComment, btnQrCode, btnQrCodeFab;
@@ -100,7 +95,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
     private boolean isSaved = false;
     private boolean isInPlan = false;
     private MonAn currentMonAn;
-    private String preSelectedDate, preSelectedMeal;
     private ListenerRegistration monAnListener;
 
     private Uri imageUri;
@@ -128,40 +122,12 @@ public class DetailMonAnActivity extends AppCompatActivity {
         return intent;
     }
 
+    // BỔ SUNG HÀM NÀY ĐỂ SỬA LỖI TRONG SCAN QR CODE
     public static Intent createIntent(Context context, String dishId) {
         Intent intent = new Intent(context, DetailMonAnActivity.class);
         intent.putExtra(EXTRA_ID, dishId);
         return intent;
     }
-
-    public static String buildNguyenLieuTextStatic(MonAn monAn) {
-        if (monAn.getDanh_sach_nguyen_lieu() == null) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        for (MonAn.ChiTietNguyenLieu nl : monAn.getDanh_sach_nguyen_lieu()) {
-            sb.append("• ")
-                    .append(formatSoLuong(nl.so_luong))
-                    .append(" ")
-                    .append(nl.don_vi != null ? nl.don_vi.trim() : "")
-                    .append(" ")
-                    .append(nl.ten_nguyen_lieu)
-                    .append("\n");
-        }
-        return sb.toString().trim();
-    }
-
-    public static String formatSoLuong(double soLuong) {
-        if (soLuong == (long) soLuong) {
-            return String.valueOf((long) soLuong);
-        } else {
-            return String.valueOf(soLuong);
-        }
-    }
-
-    // =========================================================================
-    // Lifecycle
-    // =========================================================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -189,9 +155,6 @@ public class DetailMonAnActivity extends AppCompatActivity {
         });
 
         currentDishId = getIntent().getStringExtra(EXTRA_ID);
-        preSelectedDate = getIntent().getStringExtra("PRE_SELECTED_DATE");
-        preSelectedMeal = getIntent().getStringExtra("PRE_SELECTED_MEAL");
-
         if (TextUtils.isEmpty(currentDishId)) {
             Toast.makeText(this, "Không tìm thấy món ăn!", Toast.LENGTH_SHORT).show();
             finish();
@@ -199,149 +162,51 @@ public class DetailMonAnActivity extends AppCompatActivity {
         }
 
         renderFromIntent();
-        listenRatingRealtime(currentDishId);
         fetchLatestReviews(currentDishId);
         checkIfSaved();
-        checkIfInPlan();
         addToHistory(currentDishId);
     }
 
-    // =========================================================================
-    // BƯỚC 1 — Render tức thì từ Intent
-    // =========================================================================
-
-    private void renderFromIntent() {
-        Intent i = getIntent();
-
-        String hinhAnh = i.getStringExtra(EXTRA_HINH_ANH);
-        if (!TextUtils.isEmpty(hinhAnh)) {
-            if (hinhAnh.startsWith("http")) {
-                Glide.with(this)
-                        .load(hinhAnh)
-                        .placeholder(R.drawable.bg_splash)
-                        .into(imgMonAn);
-            } else {
-                StorageReference ref = FirebaseStorage.getInstance()
-                        .getReference()
-                        .child(hinhAnh);
-                Glide.with(this)
-                        .load(ref)
-                        .placeholder(R.drawable.bg_splash)
-                        .into(imgMonAn);
-            }
-        }
-
-        String tenMon = i.getStringExtra(EXTRA_TEN_MON);
-        if (!TextUtils.isEmpty(tenMon)) {
-            tvTen.setText(tenMon);
-        }
-
-        int thoiGian = i.getIntExtra(EXTRA_THOI_GIAN, 0);
-        if (thoiGian > 0) {
-            tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", thoiGian));
-        }
-
-        String rating      = i.getStringExtra(EXTRA_RATING);
-        int    reviewCount = i.getIntExtra(EXTRA_REVIEW_COUNT, 0);
-        if (!TextUtils.isEmpty(rating)) {
-            updateRatingUI(rating, reviewCount);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Đăng ký lắng nghe mỗi khi Activity hiển thị lại
+        if (currentDishId != null) {
+            listenRatingRealtime(currentDishId);
         }
     }
-
-    // =========================================================================
-    // Rating UI
-    // =========================================================================
-
-    private void updateRatingUI(String rating, int count) {
-        tvRatingInfo.setText(
-                String.format(new Locale("vi", "VN"), "🕒 %s ⭐ (%d)", rating, count));
-        tvDiemTrungBinh.setText("⭐ " + rating);
-        if (tvSoDanhGia != null) {
-            tvSoDanhGia.setText(String.format(new Locale("vi", "VN"), "(%d đánh giá)", count));
-        }
-    }
-
-    // =========================================================================
-    // Setup UI
-    // =========================================================================
 
     private void initViews() {
         imgMonAn           = findViewById(R.id.img_detail_mon_an);
         tvTen              = findViewById(R.id.tv_detail_ten);
         tvRatingInfo       = findViewById(R.id.tv_detail_rating_info);
         tvThoiGian         = findViewById(R.id.tv_detail_thoi_gian);
-        tvDiemTrungBinh    = findViewById(R.id.tvDiemTrungBinh);
-        tvXemTatCa         = findViewById(R.id.tvXemTatCa);
-        rvDanhGia          = findViewById(R.id.rv_danh_gia);
-        etBinhLuan         = findViewById(R.id.et_binh_luan);
-        rbChonSao          = findViewById(R.id.rb_chon_sao);
-        btnGuiBinhLuan     = findViewById(R.id.btn_gui_binh_luan);
+        tvDiemTrungBinh    = findViewById(R.id.tv_detail_diem_trung_binh);
+        tvXemTatCa         = findViewById(R.id.tv_detail_xem_tat_ca);
+        rvDanhGia          = findViewById(R.id.rv_detail_danh_gia);
+        etBinhLuan         = findViewById(R.id.et_detail_binh_luan);
+        rbChonSao          = findViewById(R.id.rb_detail_chon_sao);
+        btnGuiBinhLuan     = findViewById(R.id.btn_detail_gui_binh_luan);
         btnFavoriteDetail  = findViewById(R.id.btn_favorite_detail);
         btnAddToPlan       = findViewById(R.id.btn_add_to_plan);
-        btnAddAttachment   = findViewById(R.id.btn_add_attachment);
-        imgPreviewComment  = findViewById(R.id.img_preview_comment);
-        layoutPreviewImage = findViewById(R.id.layout_preview_image);
-        layoutInputComment = findViewById(R.id.layout_input_comment);
+        btnAddAttachment   = findViewById(R.id.btn_detail_add_attachment);
+        imgPreviewComment  = findViewById(R.id.img_detail_preview_comment);
+        layoutPreviewImage = findViewById(R.id.layout_detail_preview_image);
+        layoutInputComment = findViewById(R.id.layout_detail_input_comment);
         btnQrCode          = findViewById(R.id.btn_qr_code);
         btnQrCodeFab       = findViewById(R.id.btn_qr_code_fab);
-        rvNguyenLieu = findViewById(R.id.rv_nguyen_lieu);
-        rvBuocNau = findViewById(R.id.rv_buoc_nau);
-        tvDoKho = findViewById(R.id.tv_detail_do_kho);
-        tvKhauPhan = findViewById(R.id.tv_detail_khau_phan);
-        tvRegion = findViewById(R.id.tv_detail_region);
-        tvSoDanhGia = findViewById(R.id.tv_so_danh_gia);
-        tvChuanBi = findViewById(R.id.tv_detail_chuan_bi);
+        rvNguyenLieu       = findViewById(R.id.rv_detail_nguyen_lieu);
+        rvBuocNau          = findViewById(R.id.rv_detail_buoc_nau);
+        tvDoKho            = findViewById(R.id.tv_detail_do_kho);
+        tvKhauPhan         = findViewById(R.id.tv_detail_khau_phan);
+        tvRegion           = findViewById(R.id.tv_detail_region);
+        tvSoDanhGia        = findViewById(R.id.tv_detail_so_danh_gia);
+        tvChuanBi          = findViewById(R.id.tv_detail_chuan_bi);
         btnXemThemNguyenLieu = findViewById(R.id.btn_detail_xem_them_nguyen_lieu);
         layoutBuocNauHeader = findViewById(R.id.layout_detail_buoc_nau_header);
-        ivBuocNauArrow = findViewById(R.id.iv_detail_buoc_nau_arrow);
-
-        btnEditMonAn = findViewById(R.id.btn_edit_mon_an);
-        btnDeleteMonAn = findViewById(R.id.btn_delete_mon_an);
-    }
-
-    private void checkUserRole() {
-        // 1. Mặc định ban đầu (Dành cho User thường hoặc chưa đăng nhập)
-        if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
-        if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
-        if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
-        if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
-
-        if (currentUserId == null) return;
-
-        // 2. Gọi đúng bảng "nguoi_dung" bằng Document ID (UID)
-        db.collection("nguoi_dung").document(currentUserId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot != null && documentSnapshot.exists()) {
-                        String role = documentSnapshot.getString("role");
-
-                        // 3. Nếu kiểm tra đúng là Admin
-                        if ("admin".equalsIgnoreCase(role)) {
-            // BẬT 3 nút của Admin (Sửa, Xóa, QR)
-            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.VISIBLE);
-            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.VISIBLE);
-            if (btnQrCode != null) btnQrCode.setVisibility(View.VISIBLE);
-            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.GONE);
-
-            // ẨN 2 nút của User (Yêu thích, Kế hoạch)
-            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.GONE);
-            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.GONE);
-        } else {
-            // Nếu role không phải admin hoặc null -> giữ nguyên mặc định user
-            if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
-            if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
-            if (btnEditMonAn != null) btnEditMonAn.setVisibility(View.GONE);
-            if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(View.GONE);
-            if (btnQrCode != null) btnQrCode.setVisibility(View.GONE);
-            if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(View.VISIBLE);
-        }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Lỗi kiểm tra quyền: " + e.getMessage());
-                    // Mặc định an toàn nếu lỗi mạng/DB
-                    if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(View.VISIBLE);
-                    if (btnAddToPlan != null) btnAddToPlan.setVisibility(View.VISIBLE);
-                });
+        ivBuocNauArrow      = findViewById(R.id.iv_detail_buoc_nau_arrow);
+        btnEditMonAn        = findViewById(R.id.btn_edit_mon_an);
+        btnDeleteMonAn      = findViewById(R.id.btn_delete_mon_an);
     }
 
     private void renderFromIntent() {
@@ -355,17 +220,25 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
             }
         }
-        tvTen.setText(i.getStringExtra(EXTRA_TEN_MON));
+        String tenMon = i.getStringExtra(EXTRA_TEN_MON);
+        if (!TextUtils.isEmpty(tenMon)) tvTen.setText(tenMon);
+
         int thoiGian = i.getIntExtra(EXTRA_THOI_GIAN, 0);
-        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", thoiGian));
-        updateRatingUI(i.getStringExtra(EXTRA_RATING), i.getIntExtra(EXTRA_REVIEW_COUNT, 0));
+        if (thoiGian > 0) tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", thoiGian));
+
+        String rating = i.getStringExtra(EXTRA_RATING);
+        int reviewCount = i.getIntExtra(EXTRA_REVIEW_COUNT, 0);
+        if (!TextUtils.isEmpty(rating)) updateRatingUI(rating, reviewCount);
     }
 
     private void updateRatingUI(String rating, int count) {
-        // Ẩn các thông tin rating dư thừa theo yêu cầu tinh chỉnh UI
-        if (tvRatingInfo != null) tvRatingInfo.setVisibility(View.GONE);
-        if (tvDiemTrungBinh != null) tvDiemTrungBinh.setVisibility(View.GONE);
-        if (tvSoDanhGia != null) tvSoDanhGia.setVisibility(View.GONE);
+        if (tvRatingInfo != null) {
+            tvRatingInfo.setText(String.format(new Locale("vi", "VN"), "🕒 %s ⭐ (%d)", rating, count));
+        }
+        if (tvDiemTrungBinh != null) tvDiemTrungBinh.setText("⭐ " + rating);
+        if (tvSoDanhGia != null) {
+            tvSoDanhGia.setText(String.format(new Locale("vi", "VN"), "(%d đánh giá)", count));
+        }
     }
 
     private void setupToolbar() {
@@ -378,36 +251,27 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        // Nguyên liệu Grid 2 cột
         GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
         rvNguyenLieu.setLayoutManager(gridLayoutManager);
         nguyenLieuAdapter = new NguyenLieuAdapter(new ArrayList<>());
         rvNguyenLieu.setAdapter(nguyenLieuAdapter);
 
-        // Bước nấu Linear
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
-        rvBuocNau.setLayoutManager(linearLayoutManager);
+        rvBuocNau.setLayoutManager(new LinearLayoutManager(this));
         buocNauAdapter = new BuocNauAdapter(new ArrayList<>());
         rvBuocNau.setAdapter(buocNauAdapter);
 
-        // Comment Horizontal List
-        LinearLayoutManager horizontalLayout = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
-        rvDanhGia.setLayoutManager(horizontalLayout);
+        rvDanhGia.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         adapterBinhLuan = new BinhLuanNgangAdapter(danhSachBinhLuan);
         rvDanhGia.setAdapter(adapterBinhLuan);
     }
 
     private void setupScrollBehavior() {
         NestedScrollView scrollDetail = findViewById(R.id.scroll_detail);
-        if (scrollDetail == null || etBinhLuan == null) {
-            return;
-        }
+        if (scrollDetail == null || etBinhLuan == null) return;
 
-        // Khi khung bao quanh được click -> focus vào ô nhập
         if (layoutInputComment != null) {
             layoutInputComment.setOnClickListener(v -> {
                 etBinhLuan.requestFocus();
-                // Hiển thị bàn phím thủ công nếu cần
                 android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 if (imm != null) imm.showSoftInput(etBinhLuan, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
             });
@@ -415,34 +279,29 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
         etBinhLuan.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
-                etBinhLuan.postDelayed(
-                        () -> scrollDetail.fullScroll(View.FOCUS_DOWN), 400);
+                etBinhLuan.postDelayed(() -> scrollDetail.fullScroll(View.FOCUS_DOWN), 400);
             }
         });
-
-        scrollDetail.addOnLayoutChangeListener(
-                (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
-                    if (bottom < oldBottom) {
-                        scrollDetail.postDelayed(
-                                () -> scrollDetail.fullScroll(View.FOCUS_DOWN), 100);
-                    }
-                });
     }
 
     private void setupClickListeners() {
-        if (btnAddAttachment != null) {
-            btnAddAttachment.setOnClickListener(v -> showAttachmentMenu());
+        if (btnAddAttachment != null) btnAddAttachment.setOnClickListener(v -> showAttachmentMenu());
+        if (btnFavoriteDetail != null) btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
+        if (btnAddToPlan != null) btnAddToPlan.setOnClickListener(v -> toggleCookingPlan());
+        if (btnGuiBinhLuan != null) btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
+        if (btnDeleteMonAn != null) btnDeleteMonAn.setOnClickListener(v -> deleteMonAn());
+        
+        // CHỈNH SỬA TẠI ĐÂY: Thêm sự kiện Click cho nút Edit
+        if (btnEditMonAn != null) {
+            btnEditMonAn.setOnClickListener(v -> {
+                if (currentDishId != null) {
+                    Intent intent = AddEditMonAnActivity.createIntent(this, currentDishId);
+                    startActivity(intent);
+                    overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+                }
+            });
         }
-
-        if (btnFavoriteDetail != null) {
-            btnFavoriteDetail.setOnClickListener(v -> toggleSaveRecipe());
-        }
-        if (btnAddToPlan != null) {
-            btnAddToPlan.setOnClickListener(v -> toggleCookingPlan());
-        }
-
-        btnGuiBinhLuan.setOnClickListener(v -> guiBinhLuan());
-
+        
         if (tvXemTatCa != null) {
             tvXemTatCa.setOnClickListener(v -> {
                 Intent intent = new Intent(this, TatCaBinhLuanActivity.class);
@@ -452,7 +311,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
             });
         }
 
-        View btnRemovePreview = findViewById(R.id.btn_remove_preview);
+        View btnRemovePreview = findViewById(R.id.btn_detail_remove_preview);
         if (btnRemovePreview != null) {
             btnRemovePreview.setOnClickListener(v -> {
                 imageUri = null;
@@ -460,356 +319,100 @@ public class DetailMonAnActivity extends AppCompatActivity {
             });
         }
 
-        // Xem thêm nguyên liệu
-        if (btnXemThemNguyenLieu != null) {
-            btnXemThemNguyenLieu.setOnClickListener(v -> toggleNguyenLieu());
-        }
+        if (btnXemThemNguyenLieu != null) btnXemThemNguyenLieu.setOnClickListener(v -> toggleNguyenLieu());
+        if (layoutBuocNauHeader != null) layoutBuocNauHeader.setOnClickListener(v -> toggleBuocNau());
 
-        // Toggle các bước nấu
-        if (layoutBuocNauHeader != null) {
-            layoutBuocNauHeader.setOnClickListener(v -> toggleBuocNau());
-        }
-        Intent intent = new Intent(this, QRCodeViewerActivity.class);
-        intent.putExtra("EXTRA_ID", currentDishId);
-        startActivity(intent);
+        View.OnClickListener qrAction = v -> {
+            Intent intent = new Intent(this, QRCodeViewerActivity.class);
+            intent.putExtra("EXTRA_ID", currentDishId);
+            startActivity(intent);
+        };
+        if (btnQrCode != null) btnQrCode.setOnClickListener(qrAction);
+        if (btnQrCodeFab != null) btnQrCodeFab.setOnClickListener(qrAction);
     }
 
-    private void deleteMonAn() {
-        if (currentDishId == null) return;
-        ProgressDialog pd = new ProgressDialog(this);
-        pd.setMessage("Đang xóa...");
-        pd.show();
-        db.collection("mon_an").document(currentDishId).delete()
-                .addOnSuccessListener(aVoid -> {
-                    pd.dismiss();
-                    Toast.makeText(this, "Đã xóa món ăn thành công!", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    pd.dismiss();
-                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    private void initImageLaunchers() {
-        galleryLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        imageUri = result.getData().getData();
-                        showPreview();
-                    }
-                });
-
-        cameraLauncher = registerForActivityResult(
-                new ActivityResultContracts.TakePicture(),
-                result -> {
-                    if (Boolean.TRUE.equals(result)) {
-                        showPreview();
-                    }
-                });
-    }
-
-    private void showPreview() {
-        if (imageUri != null) {
-            Glide.with(this).load(imageUri).into(imgPreviewComment);
-            layoutPreviewImage.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void showAttachmentMenu() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_attachment, null);
-
-        view.findViewById(R.id.btnChupHinh).setOnClickListener(v -> {
-            dialog.dismiss();
-            try {
-                File photoFile = createImageFile();
-                imageUri = FileProvider.getUriForFile(
-                        this, getPackageName() + ".fileprovider", photoFile);
-                cameraLauncher.launch(imageUri);
-            } catch (IOException ex) {
-                Toast.makeText(this, "Lỗi tạo file ảnh", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        view.findViewById(R.id.btnChonAnh).setOnClickListener(v -> {
-            dialog.dismiss();
-            Intent intent = new Intent(
-                    Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            galleryLauncher.launch(intent);
-        });
-
-        dialog.setContentView(view);
-        dialog.show();
-    }
-
-    private File createImageFile() throws IOException {
-        String timeStamp = new SimpleDateFormat(
-                "yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-        File storageDir = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
-        return File.createTempFile("JPEG_" + timeStamp + "_", ".jpg", storageDir);
-    }
-
-    // =========================================================================
-    // Review / Bình luận
-    // =========================================================================
-
-    private void fetchLatestReviews(String dishId) {
-        db.collection("danh_gia")
-                .whereEqualTo("id_mon_an", dishId)
-                .whereEqualTo("trang_thai", "hien_thi")
-                .orderBy("ngay_danh_gia", Query.Direction.DESCENDING)
-                .limit(5)
-                .addSnapshotListener(this, (value, error) -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    if (error != null) {
-                        Log.e(TAG, "Lỗi load bình luận: " + error.getMessage());
-                        return;
-                    }
-                    if (value != null) {
-                        danhSachBinhLuan.clear();
-                        for (QueryDocumentSnapshot doc : value) {
-                            DanhGia dg = doc.toObject(DanhGia.class);
-                            danhSachBinhLuan.add(dg);
-                        }
-                        adapterBinhLuan.notifyDataSetChanged();
-                    }
-                });
-    }
-
-    // =========================================================================
-    // THAY ĐỔI: guiBinhLuan — không gọi AI ở đây, chỉ validate và lưu ngay
-    // =========================================================================
-    private void guiBinhLuan() {
-        if (currentUserId == null) {
-            Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String noiDung = etBinhLuan.getText().toString().trim();
-        float  soSao   = rbChonSao.getRating();
-
-        if (TextUtils.isEmpty(noiDung)) {
-            etBinhLuan.setError("Nhập nội dung bình luận!");
-            etBinhLuan.requestFocus();
-            return;
-        }
-
-        if (soSao == 0) {
-            Toast.makeText(this, "Vui lòng chọn số sao đánh giá!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Hiện loading, chặn nút gửi
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Đang gửi bình luận...");
-        progressDialog.setCancelable(false);
-        progressDialog.show();
-        btnGuiBinhLuan.setEnabled(false);
-
-        // Upload ảnh nếu có, không thì lưu thẳng
-        if (imageUri != null) {
-            compressAndUploadImage(imageUri, noiDung, soSao);
-        } else {
-            saveReviewToFirestore(noiDung, soSao, null);
-        }
-    }
-
-    private void compressAndUploadImage(Uri uri, String noiDung, float soSao) {
-        progressDialog.setMessage("Đang xử lý và nén ảnh...");
-
-        new Thread(() -> {
-            try {
-                java.io.InputStream inputStream = getContentResolver().openInputStream(uri);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                if (inputStream != null) {
-                    inputStream.close();
-                }
-
-                if (bitmap == null) {
-                    runOnUiThread(() -> {
-                        dismissProgress();
-                        Toast.makeText(this, "Không thể đọc được ảnh!", Toast.LENGTH_SHORT).show();
-                    });
-                    return;
-                }
-
-                int   maxSize = 1024;
-                float ratio   = Math.min(
-                        (float) maxSize / bitmap.getWidth(),
-                        (float) maxSize / bitmap.getHeight());
-                if (ratio < 1.0f) {
-                    bitmap = Bitmap.createScaledBitmap(
-                            bitmap,
-                            (int) (bitmap.getWidth()  * ratio),
-                            (int) (bitmap.getHeight() * ratio),
-                            true);
-                }
-
-                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, baos);
-                byte[] data = baos.toByteArray();
-                bitmap.recycle();
-
-                runOnUiThread(() -> uploadBytesToFirebase(data, noiDung, soSao));
-
-            } catch (Exception e) {
-                Log.e(TAG, "Lỗi xử lý ảnh: " + e.getMessage());
-                runOnUiThread(() -> {
-                    dismissProgress();
-                    Toast.makeText(this, "Lỗi nén ảnh!", Toast.LENGTH_SHORT).show();
-                });
-            }
-        }).start();
-    }
-
-    private void uploadBytesToFirebase(byte[] data, String noiDung, float soSao) {
-        StorageReference storageRef = FirebaseStorage.getInstance()
-                .getReference()
-                .child("reviews/" + System.currentTimeMillis() + ".jpg");
-
-        storageRef.putBytes(data)
-                .addOnProgressListener(snapshot -> {
-                    double progress = (100.0 * snapshot.getBytesTransferred())
-                            / snapshot.getTotalByteCount();
-                    if (progressDialog != null && progressDialog.isShowing()) {
-                        progressDialog.setMessage("Đang tải ảnh lên: " + (int) progress + "%");
-                    }
-                })
-                .addOnSuccessListener(taskSnapshot -> {
-                    if (progressDialog != null && progressDialog.isShowing()) {
-                        progressDialog.setMessage("Đang lưu bình luận...");
-                    }
-                    storageRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
-                        saveReviewToFirestore(noiDung, soSao, downloadUri.toString());
-                    });
-                })
-                .addOnFailureListener(e -> {
-                    dismissProgress();
-                    Log.e(TAG, "Lỗi upload ảnh: " + e.getMessage());
-                    Toast.makeText(this, "Lỗi tải ảnh lên!", Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    // =========================================================================
-    // THAY ĐỔI: Lưu ngay với "cho_duyet" → toast → gọi AI kiểm duyệt ngầm
-    // =========================================================================
-    private void saveReviewToFirestore(String content, float stars, String imageUrl) {
-        FirebaseUser user   = FirebaseAuth.getInstance().getCurrentUser();
-        String name   = (user != null && !TextUtils.isEmpty(user.getDisplayName()))
-                ? user.getDisplayName() : "Người dùng";
-        String avatar = (user != null && user.getPhotoUrl() != null)
-                ? user.getPhotoUrl().toString() : null;
-
-        Map<String, Object> review = new HashMap<>();
-        review.put("id_nguoi_dung",  currentUserId);
-        review.put("ten_nguoi_dung", name);
-        review.put("avatar_url",     avatar);
-        review.put("id_mon_an",      currentDishId);
-        review.put("noi_dung",       content);
-        review.put("so_sao",         stars);
-        review.put("hinh_anh_url",   imageUrl);
-        review.put("trang_thai",     "cho_duyet"); // Lưu trước, chờ AI duyệt
-        review.put("ngay_danh_gia",  FieldValue.serverTimestamp());
-
-        db.collection("danh_gia").add(review)
-                .addOnSuccessListener(documentReference -> {
-                    dismissProgress();
-                    etBinhLuan.setText("");
-                    rbChonSao.setRating(0);
-                    imageUri = null;
-                    layoutPreviewImage.setVisibility(View.GONE);
-                    Toast.makeText(this, "Đã gửi bình luận, đang kiểm duyệt...", Toast.LENGTH_SHORT).show();
-
-                    // Lắng nghe Cloud Function cập nhật trang_thai
-                    String docId = documentReference.getId();
-                    final float finalStars = stars;
-                    documentReference.addSnapshotListener((snap, err) -> {
-                        if (snap == null || !snap.exists()) return;
-                        String trangThai = snap.getString("trang_thai");
-                        if (trangThai == null || trangThai.equals("cho_duyet")) return;
-
-                        // Cloud Function đã duyệt xong
-                        if (trangThai.equals("hien_thi")) {
-                            updateTotalRating(finalStars);
-                            Toast.makeText(this, "Bình luận đã được duyệt!", Toast.LENGTH_SHORT).show();
-                        } else if (trangThai.equals("vi_pham")) {
-                            Toast.makeText(this, "Bình luận bị từ chối do vi phạm nội quy.", Toast.LENGTH_LONG).show();
-                        }
-                        // Hủy listener sau khi đã xử lý xong
-                        documentReference.addSnapshotListener((s, e) -> {}).remove();
-                    });
-                })
-                .addOnFailureListener(e -> {
-                    dismissProgress();
-                    Log.e(TAG, "Lỗi lưu bình luận: " + e.getMessage());
-                    Toast.makeText(this, "Lỗi lưu bình luận!", Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    private void dismissProgress() {
-        if (progressDialog != null && progressDialog.isShowing()) {
-            progressDialog.dismiss();
-        }
-        if (btnGuiBinhLuan != null) {
-            btnGuiBinhLuan.setEnabled(true);
-        }
-    }
-
-    private void updateTotalRating(float newStar) {
-        DocumentReference monAnRef = db.collection("mon_an").document(currentDishId);
-
-        db.runTransaction(transaction -> {
-            DocumentSnapshot snapshot = transaction.get(monAnRef);
-            if (!snapshot.exists()) {
-                return null;
-            }
-
-            Double totalScoreVal  = snapshot.getDouble("totalScore");
-            Long   reviewCountVal = snapshot.getLong("reviewCount");
-
-            double currentTotalScore  = totalScoreVal  != null ? totalScoreVal  : 0.0;
-            long   currentReviewCount = reviewCountVal != null ? reviewCountVal : 0L;
-
-            double newTotalScore  = currentTotalScore + newStar;
-            long   newReviewCount = currentReviewCount + 1;
-            double newRating      = Math.round(
-                    (newTotalScore / newReviewCount) * 10.0) / 10.0;
-
-            transaction.update(monAnRef,
-                    "totalScore",  newTotalScore,
-                    "reviewCount", newReviewCount,
-                    "rating",      newRating);
-            return null;
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Transaction rating thất bại: " + e.getMessage());
-        });
-    }
-
-    private void checkIfInPlan() {
+    private void checkUserRole() {
         if (currentUserId == null) return;
-        db.collection("ke_hoach_nau_an")
-                .document(currentUserId + "_" + currentDishId)
+        db.collection("nguoi_dung").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        String role = documentSnapshot.getString("role");
+                        boolean isAdmin = "admin".equalsIgnoreCase(role);
+
+                        if (btnEditMonAn != null) btnEditMonAn.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+                        if (btnDeleteMonAn != null) btnDeleteMonAn.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+                        if (btnQrCode != null) btnQrCode.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+                        if (btnQrCodeFab != null) btnQrCodeFab.setVisibility(isAdmin ? View.GONE : View.VISIBLE);
+                        if (btnFavoriteDetail != null) btnFavoriteDetail.setVisibility(isAdmin ? View.GONE : View.VISIBLE);
+                        if (btnAddToPlan != null) btnAddToPlan.setVisibility(isAdmin ? View.GONE : View.VISIBLE);
+                    }
+                });
+    }
+
+    private void updateUI(MonAn monAn) {
+        if (monAn == null) return;
+
+        tvTen.setText(monAn.getTen_mon());
+        String hinhAnh = monAn.getHinh_anh();
+        if (!TextUtils.isEmpty(hinhAnh)) {
+            if (hinhAnh.startsWith("http")) {
+                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            } else {
+                StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
+            }
+        }
+
+        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", monAn.getThoi_gian_nau()));
+        tvDoKho.setText(TextUtils.isEmpty(monAn.getDo_kho()) ? "Chưa rõ" : monAn.getDo_kho());
+        tvKhauPhan.setText(monAn.getKhau_phan() > 0 ? monAn.getKhau_phan() + " người" : "Chưa rõ");
+        tvRegion.setText("Vùng miền: " + (TextUtils.isEmpty(monAn.getVung_mien()) ? "Chưa rõ" : monAn.getVung_mien()));
+
+        if (monAn.getDanh_sach_so_che() != null && !monAn.getDanh_sach_so_che().isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (MonAn.SoChe sc : monAn.getDanh_sach_so_che()) {
+                if (!TextUtils.isEmpty(sc.tieu_de)) sb.append("• ").append(sc.tieu_de).append(":\n");
+                sb.append(sc.noi_dung).append("\n\n");
+            }
+            tvChuanBi.setText(sb.toString().trim());
+            tvChuanBi.setVisibility(View.VISIBLE);
+        } else {
+            tvChuanBi.setText("Không có thông tin sơ chế.");
+        }
+
+        if (monAn.getDanh_sach_nguyen_lieu() != null) {
+            fullNguyenLieuList = monAn.getDanh_sach_nguyen_lieu();
+            updateNguyenLieuDisplay();
+        }
+
+        if (monAn.getDanh_sach_buoc_nau() != null) {
+            buocNauAdapter = new BuocNauAdapter(monAn.getDanh_sach_buoc_nau());
+            rvBuocNau.setAdapter(buocNauAdapter);
+        }
+
+        updateRatingUI(RatingUtils.getRatingOnly(monAn), monAn.getReviewCount());
+    }
+
+    private void listenRatingRealtime(String id) {
+        if (monAnListener != null) monAnListener.remove();
+        monAnListener = db.collection("mon_an").document(id)
                 .addSnapshotListener(this, (doc, error) -> {
                     if (isFinishing() || isDestroyed()) return;
-                    if (doc != null) {
-                        isInPlan = doc.exists();
-                        updatePlanButtonUI();
+                    if (error != null || doc == null || !doc.exists()) return;
+                    currentMonAn = doc.toObject(MonAn.class);
+                    if (currentMonAn != null) {
+                        currentMonAn.setId_mon_an(doc.getId());
+                        updateUI(currentMonAn);
                     }
                 });
     }
 
-    private void updatePlanButtonUI() {
-        if (btnAddToPlan == null) return;
-        if (isInPlan) {
-            btnAddToPlan.setBackgroundResource(R.drawable.bg_header_button_plan_selected);
-            btnAddToPlan.setColorFilter(Color.parseColor("#FF6600"));
-        } else {
-            btnAddToPlan.setBackgroundResource(R.drawable.bg_header_button_glass);
-            btnAddToPlan.setColorFilter(Color.WHITE);
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (monAnListener != null) {
+            monAnListener.remove();
+            monAnListener = null;
         }
     }
 
@@ -818,36 +421,38 @@ public class DetailMonAnActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (currentMonAn == null) {
+            Toast.makeText(this, "Đang tải dữ liệu món ăn, vui lòng đợi...", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        if (currentMonAn == null) return;
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            Calendar selectedCal = Calendar.getInstance();
+            selectedCal.set(year, month, dayOfMonth, 12, 0, 0);
+            Date selectedDate = selectedCal.getTime();
 
-        String idPlan = currentUserId + "_" + currentDishId;
-        if (isInPlan) {
-            db.collection("ke_hoach_nau_an").document(idPlan).delete()
-                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã xóa khỏi kế hoạch!", Toast.LENGTH_SHORT).show());
-        } else {
             String[] types = {"Sáng", "Trưa", "Tối"};
             new AlertDialog.Builder(this)
                     .setTitle("Chọn buổi nấu ăn")
                     .setItems(types, (dialog, which) -> {
-                        String mealType;
-                        if (which == 0) mealType = "Sang";
-                        else if (which == 1) mealType = "Trua";
-                        else mealType = "Toi";
-
-                        saveToCookingPlan(idPlan, mealType);
+                        String mealType = (which == 0) ? "Sang" : (which == 1) ? "Trua" : "Toi";
+                        String idPlan = currentUserId + "_" + currentDishId + "_" + (selectedDate.getTime() / 1000) + "_" + mealType;
+                        saveToCookingPlan(idPlan, mealType, selectedDate);
                     })
                     .show();
-        }
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+        datePickerDialog.setTitle("Chọn ngày nấu ăn");
+        datePickerDialog.show();
     }
 
-    private void saveToCookingPlan(String idPlan, String mealType) {
+    private void saveToCookingPlan(String idPlan, String mealType, Date selectedDate) {
         Map<String, Object> plan = new HashMap<>();
         plan.put("id_nguoi_dung", currentUserId);
         plan.put("id_mon_an", currentDishId);
         plan.put("ten_mon", currentMonAn.getTen_mon());
         plan.put("hinh_anh", currentMonAn.getHinh_anh());
-        plan.put("ngay_lap_ke_hoach", FieldValue.serverTimestamp());
+        plan.put("ngay_lap_ke_hoach", new Timestamp(selectedDate));
         plan.put("trang_thai", "dang_di_cho");
         plan.put("buoi", mealType);
 
@@ -865,118 +470,66 @@ public class DetailMonAnActivity extends AppCompatActivity {
         plan.put("danh_sach_nguyen_lieu", listNL);
 
         db.collection("ke_hoach_nau_an").document(idPlan).set(plan)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã thêm vào kế hoạch " + (mealType.equals("Sang") ? "Sáng" : mealType.equals("Trua") ? "Trưa" : "Tối") + "!", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Đã thêm vào kế hoạch!", Toast.LENGTH_SHORT).show());
     }
 
-    private void listenRatingRealtime(String id) {
-        db.collection("mon_an").document(id)
-                .addSnapshotListener(this, (doc, error) -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    if (error != null) {
-                        Log.e(TAG, "Lỗi lắng nghe món ăn: " + error.getMessage());
-                        return;
-                    }
-                    if (doc == null || !doc.exists()) {
-                        return;
-                    }
-                    currentMonAn = doc.toObject(MonAn.class);
-                    if (currentMonAn != null) {
-                        currentMonAn.setId_mon_an(doc.getId());
-                        updateRatingUI(RatingUtils.getRatingOnly(currentMonAn), currentMonAn.getReviewCount());
+    private void deleteMonAn() {
+        if (currentDishId == null) return;
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận xóa")
+                .setMessage("Bạn có chắc muốn xóa món ăn này vĩnh viễn?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    ProgressDialog pd = new ProgressDialog(this);
+                    pd.setMessage("Đang xóa...");
+                    pd.show();
+                    db.collection("mon_an").document(currentDishId).delete()
+                            .addOnSuccessListener(aVoid -> {
+                                pd.dismiss();
+                                Toast.makeText(this, "Đã xóa món ăn thành công!", Toast.LENGTH_SHORT).show();
+                                finish();
+                            })
+                            .addOnFailureListener(e -> {
+                                pd.dismiss();
+                                Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            });
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
 
-                        tvTen.setText(currentMonAn.getTen_mon());
-                        tvThoiGian.setText(String.format(Locale.getDefault(), "%d phút", currentMonAn.getThoi_gian_nau()));
+    private void updateNguyenLieuDisplay() {
+        if (fullNguyenLieuList == null || fullNguyenLieuList.isEmpty()) return;
+        List<MonAn.ChiTietNguyenLieu> displayList = (isShowingAllNguyenLieu || fullNguyenLieuList.size() <= 6)
+                ? fullNguyenLieuList : fullNguyenLieuList.subList(0, 6);
 
-                        // Cập nhật nguyên liệu - THAY ĐỔI
-                        if (currentMonAn.getDanh_sach_nguyen_lieu() != null) {
-                            fullNguyenLieuList = currentMonAn.getDanh_sach_nguyen_lieu();
-                            updateNguyenLieuDisplay();
-                        }
-
-                        // Cập nhật bước nấu
-                        if (currentMonAn.getDanh_sach_buoc_nau() != null) {
-                            buocNauAdapter = new BuocNauAdapter(currentMonAn.getDanh_sach_buoc_nau());
-                            rvBuocNau.setAdapter(buocNauAdapter);
-                            rvBuocNau.setVisibility(View.VISIBLE);
-                        }
-
-    private void updateUI(MonAn monAn) {
-        if (monAn == null) return;
-
-        // 1. Cập nhật Tên và Ảnh
-        tvTen.setText(monAn.getTen_mon());
-        String hinhAnh = monAn.getHinh_anh();
-        if (!TextUtils.isEmpty(hinhAnh)) {
-            if (hinhAnh.startsWith("http")) {
-                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+        if (btnXemThemNguyenLieu != null) {
+            if (fullNguyenLieuList.size() <= 6) {
+                btnXemThemNguyenLieu.setVisibility(View.GONE);
             } else {
-                StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
-                Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
+                btnXemThemNguyenLieu.setVisibility(View.VISIBLE);
+                btnXemThemNguyenLieu.setText(isShowingAllNguyenLieu ? "- Thu gọn" : "+ Xem thêm " + (fullNguyenLieuList.size() - 6) + " nguyên liệu");
             }
         }
-
-        // 2. Cập nhật 3 cột thông tin (Thời gian, Độ khó, Khẩu phần)
-        tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", monAn.getThoi_gian_nau()));
-
-        String dk = monAn.getDo_kho();
-        tvDoKho.setText(TextUtils.isEmpty(dk) ? "Chưa rõ" : dk);
-
-        int kp = monAn.getKhau_phan();
-        tvKhauPhan.setText(kp > 0 ? kp + " người" : "Chưa rõ");
-
-        String vm = monAn.getVung_mien();
-        tvRegion.setText("Vùng miền: " + (TextUtils.isEmpty(vm) ? "Chưa rõ" : vm));
-
-        // 3. Cập nhật phần Sơ chế (Chuẩn bị) - Xử lý List SoChe
-        if (monAn.getDanh_sach_so_che() != null && !monAn.getDanh_sach_so_che().isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            for (MonAn.SoChe sc : monAn.getDanh_sach_so_che()) {
-                if (!TextUtils.isEmpty(sc.tieu_de)) {
-                    sb.append("• ").append(sc.tieu_de).append(":\n");
-                }
-                sb.append(sc.noi_dung).append("\n\n");
-            }
-            tvChuanBi.setText(sb.toString().trim());
-            tvChuanBi.setVisibility(View.VISIBLE);
-        } else {
-            tvChuanBi.setText("Không có thông tin sơ chế.");
-        }
-
-        // 4. Cập nhật Nguyên liệu & Bước nấu
-        if (monAn.getDanh_sach_nguyen_lieu() != null) {
-            fullNguyenLieuList = monAn.getDanh_sach_nguyen_lieu();
-            updateNguyenLieuDisplay();
-        }
-
-        if (monAn.getDanh_sach_buoc_nau() != null) {
-            buocNauAdapter = new BuocNauAdapter(monAn.getDanh_sach_buoc_nau());
-            rvBuocNau.setAdapter(buocNauAdapter);
-        }
-
-        updateRatingUI(null, 0); // Ẩn các view rating theo thiết kế mới
+        nguyenLieuAdapter = new NguyenLieuAdapter(displayList);
+        rvNguyenLieu.setAdapter(nguyenLieuAdapter);
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (monAnListener != null) {
-            monAnListener.remove();
-            monAnListener = null;
-        }
+    private void toggleNguyenLieu() {
+        isShowingAllNguyenLieu = !isShowingAllNguyenLieu;
+        updateNguyenLieuDisplay();
+    }
+
+    private void toggleBuocNau() {
+        isBuocNauExpanded = !isBuocNauExpanded;
+        rvBuocNau.setVisibility(isBuocNauExpanded ? View.VISIBLE : View.GONE);
+        if (ivBuocNauArrow != null) ivBuocNauArrow.setRotation(isBuocNauExpanded ? 180 : 0);
     }
 
     private void checkIfSaved() {
-        if (currentUserId == null) {
-            return;
-        }
-        db.collection("mon_da_luu")
-                .document(currentUserId + "_" + currentDishId)
+        if (currentUserId == null) return;
+        db.collection("mon_da_luu").document(currentUserId + "_" + currentDishId)
                 .addSnapshotListener(this, (doc, error) -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
+                    if (isFinishing() || isDestroyed()) return;
                     if (doc != null) {
                         isSaved = doc.exists();
                         updateSaveButtonUI(false);
@@ -985,32 +538,13 @@ public class DetailMonAnActivity extends AppCompatActivity {
     }
 
     private void updateSaveButtonUI(boolean animate) {
-        if (btnFavoriteDetail == null) {
-            return;
-        }
-        if (isSaved) {
-            btnFavoriteDetail.setImageResource(R.drawable.ic_heart_filled);
-            btnFavoriteDetail.setColorFilter(Color.RED);
-            btnFavoriteDetail.setBackgroundResource(R.drawable.bg_header_button_favorite_selected);
-        } else {
-            btnFavoriteDetail.setImageResource(R.drawable.ic_heart_outline);
-            btnFavoriteDetail.setColorFilter(Color.WHITE);
-            btnFavoriteDetail.setBackgroundResource(R.drawable.bg_header_button_glass);
-        }
+        if (btnFavoriteDetail == null) return;
+        btnFavoriteDetail.setImageResource(isSaved ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+        btnFavoriteDetail.setColorFilter(isSaved ? Color.RED : Color.WHITE);
+        btnFavoriteDetail.setBackgroundResource(isSaved ? R.drawable.bg_header_button_favorite_selected : R.drawable.bg_header_button_glass);
         if (animate) {
-            btnFavoriteDetail.animate()
-                    .scaleX(1.4f)
-                    .scaleY(1.4f)
-                    .setDuration(150)
-                    .withEndAction(() -> {
-                        if (!isFinishing() && !isDestroyed()) {
-                            btnFavoriteDetail.animate()
-                                    .scaleX(1.0f)
-                                    .scaleY(1.0f)
-                                    .setDuration(150)
-                                    .start();
-                        }
-                    }).start();
+            btnFavoriteDetail.animate().scaleX(1.4f).scaleY(1.4f).setDuration(150)
+                    .withEndAction(() -> btnFavoriteDetail.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()).start();
         }
     }
 
@@ -1019,133 +553,149 @@ public class DetailMonAnActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
             return;
         }
-
         String idLuu = currentUserId + "_" + currentDishId;
-
         if (isSaved) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Xác nhận")
-                    .setMessage("Bỏ yêu thích món này?")
-                    .setPositiveButton("Có", (dialog, which) -> {
-                        db.collection("mon_da_luu").document(idLuu).delete()
-                                .addOnSuccessListener(unused -> updateSaveButtonUI(true));
-                    })
-                    .setNegativeButton("Hủy", null)
-                    .show();
+            db.collection("mon_da_luu").document(idLuu).delete().addOnSuccessListener(u -> updateSaveButtonUI(true));
         } else {
-            Map<String, Object> data = new HashMap<>();
-            data.put("id_nguoi_dung", currentUserId);
-            data.put("id_mon_an",     currentDishId);
-            db.collection("mon_da_luu").document(idLuu).set(data)
-                    .addOnSuccessListener(unused -> updateSaveButtonUI(true));
+            Map<String, Object> d = new HashMap<>();
+            d.put("id_nguoi_dung", currentUserId);
+            d.put("id_mon_an", currentDishId);
+            db.collection("mon_da_luu").document(idLuu).set(d).addOnSuccessListener(u -> updateSaveButtonUI(true));
         }
     }
 
-    // =========================================================================
-    // Lịch sử xem
-    // =========================================================================
+    private void fetchLatestReviews(String dishId) {
+        db.collection("danh_gia").whereEqualTo("id_mon_an", dishId).whereEqualTo("trang_thai", "hien_thi")
+                .orderBy("ngay_danh_gia", Query.Direction.DESCENDING).limit(5)
+                .addSnapshotListener(this, (value, error) -> {
+                    if (isFinishing() || isDestroyed() || error != null || value == null) return;
+                    danhSachBinhLuan.clear();
+                    for (QueryDocumentSnapshot doc : value) danhSachBinhLuan.add(doc.toObject(DanhGia.class));
+                    adapterBinhLuan.notifyDataSetChanged();
+                });
+    }
+
+    private void guiBinhLuan() {
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String noiDung = etBinhLuan.getText().toString().trim();
+        float soSao = rbChonSao.getRating();
+        if (TextUtils.isEmpty(noiDung)) { etBinhLuan.setError("Nhập bình luận!"); return; }
+        if (soSao == 0) { Toast.makeText(this, "Chọn số sao!", Toast.LENGTH_SHORT).show(); return; }
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Đang gửi...");
+        progressDialog.show();
+        btnGuiBinhLuan.setEnabled(false);
+
+        if (imageUri != null) compressAndUploadImage(imageUri, noiDung, soSao);
+        else saveReviewToFirestore(noiDung, soSao, null);
+    }
+
+    private void compressAndUploadImage(Uri uri, String noiDung, float soSao) {
+        new Thread(() -> {
+            try {
+                java.io.InputStream is = getContentResolver().openInputStream(uri);
+                Bitmap bm = BitmapFactory.decodeStream(is);
+                if (is != null) is.close();
+                if (bm == null) { runOnUiThread(() -> { dismissProgress(); Toast.makeText(this, "Lỗi ảnh!", Toast.LENGTH_SHORT).show(); }); return; }
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                bm.compress(Bitmap.CompressFormat.JPEG, 75, baos);
+                byte[] data = baos.toByteArray();
+                runOnUiThread(() -> uploadBytesToFirebase(data, noiDung, soSao));
+            } catch (Exception e) { runOnUiThread(() -> dismissProgress()); }
+        }).start();
+    }
+
+    private void uploadBytesToFirebase(byte[] data, String noiDung, float soSao) {
+        StorageReference ref = FirebaseStorage.getInstance().getReference().child("reviews/" + System.currentTimeMillis() + ".jpg");
+        ref.putBytes(data).addOnSuccessListener(ts -> ref.getDownloadUrl().addOnSuccessListener(uri -> saveReviewToFirestore(noiDung, soSao, uri.toString())))
+                .addOnFailureListener(e -> dismissProgress());
+    }
+
+    private void saveReviewToFirestore(String content, float stars, String imageUrl) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        Map<String, Object> review = new HashMap<>();
+        review.put("id_nguoi_dung", currentUserId);
+        review.put("ten_nguoi_dung", (user != null && user.getDisplayName() != null) ? user.getDisplayName() : "Người dùng");
+        review.put("avatar_url", (user != null && user.getPhotoUrl() != null) ? user.getPhotoUrl().toString() : null);
+        review.put("id_mon_an", currentDishId);
+        review.put("noi_dung", content);
+        review.put("so_sao", stars);
+        review.put("hinh_anh_url", imageUrl);
+        review.put("trang_thai", "cho_duyet");
+        review.put("ngay_danh_gia", FieldValue.serverTimestamp());
+
+        db.collection("danh_gia").add(review).addOnSuccessListener(ref -> {
+            dismissProgress();
+            etBinhLuan.setText("");
+            rbChonSao.setRating(0);
+            imageUri = null;
+            layoutPreviewImage.setVisibility(View.GONE);
+            Toast.makeText(this, "Đã gửi, đang kiểm duyệt...", Toast.LENGTH_SHORT).show();
+            ref.addSnapshotListener((snap, err) -> {
+                if (snap == null || !snap.exists()) return;
+                String status = snap.getString("trang_thai");
+                if ("hien_thi".equals(status)) updateTotalRating(stars);
+            });
+        }).addOnFailureListener(e -> dismissProgress());
+    }
+
+    private void dismissProgress() {
+        if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
+        if (btnGuiBinhLuan != null) btnGuiBinhLuan.setEnabled(true);
+    }
+
+    private void updateTotalRating(float newStar) {
+        DocumentReference ref = db.collection("mon_an").document(currentDishId);
+        db.runTransaction(t -> {
+            DocumentSnapshot s = t.get(ref);
+            if (!s.exists()) return null;
+            double score = (s.getDouble("totalScore") != null) ? s.getDouble("totalScore") : 0.0;
+            long count = (s.getLong("reviewCount") != null) ? s.getLong("reviewCount") : 0;
+            t.update(ref, "totalScore", score + newStar, "reviewCount", count + 1, "rating", Math.round(((score + newStar) / (count + 1)) * 10.0) / 10.0);
+            return null;
+        });
+    }
 
     private void addToHistory(String dishId) {
-        if (currentUserId == null) {
-            return;
-        }
-        db.collection("lich_su_xem")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .whereEqualTo("id_mon_an", dishId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    if (!querySnapshot.isEmpty()) {
-                        db.collection("lich_su_xem")
-                                .document(querySnapshot.getDocuments().get(0).getId())
-                                .update("thoi_gian_xem", FieldValue.serverTimestamp());
-                    } else {
-                        Map<String, Object> h = new HashMap<>();
-                        h.put("id_nguoi_dung", currentUserId);
-                        h.put("id_mon_an",     dishId);
-                        h.put("thoi_gian_xem", FieldValue.serverTimestamp());
-                        db.collection("lich_su_xem").add(h)
-                                .addOnSuccessListener(ref -> limitHistoryTo15());
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Lỗi thêm lịch sử xem: " + e.getMessage());
-                });
-    }
-
-    private void limitHistoryTo15() {
-        db.collection("lich_su_xem")
-                .whereEqualTo("id_nguoi_dung", currentUserId)
-                .orderBy("thoi_gian_xem", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
-                    List<DocumentSnapshot> docs = querySnapshot.getDocuments();
-                    for (int i = 15; i < docs.size(); i++) {
-                        db.collection("lich_su_xem")
-                                .document(docs.get(i).getId())
-                                .delete();
-                    }
-                });
-    }
-
-    private void updateNguyenLieuDisplay() {
-        if (fullNguyenLieuList == null || fullNguyenLieuList.isEmpty()) {
-            return;
-        }
-
-        List<MonAn.ChiTietNguyenLieu> displayList;
-        if (isShowingAllNguyenLieu || fullNguyenLieuList.size() <= 6) {
-            displayList = fullNguyenLieuList;
-        } else {
-            displayList = fullNguyenLieuList.subList(0, 6);
-        }
-
-        // Cập nhật text của nút xem thêm
-        if (btnXemThemNguyenLieu != null) {
-            if (fullNguyenLieuList.size() <= 6) {
-                btnXemThemNguyenLieu.setVisibility(View.GONE);
-            } else {
-                btnXemThemNguyenLieu.setVisibility(View.VISIBLE);
-                if (isShowingAllNguyenLieu) {
-                    btnXemThemNguyenLieu.setText("- Thu gọn");
-                } else {
-                    int remaining = fullNguyenLieuList.size() - 6;
-                    btnXemThemNguyenLieu.setText(String.format("+ Xem thêm %d nguyên liệu", remaining));
-                }
+        if (currentUserId == null) return;
+        db.collection("lich_su_xem").whereEqualTo("id_nguoi_dung", currentUserId).whereEqualTo("id_mon_an", dishId).get().addOnSuccessListener(qs -> {
+            if (!qs.isEmpty()) db.collection("lich_su_xem").document(qs.getDocuments().get(0).getId()).update("thoi_gian_xem", FieldValue.serverTimestamp());
+            else {
+                Map<String, Object> h = new HashMap<>();
+                h.put("id_nguoi_dung", currentUserId); h.put("id_mon_an", dishId); h.put("thoi_gian_xem", FieldValue.serverTimestamp());
+                db.collection("lich_su_xem").add(h);
             }
-        }
-
-        nguyenLieuAdapter = new NguyenLieuAdapter(displayList);
-        rvNguyenLieu.setAdapter(nguyenLieuAdapter);
+        });
     }
 
-    private void toggleNguyenLieu() {
-        isShowingAllNguyenLieu = !isShowingAllNguyenLieu;
-        updateNguyenLieuDisplay();
-
-        if (isShowingAllNguyenLieu && btnXemThemNguyenLieu != null) {
-            btnXemThemNguyenLieu.setText("- Thu gọn");
-        }
+    private void initImageLaunchers() {
+        galleryLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
+            if (r.getResultCode() == RESULT_OK && r.getData() != null) { imageUri = r.getData().getData(); showPreview(); }
+        });
+        cameraLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), r -> { if (Boolean.TRUE.equals(r)) showPreview(); });
     }
 
-    private void toggleBuocNau() {
-        isBuocNauExpanded = !isBuocNauExpanded;
+    private void showPreview() {
+        if (imageUri != null) { Glide.with(this).load(imageUri).into(imgPreviewComment); layoutPreviewImage.setVisibility(View.VISIBLE); }
+    }
 
-        if (isBuocNauExpanded) {
-            rvBuocNau.setVisibility(View.VISIBLE);
-            if (ivBuocNauArrow != null) {
-                ivBuocNauArrow.setRotation(180);
-            }
-        } else {
-            rvBuocNau.setVisibility(View.GONE);
-            if (ivBuocNauArrow != null) {
-                ivBuocNauArrow.setRotation(0);
-            }
-        }
+    private void showAttachmentMenu() {
+        BottomSheetDialog d = new BottomSheetDialog(this);
+        View v = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_attachment, null);
+        v.findViewById(R.id.btnChupHinh).setOnClickListener(view -> {
+            d.dismiss();
+            try { imageUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", createImageFile()); cameraLauncher.launch(imageUri); } catch (IOException e) {}
+        });
+        v.findViewById(R.id.btnChonAnh).setOnClickListener(view -> { d.dismiss(); galleryLauncher.launch(new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)); });
+        d.setContentView(v); d.show();
+    }
+
+    private File createImageFile() throws IOException {
+        String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        return File.createTempFile("JPEG_" + ts + "_", ".jpg", getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES));
     }
 }

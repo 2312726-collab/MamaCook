@@ -45,6 +45,15 @@
                 android:textColor="@android:color/black"/>
 
             <ImageButton
+                android:id="@+id/btn_insert_so_che"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_add"
+                app:tint="@color/brand_primary"
+                android:contentDescription="Thêm mục sau mục này" />
+
+            <ImageButton
                 android:id="@+id/btn_delete_so_che"
                 android:layout_width="36dp"
                 android:layout_height="36dp"

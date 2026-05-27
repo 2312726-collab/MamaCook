@@ -198,90 +198,86 @@
                     android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <RelativeLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="@string/sec_nguyen_lieu"
-                    android:textColor="@android:color/black"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-                <ImageButton
-                    android:id="@+id/btn_add_nguyen_lieu_form"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentEnd="true"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_add"
-                    app:tint="@color/brand_primary"
-                    android:contentDescription="@string/desc_add" />
-            </RelativeLayout>
+                android:text="@string/sec_nguyen_lieu"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"/>
+
             <LinearLayout
                 android:id="@+id/container_nguyen_lieu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp" />
+                android:orientation="vertical" />
 
-            <RelativeLayout
+            <Button
+                android:id="@+id/btn_add_nguyen_lieu_form"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="@string/sec_so_che"
-                    android:textColor="@android:color/black"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-                <ImageButton
-                    android:id="@+id/btn_add_so_che_form"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentEnd="true"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_add"
-                    app:tint="@color/brand_primary"
-                    android:contentDescription="@string/desc_add" />
-            </RelativeLayout>
+                android:layout_height="wrap_content"
+                android:text="Thêm nguyên liệu"
+                app:icon="@drawable/ic_add"
+                android:textColor="@color/brand_primary"
+                app:iconTint="@color/brand_primary"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sec_so_che"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
+
             <LinearLayout
                 android:id="@+id/container_so_che"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp" />
+                android:orientation="vertical" />
 
-            <RelativeLayout
+            <Button
+                android:id="@+id/btn_add_so_che_form"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="@string/sec_buoc_nau"
-                    android:textColor="@android:color/black"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-                <ImageButton
-                    android:id="@+id/btn_add_buoc_nau_form"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentEnd="true"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_add"
-                    app:tint="@color/brand_primary"
-                    android:contentDescription="@string/desc_add" />
-            </RelativeLayout>
+                android:layout_height="wrap_content"
+                android:text="Thêm mục sơ chế"
+                app:icon="@drawable/ic_add"
+                android:textColor="@color/brand_primary"
+                app:iconTint="@color/brand_primary"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sec_buoc_nau"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
+
             <LinearLayout
                 android:id="@+id/container_buoc_nau"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="32dp" />
+                android:orientation="vertical" />
+
+            <Button
+                android:id="@+id/btn_add_buoc_nau_form"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Thêm bước nấu"
+                app:icon="@drawable/ic_add"
+                android:textColor="@color/brand_primary"
+                app:iconTint="@color/brand_primary"
+                android:layout_marginBottom="32dp"/>
 
         </LinearLayout>
     </ScrollView>

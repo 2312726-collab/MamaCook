@@ -23,6 +23,7 @@ import android.widget.Toast;
 import android.util.Log;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
@@ -42,9 +43,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import top.zibin.luban.Luban;
-import top.zibin.luban.OnCompressListener;
-
 public class AddEditMonAnActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
@@ -59,8 +57,8 @@ public class AddEditMonAnActivity extends AppCompatActivity {
     private EditText edtTenMon, edtThoiGianNau, edtKhauPhan;
     private AutoCompleteTextView spinnerDoKho, spinnerVungMien, spinnerDanhMuc;
     private LinearLayout containerNguyenLieu, containerSoChe, containerBuocNau;
-    private Button btnSaveForm, btnSelectImg, btnCaptureImg;
-    private ImageButton btnBackForm, btnAddNguyenLieuForm, btnAddSoCheForm, btnAddBuocNauForm;
+    private Button btnSaveForm, btnSelectImg, btnCaptureImg, btnAddNguyenLieuForm, btnAddSoCheForm, btnAddBuocNauForm;
+    private ImageButton btnBackForm;
     private ProgressBar progressBarForm;
 
     private List<DanhMuc> listDanhMuc = new ArrayList<>();
@@ -92,12 +90,11 @@ public class AddEditMonAnActivity extends AppCompatActivity {
 
     private static class BuocNauViewHolder {
         TextView tvStt;
-        EditText edtTieuDe, edtMoTa, edtThoiGian;
+        EditText edtTieuDe, edtMoTa;
         BuocNauViewHolder(View view) {
             tvStt = view.findViewById(R.id.tv_stt_buoc_nau);
             edtTieuDe = view.findViewById(R.id.edt_sub_tieu_de_buoc_nau);
             edtMoTa = view.findViewById(R.id.edt_sub_mo_ta_buoc_nau);
-            edtThoiGian = view.findViewById(R.id.edt_sub_thoi_gian_buoc);
         }
     }
 
@@ -164,6 +161,7 @@ public class AddEditMonAnActivity extends AppCompatActivity {
 
     private void initFirebase() {
         db = FirebaseFirestore.getInstance();
+        // Để Firebase tự động nhận diện Bucket từ file google-services.json để tránh lỗi Unknown Error
         storage = FirebaseStorage.getInstance();
     }
 
@@ -293,8 +291,8 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         
         // Add initial empty rows for fresh start
         addNguyenLieuFormRow(null);
-        addSoCheFormRow(null);
-        addBuocNauFormRow(null);
+        addSoCheFormRow(null, -1);
+        addBuocNauFormRow(null, -1);
     }
 
     private void fillDataToViews(MonAn monAn) {
@@ -323,10 +321,10 @@ public class AddEditMonAnActivity extends AppCompatActivity {
             for (ChiTietNguyenLieu nl : monAn.getDanh_sach_nguyen_lieu()) addNguyenLieuFormRow(nl);
         }
         if (monAn.getDanh_sach_so_che() != null) {
-            for (SoChe sc : monAn.getDanh_sach_so_che()) addSoCheFormRow(sc);
+            for (SoChe sc : monAn.getDanh_sach_so_che()) addSoCheFormRow(sc, -1);
         }
         if (monAn.getDanh_sach_buoc_nau() != null) {
-            for (BuocNau bn : monAn.getDanh_sach_buoc_nau()) addBuocNauFormRow(bn);
+            for (BuocNau bn : monAn.getDanh_sach_buoc_nau()) addBuocNauFormRow(bn, -1);
         }
     }
 
@@ -345,8 +343,8 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         btnSelectImg.setOnClickListener(v -> galleryLauncher.launch("image/*"));
         btnCaptureImg.setOnClickListener(v -> openCamera());
         btnAddNguyenLieuForm.setOnClickListener(v -> addNguyenLieuFormRow(null));
-        btnAddSoCheForm.setOnClickListener(v -> addSoCheFormRow(null));
-        btnAddBuocNauForm.setOnClickListener(v -> addBuocNauFormRow(null));
+        btnAddSoCheForm.setOnClickListener(v -> addSoCheFormRow(null, -1));
+        btnAddBuocNauForm.setOnClickListener(v -> addBuocNauFormRow(null, -1));
         btnSaveForm.setOnClickListener(v -> validateAndProcessData());
     }
 
@@ -361,14 +359,21 @@ public class AddEditMonAnActivity extends AppCompatActivity {
             holder.edtGhiChu.setText(data.ghi_chu);
         }
         view.findViewById(R.id.btn_delete_nguyen_lieu).setOnClickListener(v -> {
-            containerNguyenLieu.removeView(view);
-            recalculateSTT(containerNguyenLieu, R.id.tv_stt_nguyen_lieu);
+            new AlertDialog.Builder(this)
+                    .setTitle("Xác nhận xóa")
+                    .setMessage("Bạn có chắc chắn muốn xóa nguyên liệu này?")
+                    .setPositiveButton("Xóa", (dialog, which) -> {
+                        containerNguyenLieu.removeView(view);
+                        recalculateSTT(containerNguyenLieu, R.id.tv_stt_nguyen_lieu);
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
         });
         containerNguyenLieu.addView(view);
         recalculateSTT(containerNguyenLieu, R.id.tv_stt_nguyen_lieu);
     }
 
-    private void addSoCheFormRow(SoChe data) {
+    private void addSoCheFormRow(SoChe data, int insertIndex) {
         View view = LayoutInflater.from(this).inflate(R.layout.item_input_so_che, containerSoChe, false);
         SoCheViewHolder holder = new SoCheViewHolder(view);
         view.setTag(holder);
@@ -376,28 +381,65 @@ public class AddEditMonAnActivity extends AppCompatActivity {
             holder.edtTieuDe.setText(data.tieu_de);
             holder.edtNoiDung.setText(data.noi_dung);
         }
-        view.findViewById(R.id.btn_delete_so_che).setOnClickListener(v -> {
-            containerSoChe.removeView(view);
-            recalculateSTT(containerSoChe, R.id.tv_stt_so_che);
+
+        // Nút thêm sơ chế vào giữa
+        view.findViewById(R.id.btn_insert_so_che).setOnClickListener(v -> {
+            int currentIdx = containerSoChe.indexOfChild(view);
+            addSoCheFormRow(null, currentIdx + 1);
         });
-        containerSoChe.addView(view);
+
+        view.findViewById(R.id.btn_delete_so_che).setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("Xác nhận xóa")
+                    .setMessage("Bạn có chắc chắn muốn xóa mục sơ chế này?")
+                    .setPositiveButton("Xóa", (dialog, which) -> {
+                        containerSoChe.removeView(view);
+                        recalculateSTT(containerSoChe, R.id.tv_stt_so_che);
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
+        });
+
+        if (insertIndex == -1) {
+            containerSoChe.addView(view);
+        } else {
+            containerSoChe.addView(view, insertIndex);
+        }
         recalculateSTT(containerSoChe, R.id.tv_stt_so_che);
     }
 
-    private void addBuocNauFormRow(BuocNau data) {
+    private void addBuocNauFormRow(BuocNau data, int insertIndex) {
         View view = LayoutInflater.from(this).inflate(R.layout.item_input_buoc_nau, containerBuocNau, false);
         BuocNauViewHolder holder = new BuocNauViewHolder(view);
         view.setTag(holder);
         if (data != null) {
             holder.edtTieuDe.setText(data.tieu_de);
             holder.edtMoTa.setText(data.mo_ta);
-            holder.edtThoiGian.setText(String.valueOf(data.thoi_gian_buoc));
         }
-        view.findViewById(R.id.btn_delete_buoc_nau).setOnClickListener(v -> {
-            containerBuocNau.removeView(view);
-            recalculateSTT(containerBuocNau, R.id.tv_stt_buoc_nau);
+
+        // Nút thêm bước vào giữa
+        view.findViewById(R.id.btn_insert_buoc_nau).setOnClickListener(v -> {
+            int currentIdx = containerBuocNau.indexOfChild(view);
+            addBuocNauFormRow(null, currentIdx + 1);
         });
-        containerBuocNau.addView(view);
+
+        view.findViewById(R.id.btn_delete_buoc_nau).setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("Xác nhận xóa")
+                    .setMessage("Bạn có chắc chắn muốn xóa bước nấu này?")
+                    .setPositiveButton("Xóa", (dialog, which) -> {
+                        containerBuocNau.removeView(view);
+                        recalculateSTT(containerBuocNau, R.id.tv_stt_buoc_nau);
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
+        });
+
+        if (insertIndex == -1) {
+            containerBuocNau.addView(view);
+        } else {
+            containerBuocNau.addView(view, insertIndex);
+        }
         recalculateSTT(containerBuocNau, R.id.tv_stt_buoc_nau);
     }
 
@@ -409,26 +451,71 @@ public class AddEditMonAnActivity extends AppCompatActivity {
     }
 
     private void openCamera() {
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.Images.Media.TITLE, "New Dish");
-        selectedMainImageUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-        cameraLauncher.launch(selectedMainImageUri);
+        if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) 
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            androidx.core.app.ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CAMERA}, 100);
+            return;
+        }
+
+        try {
+            // Tạo file ảnh thật trong thư mục Cache của App
+            String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(new java.util.Date());
+            java.io.File storageDir = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+            java.io.File imageFile = java.io.File.createTempFile("MamaCook_" + timeStamp, ".jpg", storageDir);
+            
+            // Chuyển file thành URI an toàn qua FileProvider
+            selectedMainImageUri = androidx.core.content.FileProvider.getUriForFile(this, 
+                    getPackageName() + ".fileprovider", imageFile);
+            
+            cameraLauncher.launch(selectedMainImageUri);
+        } catch (java.io.IOException e) {
+            Toast.makeText(this, "Lỗi tạo file chụp ảnh", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void validateAndProcessData() {
         String ten = edtTenMon.getText().toString().trim();
+        String thoiGian = edtThoiGianNau.getText().toString().trim();
+        String khauPhan = edtKhauPhan.getText().toString().trim();
+        String doKho = spinnerDoKho.getText().toString().trim();
+        String vungMien = spinnerVungMien.getText().toString().trim();
+        String danhMuc = spinnerDanhMuc.getText().toString().trim();
+
         if (ten.isEmpty()) {
-            Toast.makeText(this, "Vui lòng nhập tên món ăn", Toast.LENGTH_SHORT).show();
+            edtTenMon.setError("Vui lòng nhập tên món ăn");
+            edtTenMon.requestFocus();
             return;
         }
 
-        if (listDanhMuc.isEmpty()) {
-            Toast.makeText(this, "Đang tải dữ liệu danh mục, vui lòng đợi...", Toast.LENGTH_SHORT).show();
+        if (thoiGian.isEmpty()) {
+            edtThoiGianNau.setError("Vui lòng nhập thời gian nấu");
+            edtThoiGianNau.requestFocus();
             return;
         }
 
-        if (spinnerDanhMuc.getText().toString().trim().isEmpty()) {
-            Toast.makeText(this, "Vui lòng chọn danh mục cho món ăn!", Toast.LENGTH_SHORT).show();
+        if (khauPhan.isEmpty()) {
+            edtKhauPhan.setError("Vui lòng nhập khẩu phần");
+            edtKhauPhan.requestFocus();
+            return;
+        }
+
+        if (doKho.isEmpty()) {
+            Toast.makeText(this, "Vui lòng chọn độ khó", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (vungMien.isEmpty()) {
+            Toast.makeText(this, "Vui lòng chọn vùng miền", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (danhMuc.isEmpty()) {
+            Toast.makeText(this, "Vui lòng chọn danh mục", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isEditMode && selectedMainImageUri == null) {
+            Toast.makeText(this, "Vui lòng chọn ảnh cho món ăn", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -473,14 +560,32 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         for (int i = 0; i < containerNguyenLieu.getChildCount(); i++) {
             NguyenLieuViewHolder holder = (NguyenLieuViewHolder) containerNguyenLieu.getChildAt(i).getTag();
             if (holder == null) continue;
+            
             String tenNL = holder.edtTen.getText().toString().trim();
-            if (tenNL.isEmpty()) continue;
+            String soLuongStr = holder.edtSoLuong.getText().toString().trim();
+            String donVi = holder.edtDonVi.getText().toString().trim();
+            
+            if (tenNL.isEmpty()) {
+                holder.edtTen.setError("Vui lòng nhập tên nguyên liệu");
+                holder.edtTen.requestFocus();
+                return false;
+            }
+            if (soLuongStr.isEmpty()) {
+                holder.edtSoLuong.setError("Nhập số lượng");
+                holder.edtSoLuong.requestFocus();
+                return false;
+            }
+            if (donVi.isEmpty()) {
+                holder.edtDonVi.setError("Nhập đơn vị");
+                holder.edtDonVi.requestFocus();
+                return false;
+            }
 
             ChiTietNguyenLieu nl = new ChiTietNguyenLieu();
             nl.ten_nguyen_lieu = tenNL;
-            nl.so_luong = safeParseDouble(holder.edtSoLuong.getText().toString(), 0);
-            nl.don_vi = holder.edtDonVi.getText().toString().trim();
-            nl.ghi_chu = holder.edtGhiChu.getText().toString().trim();
+            nl.so_luong = safeParseDouble(soLuongStr, 0);
+            nl.don_vi = donVi;
+            nl.ghi_chu = holder.edtGhiChu.getText().toString().trim(); // Ghi chú được phép để trống
             tempNL.add(nl);
         }
 
@@ -488,12 +593,24 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         for (int i = 0; i < containerSoChe.getChildCount(); i++) {
             SoCheViewHolder holder = (SoCheViewHolder) containerSoChe.getChildAt(i).getTag();
             if (holder == null) continue;
+            
             String tDe = holder.edtTieuDe.getText().toString().trim();
-            if (tDe.isEmpty()) continue;
+            String nDung = holder.edtNoiDung.getText().toString().trim();
+            
+            if (tDe.isEmpty()) {
+                holder.edtTieuDe.setError("Nhập tiêu đề sơ chế");
+                holder.edtTieuDe.requestFocus();
+                return false;
+            }
+            if (nDung.isEmpty()) {
+                holder.edtNoiDung.setError("Nhập nội dung sơ chế");
+                holder.edtNoiDung.requestFocus();
+                return false;
+            }
             
             SoChe sc = new SoChe();
             sc.tieu_de = tDe;
-            sc.noi_dung = holder.edtNoiDung.getText().toString().trim();
+            sc.noi_dung = nDung;
             tempSC.add(sc);
         }
 
@@ -501,14 +618,26 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         for (int i = 0; i < containerBuocNau.getChildCount(); i++) {
             BuocNauViewHolder holder = (BuocNauViewHolder) containerBuocNau.getChildAt(i).getTag();
             if (holder == null) continue;
+            
             String tDe = holder.edtTieuDe.getText().toString().trim();
-            if (tDe.isEmpty()) continue;
+            String mTa = holder.edtMoTa.getText().toString().trim();
+
+            if (tDe.isEmpty()) {
+                holder.edtTieuDe.setError("Nhập tên bước nấu");
+                holder.edtTieuDe.requestFocus();
+                return false;
+            }
+            if (mTa.isEmpty()) {
+                holder.edtMoTa.setError("Nhập mô tả cách làm");
+                holder.edtMoTa.requestFocus();
+                return false;
+            }
 
             BuocNau bn = new BuocNau();
             bn.so_buoc = i + 1;
             bn.tieu_de = tDe;
-            bn.mo_ta = holder.edtMoTa.getText().toString().trim();
-            bn.thoi_gian_buoc = safeParseInt(holder.edtThoiGian.getText().toString(), 0);
+            bn.mo_ta = mTa;
+            bn.thoi_gian_buoc = 0; // Không dùng trường thời gian ở bước này nữa
             tempBN.add(bn);
         }
 
@@ -537,40 +666,44 @@ public class AddEditMonAnActivity extends AppCompatActivity {
     private void handleUploadProcess(String id, String ten) {
         if (selectedMainImageUri != null) {
             setLoading(true);
-            Luban.with(this)
-                    .load(selectedMainImageUri)
-                    .ignoreBy(100)
-                    .setCompressListener(new OnCompressListener() {
-                        @Override public void onStart() {}
-                        @Override public void onSuccess(File file) {
-                            // Tạo tên file duy nhất với timestamp để tránh cache
-                            String fileName = id + "_" + System.currentTimeMillis() + ".jpg";
-                            com.google.firebase.storage.StorageReference fileRef = storage.getReference().child("mon_an/" + fileName);
-                            
-                            fileRef.putFile(Uri.fromFile(file))
-                                    .addOnSuccessListener(taskSnapshot -> {
-                                        fileRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                                            String newImageUrl = uri.toString();
-                                            String oldImageUrl = isEditMode && currentMonAn != null ? currentMonAn.getHinh_anh() : null;
-                                            
-                                            saveToFirestore(id, ten, newImageUrl);
-                                            
-                                            // Xóa ảnh cũ sau khi đã lưu URL mới thành công
-                                            if (oldImageUrl != null && !oldImageUrl.isEmpty()) {
-                                                deleteOldImage(oldImageUrl);
-                                            }
-                                        });
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        setLoading(false);
-                                        Toast.makeText(AddEditMonAnActivity.this, "Lỗi tải ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                    });
-                        }
-                        @Override public void onError(Throwable e) {
-                            setLoading(false);
-                            Toast.makeText(AddEditMonAnActivity.this, "Lỗi nén ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }).launch();
+            String oldImageUrl = (isEditMode && currentMonAn != null) ? currentMonAn.getHinh_anh() : null;
+
+            // Nén ảnh thủ công bằng Bitmap để kiểm soát 100% đường dẫn và dung lượng
+            new Thread(() -> {
+                try {
+                    // 1. Đọc Bitmap từ Uri
+                    java.io.InputStream inputStream = getContentResolver().openInputStream(selectedMainImageUri);
+                    android.graphics.Bitmap originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream);
+                    if (inputStream != null) inputStream.close();
+
+                    if (originalBitmap == null) {
+                        runOnUiThread(() -> uploadImageToStorage(id, ten, selectedMainImageUri, oldImageUrl, false));
+                        return;
+                    }
+
+                    // 2. Tạo file tạm trong Cache
+                    File compressedFile = new File(getCacheDir(), "thumb_" + id + ".jpg");
+                    java.io.FileOutputStream out = new java.io.FileOutputStream(compressedFile);
+
+                    // 3. Nén: Chất lượng 70% là mức tối ưu cho App di động (ảnh đẹp, file ~50-100KB)
+                    originalBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out);
+                    out.flush();
+                    out.close();
+
+                    // 4. Lấy URI an toàn qua FileProvider
+                    Uri compressedUri = androidx.core.content.FileProvider.getUriForFile(
+                            this, getPackageName() + ".fileprovider", compressedFile);
+
+                    Log.d("MamaCook_Compress", "Nén thành công. Dung lượng: " + (compressedFile.length() / 1024) + " KB");
+
+                    runOnUiThread(() -> uploadImageToStorage(id, ten, compressedUri, oldImageUrl, true));
+
+                } catch (Exception e) {
+                    Log.e("MamaCook_Error", "Lỗi nén ảnh, dùng ảnh gốc", e);
+                    runOnUiThread(() -> uploadImageToStorage(id, ten, selectedMainImageUri, oldImageUrl, false));
+                }
+            }).start();
+
         } else if (isEditMode && currentMonAn != null) {
             saveToFirestore(id, ten, currentMonAn.getHinh_anh());
         } else {
@@ -579,16 +712,64 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         }
     }
 
+    // Hàm dùng chung để upload ảnh (cả nén và gốc)
+    private void uploadImageToStorage(String id, String ten, Uri uri, String oldUrl, boolean isCompressed) {
+        String suffix = isCompressed ? "_compressed" : "_direct";
+        String fileName = id + suffix + "_" + System.currentTimeMillis() + ".jpg";
+        com.google.firebase.storage.StorageReference fileRef = storage.getReference().child("mon_an/" + fileName);
+        
+        fileRef.putFile(uri)
+                .addOnSuccessListener(taskSnapshot -> {
+                    fileRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
+                        String newImageUrl = downloadUri.toString();
+                        saveToFirestore(id, ten, newImageUrl);
+                        
+                        // Chỉ xóa ảnh cũ khi upload ảnh mới thành công hoàn toàn
+                        if (oldUrl != null && !oldUrl.isEmpty()) {
+                            deleteOldImage(oldUrl);
+                        }
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("Storage_Error", "Upload failed with uri: " + uri, e);
+                    // Nếu upload file nén lỗi (thường do file:// URI), thử lại ngay với ảnh gốc (content:// URI)
+                    if (isCompressed) {
+                        Log.d("Storage", "Thử lại với ảnh gốc...");
+                        uploadImageToStorage(id, ten, selectedMainImageUri, oldUrl, false);
+                    } else {
+                        setLoading(false);
+                        Toast.makeText(this, "Lỗi tải ảnh: " + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
     private void deleteOldImage(String oldImageUrl) {
-        if (oldImageUrl == null || oldImageUrl.isEmpty() || !oldImageUrl.startsWith("http")) {
+        if (oldImageUrl == null || oldImageUrl.isEmpty()) {
             return;
         }
         try {
-            storage.getReferenceFromUrl(oldImageUrl).delete()
+            com.google.firebase.storage.StorageReference fileRef;
+            if (oldImageUrl.startsWith("http")) {
+                // Nếu là URL đầy đủ
+                fileRef = storage.getReferenceFromUrl(oldImageUrl);
+            } else {
+                // Xử lý cả dấu gạch dưới và gạch ngang để tăng tỉ lệ tìm thấy ảnh
+                // Nếu không thấy mon_an/banh_trang_nuong.jpg thì thử tìm mon_an/banh-trang-nuong.jpg
+                fileRef = storage.getReference().child(oldImageUrl);
+            }
+            
+            fileRef.delete()
                     .addOnSuccessListener(aVoid -> Log.d("Storage", "Đã xóa ảnh cũ thành công"))
-                    .addOnFailureListener(e -> Log.e("Storage", "Lỗi xóa ảnh cũ: " + e.getMessage()));
+                    .addOnFailureListener(e -> {
+                        // Nếu xóa không được (do sai tên file), thử đổi "_" sang "-" và xóa lại lần nữa
+                        if (!oldImageUrl.startsWith("http") && oldImageUrl.contains("_")) {
+                            String fallbackPath = oldImageUrl.replace("_", "-");
+                            storage.getReference().child(fallbackPath).delete();
+                        }
+                        Log.e("Storage", "Lỗi xóa ảnh cũ hoặc ảnh không tồn tại: " + e.getMessage());
+                    });
         } catch (Exception e) {
-            Log.e("Storage", "URL ảnh không hợp lệ để xóa: " + e.getMessage());
+            Log.e("Storage", "Lỗi khi xử lý xóa ảnh: " + e.getMessage());
         }
     }
 

@@ -45,6 +45,15 @@
                 android:textColor="@android:color/black"/>
 
             <ImageButton
+                android:id="@+id/btn_insert_buoc_nau"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_add"
+                app:tint="@color/brand_primary"
+                android:contentDescription="Thêm bước sau bước này" />
+
+            <ImageButton
                 android:id="@+id/btn_delete_buoc_nau"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
@@ -66,32 +75,5 @@
             android:background="@drawable/bg_admin_input"
             android:padding="12dp"
             android:gravity="top"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="8dp">
-
-            <EditText
-                android:id="@+id/edt_sub_thoi_gian_buoc"
-                android:layout_width="120dp"
-                android:layout_height="wrap_content"
-                android:hint="Thời gian"
-                android:textSize="14sp"
-                android:textColor="@color/text_brown"
-                android:inputType="number"
-                android:background="@drawable/bg_admin_input"
-                android:padding="8dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="phút"
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp"/>
-        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
