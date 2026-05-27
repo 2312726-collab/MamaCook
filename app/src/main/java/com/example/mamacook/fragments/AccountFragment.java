@@ -1,7 +1,12 @@
 package com.example.mamacook.fragments;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,20 +15,33 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
+import com.canhub.cropper.CropImageContract;
+import com.canhub.cropper.CropImageContractOptions;
+import com.canhub.cropper.CropImageOptions;
+import com.canhub.cropper.CropImageView;
 import com.example.mamacook.R;
 import com.example.mamacook.activities.MainActivity;
+import com.example.mamacook.activities.PreviewAvatarActivity;
 import com.example.mamacook.models.User;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 
 public class AccountFragment extends Fragment {
@@ -37,18 +55,62 @@ public class AccountFragment extends Fragment {
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private String currentAvatarUrl;
+    private Uri cameraUri;
+    private boolean isDataLoading = false;
+
+    // 1. Launcher xử lý kết quả cắt ảnh
+    private final ActivityResultLauncher<CropImageContractOptions> cropImage =
+            registerForActivityResult(new CropImageContract(), result -> {
+                if (result.isSuccessful()) {
+                    Uri resultUri = result.getUriContent();
+                    if (resultUri != null && isAdded()) {
+                        Intent intent = new Intent(getActivity(), PreviewAvatarActivity.class);
+                        intent.putExtra("IMAGE_URI", resultUri.toString());
+                        intent.putExtra("IS_VIEW_ONLY", false);
+                        startActivity(intent);
+                    }
+                }
+            });
+
+    // 2. Launcher chọn ảnh từ thư viện
+    private final ActivityResultLauncher<PickVisualMediaRequest> pickMedia =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+                if (uri != null) startCrop(uri);
+            });
+
+    // 3. Launcher chụp ảnh từ Camera
+    private final ActivityResultLauncher<Uri> takePhoto =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (success && cameraUri != null) {
+                    startCrop(cameraUri);
+                }
+            });
+
+    // 4. Launcher xin quyền Camera
+    private final ActivityResultLauncher<String> requestCameraPermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    openCamera();
+                } else {
+                    if (isAdded()) Toast.makeText(getContext(), "Bạn cần cấp quyền Camera để sử dụng tính năng này", Toast.LENGTH_SHORT).show();
+                }
+            });
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_account, container, false);
-
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
         initViews(view);
-        loadUserData();
+        setupListeners();
+        
+        return view;
+    }
 
+    private void setupListeners() {
         btnLogout.setOnClickListener(v -> {
             mAuth.signOut();
             Intent intent = new Intent(getActivity(), MainActivity.class);
@@ -58,21 +120,11 @@ public class AccountFragment extends Fragment {
         });
 
         btnEditProfile.setOnClickListener(v -> {
-            // Hiếu: Mở màn hình chỉnh sửa thông tin với hiệu ứng trượt
-            Intent intent = new Intent(getActivity(), com.example.mamacook.activities.EditAccountActivity.class);
-            startActivity(intent);
-            if (getActivity() != null) {
-                getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-            }
+            startActivity(new Intent(getActivity(), com.example.mamacook.activities.EditAccountActivity.class));
         });
 
         btnChangePassword.setOnClickListener(v -> {
-            // Hiếu: Mở màn hình đổi mật khẩu với hiệu ứng trượt
-            Intent intent = new Intent(getActivity(), com.example.mamacook.activities.ChangePasswordActivity.class);
-            startActivity(intent);
-            if (getActivity() != null) {
-                getActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-            }
+            startActivity(new Intent(getActivity(), com.example.mamacook.activities.ChangePasswordActivity.class));
         });
 
         btnAddMonAn.setOnClickListener(v -> {
@@ -86,23 +138,75 @@ public class AccountFragment extends Fragment {
         });
 
         imgAvatar.setOnClickListener(v -> showAvatarOptions());
-
-        return view;
     }
 
     private void showAvatarOptions() {
-        if (getContext() == null) return;
-        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(getContext());
-        // Lưu ý: Cần có layout_change_avatar_options.xml, nếu chưa có sẽ báo lỗi đỏ
+        if (!isAdded() || getContext() == null) return;
+        final BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(getContext());
         View view = LayoutInflater.from(getContext()).inflate(R.layout.layout_change_avatar_options, null, false);
         bottomSheetDialog.setContentView(view);
 
+        // Nút Chụp ảnh
+        view.findViewById(R.id.btn_take_photo).setOnClickListener(v -> {
+            bottomSheetDialog.dismiss();
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                openCamera();
+            } else {
+                requestCameraPermission.launch(Manifest.permission.CAMERA);
+            }
+        });
+
+        // Nút Tải ảnh lên
         view.findViewById(R.id.btn_upload_photo).setOnClickListener(v -> {
             bottomSheetDialog.dismiss();
-            Toast.makeText(getContext(), "Tính năng đang phát triển", Toast.LENGTH_SHORT).show();
+            pickMedia.launch(new PickVisualMediaRequest.Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                    .build());
+        });
+
+        // Nút Xem ảnh
+        view.findViewById(R.id.btn_view_photo).setOnClickListener(v -> {
+            bottomSheetDialog.dismiss();
+            if (currentAvatarUrl != null && !currentAvatarUrl.isEmpty()) {
+                Intent intent = new Intent(getActivity(), PreviewAvatarActivity.class);
+                intent.putExtra("IMAGE_URI", currentAvatarUrl);
+                intent.putExtra("IS_VIEW_ONLY", true);
+                startActivity(intent);
+            }
         });
 
         bottomSheetDialog.show();
+    }
+
+    private void openCamera() {
+        try {
+            File photoFile = createImageFile();
+            if (getContext() != null) {
+                cameraUri = FileProvider.getUriForFile(requireContext(), "com.example.mamacook.fileprovider", photoFile);
+                takePhoto.launch(cameraUri);
+            }
+        } catch (IOException e) {
+            Toast.makeText(getContext(), "Không thể tạo file tạm", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private File createImageFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        return File.createTempFile("JPEG_" + timeStamp + "_", ".jpg", storageDir);
+    }
+
+    private void startCrop(Uri uri) {
+        CropImageOptions options = new CropImageOptions();
+        options.guidelines = CropImageView.Guidelines.ON;
+        options.fixAspectRatio = true;
+        options.aspectRatioX = 1;
+        options.aspectRatioY = 1;
+        options.cropShape = CropImageView.CropShape.OVAL;
+        options.toolbarColor = Color.WHITE;
+        options.toolbarTitleColor = Color.BLACK;
+        options.cropMenuCropButtonTitle = "Xong";
+        cropImage.launch(new CropImageContractOptions(uri, options));
     }
 
     @Override
@@ -137,13 +241,13 @@ public class AccountFragment extends Fragment {
     }
 
     private void loadUserData() {
-        FirebaseUser firebaseUser = mAuth.getCurrentUser();
-        if (firebaseUser == null) return;
+        FirebaseUser userAuth = mAuth.getCurrentUser();
+        if (userAuth == null || isDataLoading) return;
 
-        db.collection("nguoi_dung")
-                .document(firebaseUser.getUid())
-                .get()
+        isDataLoading = true;
+        db.collection("nguoi_dung").document(userAuth.getUid()).get()
                 .addOnSuccessListener(doc -> {
+                    isDataLoading = false;
                     if (isAdded() && doc.exists()) {
                         User user = doc.toObject(User.class);
                         if (user != null) {
@@ -206,26 +310,25 @@ public class AccountFragment extends Fragment {
                             });
                         }
                     }
-                });
+                })
+                .addOnFailureListener(e -> isDataLoading = false);
     }
 
     private void displayData(User user) {
-        if (user.getAnh_dai_dien() != null && !user.getAnh_dai_dien().isEmpty()) {
-            Glide.with(this).load(user.getAnh_dai_dien()).placeholder(R.drawable.ic_nav_profile).into(imgAvatar);
+        if (!isAdded()) return;
+        currentAvatarUrl = user.getAnh_dai_dien();
+        if (currentAvatarUrl != null && !currentAvatarUrl.isEmpty()) {
+            Glide.with(this).load(currentAvatarUrl).placeholder(R.drawable.ic_nav_profile).circleCrop().into(imgAvatar);
         }
 
-        tvDisplayName.setText(user.getHo_ten());
+        tvDisplayName.setText(user.getHo_ten() != null ? user.getHo_ten() : "--");
         tvDisplayEmail.setText(user.getEmail());
         tvInfoName.setText(user.getHo_ten());
         tvInfoEmail.setText(user.getEmail());
-        tvInfoPhone.setText(user.getSo_dien_thoai() != null ? user.getSo_dien_thoai() : "Chưa cập nhật");
-        
-        String role = user.getVai_tro();
-        tvInfoRole.setText("admin".equals(role) ? "Quản trị viên" : "Người dùng");
-
+        tvInfoPhone.setText(user.getSo_dien_thoai() != null && !user.getSo_dien_thoai().isEmpty() ? user.getSo_dien_thoai() : "Chưa cập nhật");
+        tvInfoRole.setText("admin".equals(user.getRole()) ? "Quản trị viên" : "Người dùng");
         if (user.getNgay_tao() != null) {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-            tvInfoDate.setText(sdf.format(user.getNgay_tao().toDate()));
+            tvInfoDate.setText(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(user.getNgay_tao().toDate()));
         }
     }
 }
