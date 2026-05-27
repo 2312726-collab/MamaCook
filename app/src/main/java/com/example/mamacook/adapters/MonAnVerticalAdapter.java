@@ -12,6 +12,15 @@ import android.widget.TextView;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.example.mamacook.AI.AIRequest;
+import com.example.mamacook.AI.AIResponse;
+import com.example.mamacook.AI.ApiService;
+import com.example.mamacook.AI.RetrofitClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import java.util.ArrayList;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
@@ -122,9 +131,57 @@ public class MonAnVerticalAdapter extends RecyclerView.Adapter<MonAnVerticalAdap
         // Nút AI: Chỉ hiện khi ở chế độ Quản lý (Admin)
         holder.btnAI.setVisibility(isAdminMode ? View.VISIBLE : View.GONE);
         holder.btnAI.setOnClickListener(v -> {
-            if (longClickListener != null) {
-                longClickListener.onLongClick(monAn);
-            }
+            Context context = v.getContext();
+
+            AlertDialog loadingDialog = new AlertDialog.Builder(context)
+                    .setTitle("🤖 AI đang phân tích...")
+                    .setMessage("Vui lòng chờ...")
+                    .setCancelable(false)
+                    .create();
+            loadingDialog.show();
+
+            ApiService apiService = RetrofitClient.getClient().create(ApiService.class);
+
+            FirebaseFirestore.getInstance()
+                    .collection("danh_gia")
+                    .whereEqualTo("id_mon_an", monAn.getId_mon_an())
+                    .get()
+                    .addOnSuccessListener(docs -> {
+                        java.util.List<String> comments2 = new java.util.ArrayList<>();
+                        for (com.google.firebase.firestore.QueryDocumentSnapshot doc : docs) {
+                            Number soSao = doc.getDouble("so_sao");
+                            if (soSao != null && soSao.doubleValue() < 4.0) {
+                                String c = doc.getString("noi_dung");
+                                if (c != null) comments2.add(c);
+                            }
+                        }
+                        if (comments2.isEmpty()) comments2.add("Chưa có bình luận tiêu cực.");
+
+                        AIRequest request = new AIRequest(monAn.getTen_mon(), monAn.getRating(), comments2);
+                        apiService.analyzeRecipe(request).enqueue(new Callback<AIResponse>() {
+                            @Override
+                            public void onResponse(Call<AIResponse> call, Response<AIResponse> response) {
+                                loadingDialog.dismiss();
+                                if (response.isSuccessful() && response.body() != null) {
+                                    new AlertDialog.Builder(context)
+                                            .setTitle("📋 Kết quả AI")
+                                            .setMessage(response.body().getResult())
+                                            .setPositiveButton("OK", null)
+                                            .show();
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Call<AIResponse> call, Throwable t) {
+                                loadingDialog.dismiss();
+                                Toast.makeText(context, "Lỗi: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    })
+                    .addOnFailureListener(e -> {
+                        loadingDialog.dismiss();
+                        Toast.makeText(context, "Lỗi: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    });
         });
     }
 

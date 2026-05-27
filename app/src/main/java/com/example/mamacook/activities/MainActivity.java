@@ -30,6 +30,8 @@ import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
@@ -52,8 +54,7 @@ public class MainActivity extends AppCompatActivity {
         
         mAuth = FirebaseAuth.getInstance();
         if (mAuth.getCurrentUser() != null) {
-            startActivity(new Intent(MainActivity.this, HomeActivity.class));
-            finish();
+            kiemTraTrangThaiTaiKhoan(mAuth.getCurrentUser().getUid());
             return;
         }
 
@@ -120,9 +121,9 @@ public class MainActivity extends AppCompatActivity {
         mAuth.signInWithEmailAndPassword(finalEmail, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                        finish();
-                    } else {
+                        kiemTraTrangThaiTaiKhoan(mAuth.getCurrentUser().getUid());
+                    }
+                     else {
                         Toast.makeText(MainActivity.this, "Tài khoản hoặc mật khẩu không đúng!", Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -161,8 +162,31 @@ public class MainActivity extends AppCompatActivity {
                 // Không setMat_khau để bảo mật
                 db.collection("nguoi_dung").document(uid).set(user);
             }
-            startActivity(new Intent(MainActivity.this, HomeActivity.class));
-            finish();
+            kiemTraTrangThaiTaiKhoan(uid);
         });
+    }
+    private void kiemTraTrangThaiTaiKhoan(String userId) {
+        db.collection("nguoi_dung").document(userId).get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot doc = task.getResult();
+                        if (doc.exists()) {
+                            String trangThai = doc.getString("trang_thai_tai_khoan");
+                            if ("bi_khoa".equals(trangThai)) {
+                                mAuth.signOut();
+                                Toast.makeText(MainActivity.this, "⚠️ Tài khoản đã bị khóa. Vui lòng liên hệ admin!", Toast.LENGTH_LONG).show();
+                            } else {
+                                startActivity(new Intent(MainActivity.this, HomeActivity.class));
+                                finish();
+                            }
+                        } else {
+                            startActivity(new Intent(MainActivity.this, HomeActivity.class));
+                            finish();
+                        }
+                    } else {
+                        startActivity(new Intent(MainActivity.this, HomeActivity.class));
+                        finish();
+                    }
+                });
     }
 }

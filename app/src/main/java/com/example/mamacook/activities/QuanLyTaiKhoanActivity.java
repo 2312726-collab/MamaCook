@@ -25,10 +25,10 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
 
     private EditText edtSearchUser;
     private RecyclerView rvUsers;
-    private Button btnTatCa, btnViPham;
+    private Button btnTatCa, btnViPham, btnUpdateViPham;
     private UserAdminAdapter adapter;
     private FirebaseFirestore db;
-    private com.google.firebase.firestore.ListenerRegistration userListener; // Bộ lắng nghe realtime
+    private com.google.firebase.firestore.ListenerRegistration userListener;
 
     private final List<User> fullList = new ArrayList<>();
     private final List<User> filteredList = new ArrayList<>();
@@ -45,6 +45,7 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
         rvUsers = findViewById(R.id.rv_users_admin);
         btnTatCa = findViewById(R.id.btn_tat_ca_tai_khoan);
         btnViPham = findViewById(R.id.btn_tai_khoan_vi_pham);
+        btnUpdateViPham = findViewById(R.id.btn_update_vi_pham);
 
         adapter = new UserAdminAdapter(this, filteredList, this);
         rvUsers.setLayoutManager(new LinearLayoutManager(this));
@@ -53,42 +54,68 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
         setupSearch();
         setupButtons();
         loadUsers();
+
+        btnUpdateViPham.setOnClickListener(v -> updateAllUsersViPham());
+    }
+
+    // ✅ THÊM onResume để reload khi quay lại màn hình
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadUsers();
+    }
+
+    private void updateAllUsersViPham() {
+        new AlertDialog.Builder(this)
+                .setTitle("Cập nhật vi phạm")
+                .setMessage("Thêm field 'so_lan_vi_pham = 0' cho tất cả tài khoản?")
+                .setPositiveButton("Có", (d, w) -> {
+                    db.collection("nguoi_dung")
+                            .get()
+                            .addOnSuccessListener(queryDocumentSnapshots -> {
+                                int count = 0;
+                                for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                                    doc.getReference().update("so_lan_vi_pham", 0);
+                                    count++;
+                                }
+                                Toast.makeText(QuanLyTaiKhoanActivity.this,
+                                        "Đã cập nhật " + count + " tài khoản",
+                                        Toast.LENGTH_LONG).show();
+                            })
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(QuanLyTaiKhoanActivity.this,
+                                            "Lỗi: " + e.getMessage(),
+                                            Toast.LENGTH_LONG).show());
+                })
+                .setNegativeButton("Không", null)
+                .show();
     }
 
     private void loadUsers() {
-        // Gán listener vào biến để có thể gỡ bỏ khi đóng Activity
-        android.util.Log.d("QuanLyTaiKhoan", "Bắt đầu load users...");
+        com.google.firebase.auth.FirebaseUser currentUser =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
 
-        // Kiểm tra user đã đăng nhập chưa
-        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
-            android.util.Log.e("QuanLyTaiKhoan", "User chưa đăng nhập!");
             Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
             return;
         }
-        android.util.Log.d("QuanLyTaiKhoan", "User đã đăng nhập: " + currentUser.getEmail());
+
+        if (userListener != null) {
+            userListener.remove();
+        }
 
         userListener = db.collection("nguoi_dung")
                 .addSnapshotListener((query, error) -> {
                     if (error != null) {
-                        android.util.Log.e("QuanLyTaiKhoan", "Lỗi: " + error.getMessage());
                         Toast.makeText(this, "Lỗi tải dữ liệu: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
-                    if (query == null) {
-                        android.util.Log.e("QuanLyTaiKhoan", "Query null");
-                        Toast.makeText(this, "Query null - Không có dữ liệu", Toast.LENGTH_LONG).show();
-                        return;
-                    }
 
-                    android.util.Log.d("QuanLyTaiKhoan", "Số user: " + query.size());
-                    Toast.makeText(this, "Đã load " + query.size() + " users", Toast.LENGTH_SHORT).show();
                     fullList.clear();
                     for (QueryDocumentSnapshot doc : query) {
                         User u = doc.toObject(User.class);
                         u.setId_nguoi_dung(doc.getId());
                         fullList.add(u);
-                        android.util.Log.d("QuanLyTaiKhoan", "User: " + u.getHo_ten());
                     }
                     applyFilters();
                 });
@@ -97,7 +124,6 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Giải phóng bộ lắng nghe để tránh rò rỉ bộ nhớ (Memory Leak)
         if (userListener != null) {
             userListener.remove();
         }
@@ -127,11 +153,10 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
     }
 
     private void applyFilters() {
-        android.util.Log.d("QuanLyTaiKhoan", "applyFilters called - fullList size: " + fullList.size());
         List<User> newFilteredList = new ArrayList<>();
         for (User u : fullList) {
-            boolean matchesSearch = u.getHo_ten() != null && u.getHo_ten().toLowerCase().contains(keywordHienTai)
-                    || u.getEmail() != null && u.getEmail().toLowerCase().contains(keywordHienTai);
+            boolean matchesSearch = (u.getHo_ten() != null && u.getHo_ten().toLowerCase().contains(keywordHienTai))
+                    || (u.getEmail() != null && u.getEmail().toLowerCase().contains(keywordHienTai));
 
             if (keywordHienTai.isEmpty()) matchesSearch = true;
 
@@ -143,7 +168,6 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
                 }
             }
         }
-        android.util.Log.d("QuanLyTaiKhoan", "After filter - newFilteredList size: " + newFilteredList.size());
         filteredList.clear();
         filteredList.addAll(newFilteredList);
         adapter.updateList(newFilteredList);
@@ -158,7 +182,8 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
                 .setPositiveButton("Có", (d, w) -> {
                     db.collection("nguoi_dung").document(user.getId_nguoi_dung())
                             .update("trang_thai_tai_khoan", newStatus)
-                            .addOnSuccessListener(a -> Toast.makeText(this, "Đã cập nhật", Toast.LENGTH_SHORT).show());
+                            .addOnSuccessListener(a ->
+                                    Toast.makeText(this, "Đã cập nhật", Toast.LENGTH_SHORT).show());
                 })
                 .setNegativeButton("Không", null)
                 .show();
@@ -173,7 +198,8 @@ public class QuanLyTaiKhoanActivity extends AppCompatActivity implements UserAdm
                 .setPositiveButton("Có", (d, w) -> {
                     db.collection("nguoi_dung").document(user.getId_nguoi_dung())
                             .update("role", newRole)
-                            .addOnSuccessListener(a -> Toast.makeText(this, "Đã đổi role", Toast.LENGTH_SHORT).show());
+                            .addOnSuccessListener(a ->
+                                    Toast.makeText(this, "Đã đổi role", Toast.LENGTH_SHORT).show());
                 })
                 .setNegativeButton("Không", null)
                 .show();
