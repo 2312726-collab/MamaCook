@@ -10,6 +10,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 import com.example.mamacook.R;
 import com.example.mamacook.models.User;
@@ -35,6 +36,8 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,11 +53,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Ép buộc ứng dụng luôn ở chế độ Sáng (Light Mode)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+
         super.onCreate(savedInstanceState);
         
         mAuth = FirebaseAuth.getInstance();
         if (mAuth.getCurrentUser() != null) {
-            kiemTraTrangThaiTaiKhoan(mAuth.getCurrentUser().getUid());
+            // Đã đăng nhập: Vẫn chạy saveUserToFirestore để đồng bộ dữ liệu nếu thiếu (email, avatar...)
+            saveUserToFirestore(mAuth.getCurrentUser());
             return;
         }
 
@@ -149,18 +156,50 @@ public class MainActivity extends AppCompatActivity {
     private void saveUserToFirestore(FirebaseUser firebaseUser) {
         if (firebaseUser == null) return;
         String uid = firebaseUser.getUid();
+        
+        // Tìm email từ providerData nếu top-level null (Thường gặp với Facebook)
+        String email = firebaseUser.getEmail();
+        if (TextUtils.isEmpty(email)) {
+            for (com.google.firebase.auth.UserInfo profile : firebaseUser.getProviderData()) {
+                if (!TextUtils.isEmpty(profile.getEmail())) {
+                    email = profile.getEmail();
+                    break;
+                }
+            }
+        }
+        final String finalEmail = email;
+
         db.collection("nguoi_dung").document(uid).get().addOnSuccessListener(doc -> {
             if (!doc.exists()) {
+                // TẠO MỚI HOÀN TOÀN
                 User user = new User();
                 user.setId_nguoi_dung(uid);
                 user.setHo_ten(firebaseUser.getDisplayName());
-                user.setEmail(firebaseUser.getEmail());
+                user.setEmail(finalEmail);
+                if (firebaseUser.getPhotoUrl() != null) {
+                    user.setAnh_dai_dien(firebaseUser.getPhotoUrl().toString());
+                }
                 user.setNgay_tao(Timestamp.now());
                 user.setTrang_thai_tai_khoan("dang_hoat_dong");
                 user.setRole("user");
                 user.setSo_lan_vi_pham(0);
-                // Không setMat_khau để bảo mật
                 db.collection("nguoi_dung").document(uid).set(user);
+            } else {
+                // CẬP NHẬT NẾU THIẾU
+                Map<String, Object> updates = new HashMap<>();
+                if (!doc.contains("email") || TextUtils.isEmpty(doc.getString("email"))) {
+                    if (!TextUtils.isEmpty(finalEmail)) {
+                        updates.put("email", finalEmail);
+                    }
+                }
+                if (!doc.contains("anh_dai_dien") || TextUtils.isEmpty(doc.getString("anh_dai_dien"))) {
+                    if (firebaseUser.getPhotoUrl() != null) {
+                        updates.put("anh_dai_dien", firebaseUser.getPhotoUrl().toString());
+                    }
+                }
+                if (!updates.isEmpty()) {
+                    db.collection("nguoi_dung").document(uid).update(updates);
+                }
             }
             kiemTraTrangThaiTaiKhoan(uid);
         });

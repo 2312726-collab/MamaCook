@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.Handler;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
@@ -23,6 +24,9 @@ public class SplashActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Ép buộc ứng dụng luôn ở chế độ Sáng (Light Mode)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+
         super.onCreate(savedInstanceState);
 
         // --- KHỞI TẠO APP CHECK DEBUG ---

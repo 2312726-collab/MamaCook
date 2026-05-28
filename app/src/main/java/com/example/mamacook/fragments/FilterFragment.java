@@ -18,8 +18,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mamacook.R;
 import com.example.mamacook.adapters.MonAnVerticalAdapter;
+import com.example.mamacook.models.DanhMuc;
 import com.example.mamacook.models.MonAn;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -44,7 +46,9 @@ public class FilterFragment extends Fragment {
     private int ratingRange = 0; // 0: All, 4: 4-5, 3: 3-4, 2: 2-3, 1: 1-2
     private int timeRange = 0; // 0: All, 1: <15, 2: 15-30, 3: 30-60, 4: >60
     private String currentDifficulty = "Tất cả";
+    private String currentCategoryId = "all";
 
+    private List<DanhMuc> listDanhMuc = new ArrayList<>();
     private String preSelectedDate, preSelectedMeal;
 
     @Nullable
@@ -61,9 +65,29 @@ public class FilterFragment extends Fragment {
         bindViews(view);
         setupRecyclerView();
         setupListeners();
-        loadAllData();
+        
+        // Trì hoãn việc tải dữ liệu để ưu tiên cho hiệu ứng trượt (Animation) mượt mà
+        view.postDelayed(() -> {
+            if (isAdded()) {
+                loadCategories();
+                loadAllData();
+            }
+        }, 300);
 
         return view;
+    }
+
+    private void loadCategories() {
+        db.collection("danh_muc_mon").get().addOnSuccessListener(snap -> {
+            listDanhMuc.clear();
+            for (QueryDocumentSnapshot doc : snap) {
+                DanhMuc dm = doc.toObject(DanhMuc.class);
+                if (dm != null) {
+                    dm.setId_danh_muc(doc.getId());
+                    listDanhMuc.add(dm);
+                }
+            }
+        });
     }
 
     private void bindViews(View v) {
@@ -113,7 +137,30 @@ public class FilterFragment extends Fragment {
         ChipGroup cgRating = view.findViewById(R.id.cg_rating);
         ChipGroup cgTime = view.findViewById(R.id.cg_time);
         ChipGroup cgDifficulty = view.findViewById(R.id.cg_difficulty);
+        ChipGroup cgCategory = view.findViewById(R.id.cg_category);
         Button btnApply = view.findViewById(R.id.btn_apply_filter);
+
+        // Hiển thị danh sách danh mục động
+        if (cgCategory != null) {
+            // Lấy LayoutInflater từ ngữ cảnh của chính ChipGroup để kế thừa đúng Theme MaterialComponents.Light
+            LayoutInflater inflater = LayoutInflater.from(cgCategory.getContext());
+            for (DanhMuc dm : listDanhMuc) {
+                // Nạp chip từ file layout mẫu
+                Chip chip = (Chip) inflater.inflate(R.layout.item_chip_filter, cgCategory, false);
+                chip.setText(dm.getTen_danh_muc());
+                chip.setTag(dm.getId_danh_muc());
+                // Cần đảm bảo chip có ID duy nhất để ChipGroup xử lý chọn (singleSelection)
+                chip.setId(View.generateViewId());
+                
+                cgCategory.addView(chip);
+                if (dm.getId_danh_muc().equals(currentCategoryId)) {
+                    cgCategory.check(chip.getId());
+                }
+            }
+            if (currentCategoryId.equals("all")) {
+                cgCategory.check(R.id.chip_cat_all);
+            }
+        }
 
         // Khởi tạo giá trị hiện tại
         if (ratingRange == 4) cgRating.check(R.id.chip_rate_4);
@@ -157,6 +204,19 @@ public class FilterFragment extends Fragment {
             else if (diffId == R.id.chip_diff_hard) currentDifficulty = "Khó";
             else currentDifficulty = "Tất cả";
 
+            // Lấy giá trị Danh mục
+            int catId = cgCategory.getCheckedChipId();
+            if (catId == R.id.chip_cat_all) {
+                currentCategoryId = "all";
+            } else {
+                Chip selectedChip = view.findViewById(catId);
+                if (selectedChip != null && selectedChip.getTag() != null) {
+                    currentCategoryId = selectedChip.getTag().toString();
+                } else {
+                    currentCategoryId = "all";
+                }
+            }
+
             applyFilter();
             dialog.dismiss();
         });
@@ -195,7 +255,12 @@ public class FilterFragment extends Fragment {
             displayList.removeIf(m -> m.getDo_kho() == null || !Objects.equals(m.getDo_kho(), currentDifficulty));
         }
 
-        // 4. Mặc định sắp xếp theo mới nhất
+        // 4. Lọc theo Danh mục
+        if (!Objects.equals(currentCategoryId, "all")) {
+            displayList.removeIf(m -> m.getId_danh_muc() == null || !Objects.equals(m.getId_danh_muc(), currentCategoryId));
+        }
+
+        // 5. Mặc định sắp xếp theo mới nhất
         displayList.sort((a, b) -> {
             if (a.getNgay_tao() == null && b.getNgay_tao() == null) return 0;
             if (a.getNgay_tao() == null) return 1;

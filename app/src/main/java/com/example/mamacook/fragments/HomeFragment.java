@@ -91,10 +91,12 @@ public class HomeFragment extends Fragment {
 
     private TextView    tvGreeting, tvAiInsights;
     private EditText    etSearch;
-    private ImageButton btnFilter;
+    private ImageButton btnFilter, btnChatFloat;
     private FrameLayout layoutThongBao;
     private ProgressBar pbAiLoading;
     private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory, rvWeeklyAttention;
+
+    private String tenNguoiDung = "";
 
     private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory, adapterWeeklyAttention;
     private final List<MonAn> listWeeklyAttention = new ArrayList<>();
@@ -170,6 +172,7 @@ public class HomeFragment extends Fragment {
         tvAiInsights  = v.findViewById(R.id.tvAiInsights);
         etSearch      = v.findViewById(R.id.et_search);
         btnFilter     = v.findViewById(R.id.btn_filter);
+        btnChatFloat  = v.findViewById(R.id.btn_chat_float);
         layoutThongBao = v.findViewById(R.id.layout_thong_bao);
         pbAiLoading   = v.findViewById(R.id.pb_ai_loading);
         currentSelectedCategory = v.findViewById(R.id.btn_cat_all);
@@ -185,6 +188,15 @@ public class HomeFragment extends Fragment {
         if (btnScanQr != null) {
             btnScanQr.setOnClickListener(view -> {
                 Intent intent = new Intent(getActivity(), com.example.mamacook.activities.ScanQRCodeActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        if (btnChatFloat != null) {
+            btnChatFloat.setOnClickListener(view -> {
+                Intent intent = new Intent(getActivity(), com.example.mamacook.activities.ChatActivity.class);
+                intent.putExtra("che_do", "user");
+                intent.putExtra("ten_user", tenNguoiDung);
                 startActivity(intent);
             });
         }
@@ -324,6 +336,7 @@ public class HomeFragment extends Fragment {
             if (!isAdded()) return;
             if (doc.exists()) {
                 String name = doc.getString("ho_ten");
+                tenNguoiDung = name != null ? name : "";
                 if (name != null) tvGreeting.setText("Xin chào " + name + "!");
                 List<String> prefs = (List<String>) doc.get("so_thich");
                 userPrefs.clear(); if (prefs != null) userPrefs.addAll(prefs);
@@ -560,7 +573,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadNewRecipes() {
-        newRecipesListener = db.collection("mon_an").orderBy("rating", Query.Direction.DESCENDING).limit(11).addSnapshotListener((snap, e) -> {
+        newRecipesListener = db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(11).addSnapshotListener((snap, e) -> {
             if (snap == null) return; listNew.clear();
             for (QueryDocumentSnapshot d : snap) listNew.add(parseMonAn(d));
             adapterNew.notifyDataSetChanged();
@@ -569,9 +582,15 @@ public class HomeFragment extends Fragment {
 
     private void loadHistoryRecipes() {
         String uid = mAuth.getUid(); if (uid == null) return;
-        historyListener = db.collection("lich_su_xem").whereEqualTo("id_nguoi_dung", uid).orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(11).addSnapshotListener((snap, e) -> {
+        // Tải tối đa 15 món gần đây nhất
+        historyListener = db.collection("lich_su_xem").whereEqualTo("id_nguoi_dung", uid).orderBy("thoi_gian_xem", Query.Direction.DESCENDING).limit(15).addSnapshotListener((snap, e) -> {
             if (snap == null) return; List<String> ids = new ArrayList<>();
-            for (DocumentSnapshot d : snap) ids.add(d.getString("id_mon_an"));
+            for (DocumentSnapshot d : snap) {
+                String id = d.getString("id_mon_an");
+                if (id != null && !ids.contains(id)) {
+                    ids.add(id);
+                }
+            }
             if (ids.isEmpty()) { listHistory.clear(); adapterHistory.notifyDataSetChanged(); return; }
             List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
             for (String id : ids) tasks.add(db.collection("mon_an").document(id).get());

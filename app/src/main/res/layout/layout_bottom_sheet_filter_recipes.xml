@@ -153,6 +153,29 @@
                 android:text="@string/diff_hard"/>
         </com.google.android.material.chip.ChipGroup>
 
+        <!-- Danh mục (MỚI) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Danh mục"
+            android:textStyle="bold"
+            android:textColor="#3E2723"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/cg_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true">
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_cat_all"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/all" />
+            <!-- Các chip danh mục sẽ được thêm động từ code -->
+        </com.google.android.material.chip.ChipGroup>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_apply_filter"
             android:layout_width="match_parent"

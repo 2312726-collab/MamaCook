@@ -33,9 +33,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:fontFamily="serif"
-            android:text="Kế hoạch hôm nay"
+            android:text="KẾ HOẠCH NẤU ĂN"
             android:textColor="@color/white"
-            android:textSize="22sp"
+            android:textSize="25sp"
             android:textStyle="bold" />
 
         <ImageButton
@@ -43,9 +43,9 @@
             android:layout_width="45dp"
             android:layout_height="45dp"
             android:background="@drawable/bg_circle_white"
-            android:src="@drawable/ic_ai_stars"
-            android:padding="10dp"
-            app:tint="#9B4F4F" />
+            android:src="@drawable/ic_gemini"
+            android:padding="8dp"
+            app:tint="#4285F4" />
     </LinearLayout>
 
     <androidx.core.widget.NestedScrollView

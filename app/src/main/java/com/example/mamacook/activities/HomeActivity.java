@@ -28,8 +28,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigationView;
     private int currentId = -1;
-    private ImageButton btnChatFloat;
-    private String tenNguoiDung = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,17 +49,6 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
-        btnChatFloat = findViewById(R.id.btn_chat_float);
-
-        // Load tên người dùng để truyền sang ChatActivity
-        loadUserName();
-
-        btnChatFloat.setOnClickListener(v -> {
-            Intent intent = new Intent(HomeActivity.this, ChatActivity.class);
-            intent.putExtra("che_do", "user");
-            intent.putExtra("ten_user", tenNguoiDung);
-            startActivity(intent);
-        });
 
         bottomNavigationView.setOnItemSelectedListener(item -> {
             showFragment(item.getItemId());
@@ -94,14 +81,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void loadUserName() {
-        String uid = FirebaseAuth.getInstance().getUid();
-        if (uid == null) return;
-        FirebaseFirestore.getInstance().collection("nguoi_dung").document(uid).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        tenNguoiDung = doc.getString("ho_ten");
-                    }
-                });
+        // Removed to move logic to HomeFragment
     }
 
     private void showFragment(int id) {

@@ -139,10 +139,12 @@ public class AccountFragment extends Fragment {
             Glide.with(this).load(currentAvatarUrl).placeholder(R.drawable.ic_nav_profile).circleCrop().into(imgAvatar);
         }
 
+        String emailDisplay = (user.getEmail() != null && !user.getEmail().isEmpty()) ? user.getEmail() : "Chưa cập nhật";
+
         tvDisplayName.setText(user.getHo_ten() != null ? user.getHo_ten() : "--");
-        tvDisplayEmail.setText(user.getEmail());
+        tvDisplayEmail.setText(emailDisplay);
         tvInfoName.setText(user.getHo_ten());
-        tvInfoEmail.setText(user.getEmail());
+        tvInfoEmail.setText(emailDisplay);
         tvInfoPhone.setText(user.getSo_dien_thoai() != null && !user.getSo_dien_thoai().isEmpty() ? user.getSo_dien_thoai() : "Chưa cập nhật");
 
         // Hiển thị Ngày sinh và Giới tính

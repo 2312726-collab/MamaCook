@@ -171,12 +171,15 @@ public class SeeAllActivity extends AppCompatActivity {
         db.collection("lich_su_xem")
                 .whereEqualTo("id_nguoi_dung", uid)
                 .orderBy("thoi_gian_xem", Query.Direction.DESCENDING)
-                .limit(20)
+                .limit(15)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<String> dishIds = new ArrayList<>();
                     for (DocumentSnapshot doc : querySnapshot) {
-                        dishIds.add(doc.getString("id_mon_an"));
+                        String id = doc.getString("id_mon_an");
+                        if (id != null && !dishIds.contains(id)) {
+                            dishIds.add(id);
+                        }
                     }
                     if (dishIds.isEmpty()) return;
 

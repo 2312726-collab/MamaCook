@@ -115,6 +115,7 @@ public class ScheduleFragment extends Fragment {
         filterFragment.setArguments(args);
 
         requireActivity().getSupportFragmentManager().beginTransaction()
+                .setCustomAnimations(R.anim.slide_up, R.anim.stay_still, R.anim.stay_still, R.anim.slide_down)
                 .add(R.id.fragment_container, filterFragment)
                 .hide(this)
                 .addToBackStack(null)

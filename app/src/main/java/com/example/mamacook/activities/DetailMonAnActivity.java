@@ -252,19 +252,21 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void renderFromIntent() {
         Intent i = getIntent();
-        String hinhAnh = i.getStringExtra(EXTRA_HINH_ANH);
-        if (!TextUtils.isEmpty(hinhAnh)) {
-            if (hinhAnh.startsWith("http")) {
-                Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
-            } else {
-                StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
-                Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
-            }
-        }
+        loadDishImage(i.getStringExtra(EXTRA_HINH_ANH));
         tvTen.setText(i.getStringExtra(EXTRA_TEN_MON));
         int thoiGian = i.getIntExtra(EXTRA_THOI_GIAN, 0);
         tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", thoiGian));
         updateRatingUI(i.getStringExtra(EXTRA_RATING), i.getIntExtra(EXTRA_REVIEW_COUNT, 0));
+    }
+
+    private void loadDishImage(String hinhAnh) {
+        if (TextUtils.isEmpty(hinhAnh)) return;
+        if (hinhAnh.startsWith("http")) {
+            Glide.with(this).load(hinhAnh).placeholder(R.drawable.bg_splash).into(imgMonAn);
+        } else {
+            StorageReference ref = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+            Glide.with(this).load(ref).placeholder(R.drawable.bg_splash).into(imgMonAn);
+        }
     }
 
     private void updateRatingUI(String ratingParam, int count) {
@@ -330,8 +332,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (btnEditMonAn != null) {
             btnEditMonAn.setOnClickListener(v -> {
                 if (currentDishId != null) {
-                    Intent intent = new Intent(DetailMonAnActivity.this, AddEditMonAnActivity.class);
-                    intent.putExtra("id_mon_an", currentDishId);
+                    Intent intent = AddEditMonAnActivity.createIntent(DetailMonAnActivity.this, currentDishId);
                     startActivity(intent);
                 }
             });
@@ -363,17 +364,48 @@ public class DetailMonAnActivity extends AppCompatActivity {
         if (currentDishId == null) return;
         ProgressDialog pd = new ProgressDialog(this);
         pd.setMessage("Đang xóa...");
+        pd.setCancelable(false);
         pd.show();
-        db.collection("mon_an").document(currentDishId).delete()
-                .addOnSuccessListener(aVoid -> {
-                    pd.dismiss();
-                    Toast.makeText(this, "Đã xóa món ăn", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    pd.dismiss();
-                    Toast.makeText(this, "Lỗi xóa: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+
+        // Lấy thông tin mới nhất từ Firestore trước khi xóa để đảm bảo có đường dẫn ảnh chính xác
+        db.collection("mon_an").document(currentDishId).get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                String hinhAnh = doc.getString("hinh_anh");
+                
+                // 1. Xóa hình ảnh trong Storage nếu có
+                if (!TextUtils.isEmpty(hinhAnh)) {
+                    try {
+                        StorageReference storageRef;
+                        if (hinhAnh.startsWith("http")) {
+                            // Nếu là URL (thường là download URL của Firebase)
+                            storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(hinhAnh);
+                        } else {
+                            // Nếu là path (ví dụ: mon_an/abc.jpg)
+                            storageRef = FirebaseStorage.getInstance().getReference().child(hinhAnh);
+                        }
+                        
+                        storageRef.delete().addOnFailureListener(e -> Log.e(TAG, "Lỗi xóa ảnh Storage: " + e.getMessage()));
+                    } catch (Exception e) {
+                        Log.e(TAG, "Lỗi khi xử lý xóa ảnh: " + e.getMessage());
+                    }
+                }
+            }
+
+            // 2. Xóa tài liệu trong Firestore (Luôn xóa tài liệu kể cả khi không có ảnh hoặc lỗi xóa ảnh)
+            db.collection("mon_an").document(currentDishId).delete()
+                    .addOnSuccessListener(aVoid -> {
+                        pd.dismiss();
+                        Toast.makeText(this, "Đã xóa món ăn thành công", Toast.LENGTH_SHORT).show();
+                        finish();
+                    })
+                    .addOnFailureListener(e -> {
+                        pd.dismiss();
+                        Toast.makeText(this, "Lỗi xóa dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+        }).addOnFailureListener(e -> {
+            pd.dismiss();
+            Toast.makeText(this, "Không thể truy cập dữ liệu để xóa: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        });
     }
 
     private boolean checkPermissions() {
@@ -677,6 +709,7 @@ public class DetailMonAnActivity extends AppCompatActivity {
                 currentMonAn = doc.toObject(MonAn.class);
                 if (currentMonAn != null) {
                     currentMonAn.setId_mon_an(doc.getId());
+                    loadDishImage(currentMonAn.getHinh_anh());
                     updateRatingUI(RatingUtils.getRatingOnly(currentMonAn), currentMonAn.getReviewCount());
                     tvTen.setText(currentMonAn.getTen_mon());
                     tvThoiGian.setText(String.format(Locale.getDefault(), "⌛ %d phút", currentMonAn.getThoi_gian_nau()));
@@ -771,11 +804,13 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void addToHistory(String dishId) {
         if (currentUserId == null) return;
+        String historyId = currentUserId + "_" + dishId;
         Map<String, Object> h = new HashMap<>();
         h.put("id_nguoi_dung", currentUserId);
         h.put("id_mon_an", dishId);
         h.put("thoi_gian_xem", FieldValue.serverTimestamp());
-        db.collection("lich_su_xem").add(h).addOnSuccessListener(ref -> limitHistoryTo15());
+        db.collection("lich_su_xem").document(historyId).set(h)
+                .addOnSuccessListener(ref -> limitHistoryTo15());
     }
 
     private void limitHistoryTo15() {
