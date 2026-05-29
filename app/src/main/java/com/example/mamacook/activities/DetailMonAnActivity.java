@@ -170,6 +170,14 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
         renderFromIntent();
         addToHistory(currentDishId);
+        incrementViewCount(currentDishId);
+    }
+
+    private void incrementViewCount(String dishId) {
+        if (dishId == null) return;
+        db.collection("mon_an").document(dishId)
+                .update("luot_xem", FieldValue.increment(1))
+                .addOnFailureListener(e -> Log.e(TAG, "Lỗi cập nhật lượt xem: " + e.getMessage()));
     }
 
     @Override
@@ -559,6 +567,9 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     review.put("ngay_danh_gia", FieldValue.serverTimestamp());
 
                     db.collection("danh_gia").add(review).addOnSuccessListener(docRef -> {
+                        // Cập nhật số sao và lượt đánh giá vào mon_an ngay lập tức
+                        updateMonAnRating(stars);
+
                         progressDialog.dismiss();
                         etBinhLuan.setText("");
                         rbChonSao.setRating(5);
@@ -571,6 +582,40 @@ public class DetailMonAnActivity extends AppCompatActivity {
                     progressDialog.dismiss();
                     Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void updateMonAnRating(float newStar) {
+        if (currentDishId == null || currentMonAn == null) return;
+
+        DocumentReference dishRef = db.collection("mon_an").document(currentDishId);
+
+        db.runTransaction(transaction -> {
+            DocumentSnapshot snapshot = transaction.get(dishRef);
+            
+            double currentRating = 0;
+            if (snapshot.contains("rating")) {
+                Object r = snapshot.get("rating");
+                if (r instanceof Number) currentRating = ((Number) r).doubleValue();
+            }
+            
+            long currentCount = 0;
+            if (snapshot.contains("reviewCount")) {
+                Long c = snapshot.getLong("reviewCount");
+                if (c != null) currentCount = c;
+            }
+
+            double newTotalRating = (currentRating * currentCount) + newStar;
+            long newCount = currentCount + 1;
+            double newAverage = newTotalRating / newCount;
+
+            // Làm tròn 1 chữ số thập phân
+            newAverage = Math.round(newAverage * 10.0) / 10.0;
+
+            transaction.update(dishRef, "rating", newAverage);
+            transaction.update(dishRef, "reviewCount", newCount);
+
+            return null;
+        }).addOnFailureListener(e -> Log.e(TAG, "Lỗi cập nhật rating: " + e.getMessage()));
     }
 
     private void checkIfInPlan() {

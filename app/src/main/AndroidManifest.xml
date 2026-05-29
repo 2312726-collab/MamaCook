@@ -89,7 +89,6 @@
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".activities.GioHangActivity" android:exported="false" />
         <activity android:name=".activities.ChuanBiNauActivity" android:exported="false" />
-        <activity android:name=".activities.FavoriteActivity" android:exported="false" />
         <activity
             android:name=".activities.AddEditMonAnActivity"
             android:exported="false"
@@ -98,7 +97,6 @@
             android:name=".activities.QRCodeViewerActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Translucent" />
-        <activity android:name=".activities.AccountActivity" android:exported="false" />
         <activity android:name=".activities.PreviewAvatarActivity" android:exported="false" />
 
         <activity

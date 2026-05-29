@@ -793,7 +793,7 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         monAn.setDanh_sach_nguyen_lieu(danhSachNguyenLieu);
         monAn.setDanh_sach_so_che(danhSachSoChe);
         monAn.setDanh_sach_buoc_nau(danhSachBuocNau);
-        monAn.setTu_khoa_tim_kiem(generateKeywords(ten));
+        monAn.setTu_khoa_tim_kiem(generateKeywords(ten, danhSachNguyenLieu));
         
         com.google.firebase.Timestamp now = com.google.firebase.Timestamp.now();
         if (!isEditMode) monAn.setNgay_tao(now);
@@ -842,24 +842,45 @@ public class AddEditMonAnActivity extends AppCompatActivity {
         } catch (Exception e) { return defaultVal; }
     }
 
-    private List<String> generateKeywords(String name) {
+    private List<String> generateKeywords(String name, List<ChiTietNguyenLieu> ingredients) {
         java.util.Set<String> keywords = new java.util.HashSet<>();
-        String normalized = VNCharacterUtils.removeAccents(name).toLowerCase();
-        String[] words = normalized.split("\\s+");
         
-        // Thêm từng từ đơn
-        for (String word : words) {
-            if (word.length() > 1) keywords.add(word);
+        // 1. Sinh từ khóa cho Tên món
+        if (name != null && !name.isEmpty()) {
+            addKeywordPermutations(keywords, name.toLowerCase());
+            addKeywordPermutations(keywords, VNCharacterUtils.removeAccents(name).toLowerCase());
         }
-        
-        // Thêm cụm từ tích lũy (Prefix)
-        StringBuilder sb = new StringBuilder();
-        for (String word : words) {
-            if (sb.length() > 0) sb.append(" ");
-            sb.append(word);
-            keywords.add(sb.toString());
+
+        // 2. Sinh từ khóa cho danh sách Nguyên liệu
+        if (ingredients != null) {
+            for (ChiTietNguyenLieu nl : ingredients) {
+                if (nl.ten_nguyen_lieu != null && !nl.ten_nguyen_lieu.isEmpty()) {
+                    addKeywordPermutations(keywords, nl.ten_nguyen_lieu.toLowerCase());
+                    addKeywordPermutations(keywords, VNCharacterUtils.removeAccents(nl.ten_nguyen_lieu).toLowerCase());
+                }
+            }
         }
+
         return new ArrayList<>(keywords);
+    }
+
+    private void addKeywordPermutations(java.util.Set<String> keywords, String text) {
+        if (text == null || text.isEmpty()) return;
+        
+        // LÀM SẠCH: Loại bỏ các ký tự đặc biệt như (, ), +, ,, . và chỉ giữ lại chữ cái, số, khoảng trắng
+        String cleanText = text.replaceAll("[()\\+\\.,\\-]", " ").replaceAll("\\s+", " ").trim();
+        
+        String[] words = cleanText.split("\\s+");
+        
+        // Tạo tất cả các cụm từ bắt đầu từ từng vị trí
+        for (int i = 0; i < words.length; i++) {
+            StringBuilder sb = new StringBuilder();
+            for (int j = i; j < words.length; j++) {
+                if (sb.length() > 0) sb.append(" ");
+                sb.append(words[j]);
+                keywords.add(sb.toString());
+            }
+        }
     }
 
     private String removeAccent(String str) {

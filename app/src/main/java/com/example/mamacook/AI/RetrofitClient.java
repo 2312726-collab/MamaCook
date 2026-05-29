@@ -21,7 +21,7 @@ public class RetrofitClient {
                     .build();
 
             retrofit = new Retrofit.Builder()
-                    .baseUrl("http://192.168.1.79:3000/")
+                    .baseUrl("http://192.168.1.51:3000/")
                     .client(okHttpClient)               // ✅ Gắn vào đây
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();

@@ -429,6 +429,9 @@ public class HomeFragment extends Fragment {
 
     private void onGeminiSuccess(List<MonAn> selected, String greeting) {
         aiState = AiState.DONE;
+        // Chỉ cập nhật nếu người dùng vẫn đang ở tab "Gợi ý cho bạn"
+        if (!lastCategoryId.equals("all")) return;
+
         if (tvAiInsights != null) tvAiInsights.setText("✨ " + greeting);
         listCategory.clear(); listCategory.addAll(selected);
         if (adapterCategory != null) adapterCategory.notifyDataSetChanged();
@@ -437,6 +440,12 @@ public class HomeFragment extends Fragment {
 
     private void onGeminiFailed(List<MonAn> candidates, String reason) {
         aiState = AiState.DONE;
+        // Chỉ cập nhật nếu người dùng vẫn đang ở tab "Gợi ý cho bạn"
+        if (!lastCategoryId.equals("all")) return;
+
+        if (tvAiInsights != null) {
+            tvAiInsights.setText("✨ Gợi ý cho bạn");
+        }
         List<MonAn> fb = new ArrayList<>();
         for (MonAn m : candidates) if (matchesPrefs(m)) fb.add(m);
         if (fb.size() < 5) { for (MonAn m : candidates) if (!fb.contains(m)) fb.add(m); }
@@ -457,6 +466,16 @@ public class HomeFragment extends Fragment {
 
     private void loadRecipesByCategory(String categoryId, String title) {
         lastCategoryId = categoryId; lastCategoryTitle = title;
+
+        // Cập nhật tiêu đề hiển thị ngay khi chuyển tab
+        if (tvAiInsights != null) {
+            if (categoryId.equals("all")) {
+                updateAiInsightsTitle(aiLocation);
+            } else {
+                tvAiInsights.setText(title);
+            }
+        }
+
         if (categoryListener != null) categoryListener.remove();
         Query q = categoryId.equals("all") ? db.collection("mon_an") : db.collection("mon_an").whereEqualTo("id_danh_muc", categoryId);
         categoryListener = q.limit(100).addSnapshotListener((snap, error) -> {
@@ -465,12 +484,16 @@ public class HomeFragment extends Fragment {
             for (QueryDocumentSnapshot doc : snap) {
                 MonAn m = parseMonAn(doc); if (m != null) listFullCurrentCategory.add(m);
             }
-            if (categoryId.equals("all")) { recipesReady = true; checkAndTriggerAi(); }
-            else { 
+            if (categoryId.equals("all")) { 
+                recipesReady = true; 
+                checkAndTriggerAi(); 
+            } else { 
                 listCategory.clear(); 
                 listCategory.addAll(listFullCurrentCategory);
                 if (adapterCategory != null) adapterCategory.notifyDataSetChanged();
                 showAiLoading(false); 
+                // Đảm bảo tiêu đề danh mục luôn đúng khi dữ liệu tải xong
+                if (tvAiInsights != null) tvAiInsights.setText(title);
             }
         });
     }
@@ -565,11 +588,16 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadFeaturedRecipes() {
-        featuredListener = db.collection("mon_an").orderBy("luot_xem", Query.Direction.DESCENDING).limit(11).addSnapshotListener((snap, e) -> {
-            if (snap == null) return; listFeatured.clear();
-            for (QueryDocumentSnapshot d : snap) listFeatured.add(parseMonAn(d));
-            adapterFeatured.notifyDataSetChanged();
-        });
+        // Món ăn nổi bật: Sắp xếp theo Đánh giá (Rating) cao nhất
+        featuredListener = db.collection("mon_an")
+                .orderBy("rating", Query.Direction.DESCENDING)
+                .limit(11)
+                .addSnapshotListener((snap, e) -> {
+                    if (snap == null) return;
+                    listFeatured.clear();
+                    for (QueryDocumentSnapshot d : snap) listFeatured.add(parseMonAn(d));
+                    adapterFeatured.notifyDataSetChanged();
+                });
     }
 
     private void loadNewRecipes() {
@@ -607,22 +635,19 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadWeeklyAttentionRecipes() {
-        long moc = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
-        db.collection("lich_su_xem").whereGreaterThanOrEqualTo("thoi_gian_xem", new com.google.firebase.Timestamp(new java.util.Date(moc))).get().addOnSuccessListener(snap -> {
-            Map<String, Integer> score = new HashMap<>();
-            for (DocumentSnapshot d : snap) { String id = d.getString("id_mon_an"); if(id!=null) score.put(id, score.getOrDefault(id, 0) + 1); }
-            if (score.isEmpty()) { loadFeaturedRecipesFallbackForWeekly(); return; }
-            List<Map.Entry<String, Integer>> sortedList = new ArrayList<>(score.entrySet());
-            sortedList.sort((a,b) -> b.getValue() - a.getValue());
-            List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
-            for (int i=0; i<Math.min(10, sortedList.size()); i++) tasks.add(db.collection("mon_an").document(sortedList.get(i).getKey()).get());
-            Tasks.whenAllSuccess(tasks).addOnSuccessListener(res -> {
-                if (!isAdded()) return;
-                listWeeklyAttention.clear();
-                for (Object r : res) { MonAn m = parseMonAn((DocumentSnapshot)r); if (m!=null) listWeeklyAttention.add(m); }
-                adapterWeeklyAttention.notifyDataSetChanged();
-            });
-        });
+        // Được xem nhiều nhất tuần: Sắp xếp theo Tổng lượt xem (luot_xem) giảm dần
+        // Sử dụng SnapshotListener để cập nhật ngay lập tức khi số lượt xem tăng lên
+        db.collection("mon_an")
+                .orderBy("luot_xem", Query.Direction.DESCENDING)
+                .limit(10)
+                .addSnapshotListener((snap, e) -> {
+                    if (!isAdded() || snap == null) return;
+                    listWeeklyAttention.clear();
+                    for (QueryDocumentSnapshot d : snap) {
+                        listWeeklyAttention.add(parseMonAn(d));
+                    }
+                    adapterWeeklyAttention.notifyDataSetChanged();
+                });
     }
 
     private void loadFeaturedRecipesFallbackForWeekly() {
