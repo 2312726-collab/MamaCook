@@ -19,7 +19,10 @@ import com.example.mamacook.R;
 import com.example.mamacook.models.User;
 import com.google.firebase.FirebaseException;
 import com.google.firebase.Timestamp;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthOptions;
@@ -138,7 +141,7 @@ public class RegisterActivity extends AppCompatActivity {
                 Toast.makeText(this, "Email không hợp lệ", Toast.LENGTH_SHORT).show();
                 return;
             }
-            performRegister(email, password, name, "", email);
+            performRegister(email, password, name, "", email, null);
         } else {
             String otp = etOtp.getText().toString().trim();
             String phone = etPhone.getText().toString().trim();
@@ -148,26 +151,36 @@ public class RegisterActivity extends AppCompatActivity {
             }
             // Xác thực OTP trước khi tạo account
             PhoneAuthCredential credential = PhoneAuthProvider.getCredential(mVerificationId, otp);
-            mAuth.signInWithCredential(credential).addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    // OTP đúng -> Tạo account email ảo để đồng bộ login
-                    String fakeEmail = phone + "@mamacook.com";
-                    performRegister(fakeEmail, password, name, phone, "");
-                } else {
-                    Toast.makeText(this, "Mã OTP không chính xác!", Toast.LENGTH_SHORT).show();
-                }
-            });
+            // OTP đúng -> Tạo account email ảo để đồng bộ login
+            String fakeEmail = phone + "@mamacook.com";
+            performRegister(fakeEmail, password, name, phone, "", credential);
         }
     }
 
-    private void performRegister(String authEmail, String password, String name, String phone, String realEmail) {
+    private void performRegister(String authEmail, String password, String name, String phone, String realEmail, PhoneAuthCredential phoneCred) {
         mAuth.createUserWithEmailAndPassword(authEmail, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        saveUserToFirestore(task.getResult().getUser().getUid(), name, phone, realEmail, password);
+                        FirebaseUser user = task.getResult().getUser();
+                        if (user != null && phoneCred != null) {
+                            // Nếu đăng ký bằng Phone: Liên kết SĐT vào tài khoản Email vừa tạo
+                            user.linkWithCredential(phoneCred)
+                                    .addOnCompleteListener(linkTask -> {
+                                        if (linkTask.isSuccessful()) {
+                                            saveUserToFirestore(user.getUid(), name, phone, realEmail, password);
+                                        } else {
+                                            // Nếu SĐT đã bị tài khoản khác liên kết rồi
+                                            user.delete(); // Xóa tài khoản Email vừa tạo để đảm bảo đồng bộ
+                                            Toast.makeText(this, "Số điện thoại này đã được sử dụng bởi tài khoản khác!", Toast.LENGTH_LONG).show();
+                                        }
+                                    });
+                        } else if (user != null) {
+                            // Đăng ký bằng Email thuần túy
+                            saveUserToFirestore(user.getUid(), name, phone, realEmail, password);
+                        }
                     } else {
                         if (task.getException() instanceof FirebaseAuthUserCollisionException) {
-                            Toast.makeText(this, "Tài khoản đã tồn tại!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Tài khoản (Email hoặc Email ảo) đã tồn tại. Vui lòng đăng nhập!", Toast.LENGTH_LONG).show();
                         } else {
                             Toast.makeText(this, "Lỗi đăng ký: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         }

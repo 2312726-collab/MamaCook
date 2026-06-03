@@ -59,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance(); // Khởi tạo db trước khi sử dụng
+
         if (mAuth.getCurrentUser() != null) {
             // Đã đăng nhập: Vẫn chạy saveUserToFirestore để đồng bộ dữ liệu nếu thiếu (email, avatar...)
             saveUserToFirestore(mAuth.getCurrentUser());
@@ -66,8 +68,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_main);
-        
-        db = FirebaseFirestore.getInstance();
         mCallbackManager = CallbackManager.Factory.create();
         
         etLoginUser = findViewById(R.id.et_login_user);

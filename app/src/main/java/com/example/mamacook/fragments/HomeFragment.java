@@ -134,8 +134,7 @@ public class HomeFragment extends Fragment {
         setupRecyclerViews(view);
         setupCategoryButtons(view);
         setupSearchAction();
-        
-        // SỬA: Khi nhấn nút Lọc, mở màn hình kết quả chuyên biệt như hình mẫu cam đào
+
         btnFilter.setOnClickListener(v -> openFilterFragment());
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -545,7 +544,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void openSearchResult(String query) {
-        // SỬA: Chuyển sang SearchResultFragment (Giao diện cam đào)
+        // Chuyển sang SearchResultFragment
         SearchResultFragment fragment = SearchResultFragment.newInstance(query);
         getParentFragmentManager().beginTransaction()
                 .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
@@ -555,7 +554,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void openFilterFragment() {
-        // SỬA: Chuyển sang FilterFragment (Giao diện cam đào)
+        // Chuyển sang FilterFragment
         FilterFragment fragment = new FilterFragment();
         getParentFragmentManager().beginTransaction()
                 .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
