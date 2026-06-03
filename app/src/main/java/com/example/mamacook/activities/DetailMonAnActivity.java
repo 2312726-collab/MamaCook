@@ -688,21 +688,23 @@ public class DetailMonAnActivity extends AppCompatActivity {
 
     private void saveToCookingPlan(String selectedDate, String mealType) {
         String buoiTiengViet = mealType.equals("Sang") ? "Bữa Sáng" : mealType.equals("Trua") ? "Bữa Trưa" : "Bữa Tối";
-        String thuMay = "";
+        String displayDate = "";
         try {
             SimpleDateFormat dbFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             Date date = dbFormat.parse(selectedDate);
             if (date != null) {
-                SimpleDateFormat thuFormat = new SimpleDateFormat("EEEE", new Locale("vi", "VN"));
-                thuMay = thuFormat.format(date);
+                SimpleDateFormat displayFormat = new SimpleDateFormat("EEEE (dd/MM)", new Locale("vi", "VN"));
+                displayDate = displayFormat.format(date);
             }
-        } catch (Exception e) { thuMay = selectedDate; }
+        } catch (Exception e) { 
+            displayDate = selectedDate; 
+        }
 
-        String finalThuMay = thuMay;
+        String finalDisplayDate = displayDate;
         new AlertDialog.Builder(this)
                 .setTitle("Xác nhận thêm món")
-                .setMessage("Bạn có chắc muốn thêm '" + currentMonAn.getTen_mon() + "' vào " + buoiTiengViet + " " + finalThuMay + "?")
-                .setPositiveButton("Thêm", (dialog, which) -> checkDuplicateAndSave(selectedDate, mealType, finalThuMay))
+                .setMessage("Bạn có chắc muốn thêm '" + currentMonAn.getTen_mon() + "' vào " + buoiTiengViet + " " + finalDisplayDate + "?")
+                .setPositiveButton("Thêm", (dialog, which) -> checkDuplicateAndSave(selectedDate, mealType, finalDisplayDate))
                 .setNegativeButton("Hủy", null).show();
     }
 

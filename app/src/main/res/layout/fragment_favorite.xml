@@ -23,11 +23,11 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingTop="40dp"
+            android:paddingTop="15dp"
             android:paddingBottom="10dp">
             <ImageView
-                android:layout_width="100dp"
-                android:layout_height="80dp"
+                android:layout_width="150dp"
+                android:layout_height="130dp"
                 android:src="@drawable/ic_mama" />
         </LinearLayout>
 

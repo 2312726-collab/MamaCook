@@ -20,6 +20,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -92,6 +93,8 @@ public class HomeFragment extends Fragment {
     private TextView    tvGreeting, tvAiInsights;
     private EditText    etSearch;
     private ImageButton btnFilter, btnChatFloat;
+    private ImageView   ivThongBao;
+    private View        viewNotificationDot;
     private FrameLayout layoutThongBao;
     private ProgressBar pbAiLoading;
     private RecyclerView rvCategory, rvFeatured, rvNew, rvHistory, rvWeeklyAttention;
@@ -101,7 +104,7 @@ public class HomeFragment extends Fragment {
     private MonAnAdapter adapterCategory, adapterFeatured, adapterNew, adapterHistory, adapterWeeklyAttention;
     private final List<MonAn> listWeeklyAttention = new ArrayList<>();
 
-    private ListenerRegistration categoryListener, featuredListener, newRecipesListener, historyListener;
+    private ListenerRegistration categoryListener, featuredListener, newRecipesListener, historyListener, notificationListener;
 
     private final List<MonAn>  listCategory            = new ArrayList<>();
     private final List<MonAn>  listFeatured            = new ArrayList<>();
@@ -145,6 +148,7 @@ public class HomeFragment extends Fragment {
             loadNewRecipes();
             loadHistoryRecipes();
             loadWeeklyAttentionRecipes();
+            listenToNotifications();
             //checkAdminRole();
         }, 300);
 
@@ -165,6 +169,7 @@ public class HomeFragment extends Fragment {
         if (featuredListener    != null) featuredListener.remove();
         if (newRecipesListener  != null) newRecipesListener.remove();
         if (historyListener     != null) historyListener.remove();
+        if (notificationListener != null) notificationListener.remove();
     }
 
     private void bindViews(View v) {
@@ -174,6 +179,8 @@ public class HomeFragment extends Fragment {
         btnFilter     = v.findViewById(R.id.btn_filter);
         btnChatFloat  = v.findViewById(R.id.btn_chat_float);
         layoutThongBao = v.findViewById(R.id.layout_thong_bao);
+        ivThongBao    = v.findViewById(R.id.iv_thong_bao);
+        viewNotificationDot = v.findViewById(R.id.view_notification_dot);
         pbAiLoading   = v.findViewById(R.id.pb_ai_loading);
         currentSelectedCategory = v.findViewById(R.id.btn_cat_all);
 
@@ -570,7 +577,7 @@ public class HomeFragment extends Fragment {
         rvHistory = view.findViewById(R.id.rv_history);
         rvWeeklyAttention = view.findViewById(R.id.rv_weekly_attention);
         
-        int H = LinearLayoutManager.HORIZONTAL;
+        int H = RecyclerView.HORIZONTAL;
         rvCategory.setLayoutManager(new LinearLayoutManager(getContext(), H, false));
         rvFeatured.setLayoutManager(new LinearLayoutManager(getContext(), H, false));
         rvNew.setLayoutManager(new LinearLayoutManager(getContext(), H, false));
@@ -579,7 +586,9 @@ public class HomeFragment extends Fragment {
         
         adapterCategory = new MonAnAdapter(listCategory);
         adapterFeatured = new MonAnAdapter(listFeatured); adapterFeatured.setSectionInfo("NOI_BAT", "");
-        adapterNew = new MonAnAdapter(listNew); adapterNew.setSectionInfo("MOI", "");
+        adapterNew = new MonAnAdapter(listNew); 
+        adapterNew.setSectionInfo("MOI", "");
+        adapterNew.setMaxItemsBeforeSeeAll(5);
         adapterHistory = new MonAnAdapter(listHistory); adapterHistory.setSectionInfo("LICH_SU", "");
         adapterWeeklyAttention = new MonAnAdapter(listWeeklyAttention); adapterWeeklyAttention.setSectionInfo("DUOC_DE_Y_TUAN", "");
         
@@ -601,7 +610,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadNewRecipes() {
-        newRecipesListener = db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(11).addSnapshotListener((snap, e) -> {
+        newRecipesListener = db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(6).addSnapshotListener((snap, e) -> {
             if (snap == null) return; listNew.clear();
             for (QueryDocumentSnapshot d : snap) listNew.add(parseMonAn(d));
             adapterNew.notifyDataSetChanged();
@@ -647,6 +656,26 @@ public class HomeFragment extends Fragment {
                         listWeeklyAttention.add(parseMonAn(d));
                     }
                     adapterWeeklyAttention.notifyDataSetChanged();
+                });
+    }
+
+    private void listenToNotifications() {
+        if (notificationListener != null) notificationListener.remove();
+
+        notificationListener = db.collection("thong_bao")
+                .whereEqualTo("id_nguoi_nhan", "all")
+                .whereEqualTo("da_doc", false)
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null || snapshots == null || !isAdded()) return;
+
+                    boolean hasUnread = !snapshots.isEmpty();
+                    if (hasUnread) {
+                        ivThongBao.setColorFilter(android.graphics.Color.YELLOW);
+                        viewNotificationDot.setVisibility(View.VISIBLE);
+                    } else {
+                        ivThongBao.setColorFilter(android.graphics.Color.WHITE);
+                        viewNotificationDot.setVisibility(View.GONE);
+                    }
                 });
     }
 

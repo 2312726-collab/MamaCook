@@ -35,20 +35,21 @@ public class GioHangActivity extends AppCompatActivity {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
 
-        // Làm trong suốt thanh trạng thái và chỉnh màu icon (Pin, Sóng...) cho dễ nhìn trên nền sáng
+        // Cố định thanh trạng thái màu trắng, chữ đen và không cho layout tràn lên
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
             android.view.Window window = getWindow();
             window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
             
-            // Nếu Android 6.0 trở lên, đổi icon thanh trạng thái sang màu tối (vì nền của mình đang là màu sáng)
+            // Bật chế độ icon tối
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                View decorView = window.getDecorView();
+                int flags = decorView.getSystemUiVisibility();
                 flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                decorView.setSystemUiVisibility(flags);
             }
-
-            window.getDecorView().setSystemUiVisibility(flags);
-            window.setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            
+            window.setStatusBarColor(android.graphics.Color.parseColor("#F2E7D5"));
         }
 
         setContentView(R.layout.activity_gio_hang);

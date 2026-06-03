@@ -37,6 +37,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     private List<MonAn> monAnList;
     private String sectionType = "";
     private String categoryId  = "";
+    private int maxItemsBeforeSeeAll = 10;
 
     // Lưu trữ thông tin bộ lọc để gửi sang SeeAllActivity
     private String filterDifficulty = "Tất cả";
@@ -64,10 +65,14 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         setSectionInfo(type, catId, "Tất cả", "Tất cả", "Tất cả");
     }
 
+    public void setMaxItemsBeforeSeeAll(int max) {
+        this.maxItemsBeforeSeeAll = max;
+    }
+
     @Override
     public int getItemViewType(int position) {
-        // Hiện nút "Xem tất cả" tại vị trí thứ 11 nếu danh sách > 10 món.
-        if (monAnList.size() > 10 && position == 10) {
+        // Hiện nút "Xem tất cả" tại vị trí thứ (max + 1) nếu danh sách vượt quá max món.
+        if (monAnList.size() > maxItemsBeforeSeeAll && position == maxItemsBeforeSeeAll) {
             return TYPE_SEE_ALL;
         }
         return TYPE_ITEM;
@@ -175,7 +180,7 @@ public class MonAnAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         if (monAnList == null) {
             return 0;
         }
-        return monAnList.size() > 10 ? 11 : monAnList.size();
+        return monAnList.size() > maxItemsBeforeSeeAll ? maxItemsBeforeSeeAll + 1 : monAnList.size();
     }
 
     public static class ItemViewHolder extends RecyclerView.ViewHolder {

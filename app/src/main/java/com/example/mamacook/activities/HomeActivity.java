@@ -33,17 +33,24 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Làm trong suốt thanh trạng thái
+        // Đổi thanh trạng thái thành màu trắng, chữ đen (Fix triệt để như Grab)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = getWindow();
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            // Xóa sạch các cờ gây tràn màn hình hoặc làm trong suốt
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS 
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+            
+            // Đặt màu #F2E7D5 cho thanh trạng thái
+            window.setStatusBarColor(Color.parseColor("#F2E7D5"));
+            
+            // Bật chế độ icon tối (chữ đen) cho nền sáng
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                View decorView = window.getDecorView();
+                int flags = decorView.getSystemUiVisibility();
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR; 
+                decorView.setSystemUiVisibility(flags);
             }
-            window.getDecorView().setSystemUiVisibility(flags);
-            window.setStatusBarColor(Color.TRANSPARENT);
         }
 
         setContentView(R.layout.activity_home);

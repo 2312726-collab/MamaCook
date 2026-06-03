@@ -4,6 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="#F2E7D5"
     tools:context=".activities.HomeActivity">
 
     <!-- Background đồng bộ để tránh màn hình đen khi chuyển fragment -->
@@ -29,7 +31,7 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
-        android:layout_height="85dp"
+        android:layout_height="70dp"
         android:background="#F2E7D5"
         app:itemIconSize="24dp"
         app:itemIconTint="@color/bottom_nav_color"

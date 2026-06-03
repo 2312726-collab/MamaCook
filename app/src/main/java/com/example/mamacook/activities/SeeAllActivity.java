@@ -131,7 +131,7 @@ public class SeeAllActivity extends AppCompatActivity {
 
     private void loadNewRecipes() {
         tvTitle.setText("Công thức mới");
-        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(30)
+        db.collection("mon_an").orderBy("ngay_tao", Query.Direction.DESCENDING).limit(10)
                 .addSnapshotListener(this, (querySnapshot, error) -> {
                     if (error != null || querySnapshot == null) return;
                     listMonAn.clear();

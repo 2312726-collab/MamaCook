@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,7 +49,7 @@ public class ScheduleFragment extends Fragment {
 
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
-    private TextView tvTotalDishes, tvShoppingProgress;
+    private TextView tvTotalDishes, tvShoppingProgress, tvWeekTitle;
     private ImageButton btnAiSuggest;
     private RecyclerView rvSang, rvTrua, rvToi, rvDays;
     private CookingPlanHorizontalAdapter adapterSang, adapterTrua, adapterToi;
@@ -58,6 +59,7 @@ public class ScheduleFragment extends Fragment {
     private List<CookingPlan> listToi = new ArrayList<>();
     private List<DayItem> dayList = new ArrayList<>();
     private String selectedDate;
+    private int currentWeekOffset = 0;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
     private ListenerRegistration planListener;
 
@@ -71,6 +73,7 @@ public class ScheduleFragment extends Fragment {
 
         tvTotalDishes = view.findViewById(R.id.tv_total_dishes);
         tvShoppingProgress = view.findViewById(R.id.tv_shopping_progress);
+        tvWeekTitle = view.findViewById(R.id.tv_week_title);
         btnAiSuggest = view.findViewById(R.id.btn_ai_suggest);
         rvDays = view.findViewById(R.id.rv_days_of_week);
 
@@ -146,24 +149,62 @@ public class ScheduleFragment extends Fragment {
         dayAdapter = new DayAdapter(dayList, day -> {
             selectedDate = day.date;
             for (DayItem item : dayList) {
-                item.isSelected = item.date.equals(selectedDate);
+                item.isSelected = !item.isNav && item.date.equals(selectedDate);
             }
             dayAdapter.notifyDataSetChanged();
             loadCookingPlans(); // Tải lại dữ liệu cho ngày mới
-        });
+        }, this);
         rvDays.setAdapter(dayAdapter);
+    }
+
+    private void changeWeek(int offset) {
+        currentWeekOffset += offset;
+        if (currentWeekOffset < 0) currentWeekOffset = 0;
+        if (currentWeekOffset > 1) currentWeekOffset = 1;
+        
+        // Cập nhật tiêu đề tuần
+        if (tvWeekTitle != null) {
+            tvWeekTitle.setText(currentWeekOffset == 0 ? "Tuần này" : "Tuần kế tiếp");
+        }
+
+        loadDaysOfWeek();
+        
+        if (!dayList.isEmpty()) {
+            // Khi chuyển tuần, chọn ngày đầu tiên hợp lệ (không phải nút điều hướng)
+            for (DayItem item : dayList) {
+                if (!item.isNav) {
+                    selectedDate = item.date;
+                    item.isSelected = true;
+                    break;
+                }
+            }
+        }
+        
+        dayAdapter.notifyDataSetChanged();
+        loadCookingPlans();
     }
 
     private void loadDaysOfWeek() {
         dayList.clear();
         Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek()); // Bắt đầu từ đầu tuần (thường là CN hoặc T2 tùy locale)
+        cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek()); 
         
         // Điều chỉnh để bắt đầu từ Thứ 2 nếu cần
         if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
             cal.add(Calendar.DAY_OF_YEAR, 1);
         } else if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
             cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        }
+
+        // Áp dụng offset tuần
+        cal.add(Calendar.WEEK_OF_YEAR, currentWeekOffset);
+
+        // Nếu ở tuần kế tiếp, thêm nút "Về tuần này" ở đầu
+        if (currentWeekOffset == 1) {
+            DayItem backNav = new DayItem();
+            backNav.isNav = true;
+            backNav.navType = -1;
+            dayList.add(backNav);
         }
 
         SimpleDateFormat dayNameSdf = new SimpleDateFormat("EEE", new Locale("vi", "VN"));
@@ -177,6 +218,14 @@ public class ScheduleFragment extends Fragment {
             item.isSelected = item.date.equals(selectedDate);
             dayList.add(item);
             cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+
+        // Nếu ở tuần hiện tại, thêm nút "Tuần sau" ở cuối
+        if (currentWeekOffset == 0) {
+            DayItem nextNav = new DayItem();
+            nextNav.isNav = true;
+            nextNav.navType = 1;
+            dayList.add(nextNav);
         }
     }
 
@@ -447,58 +496,103 @@ public class ScheduleFragment extends Fragment {
         String dayName;
         String dayNumber;
         boolean isSelected;
+        boolean isNav = false;
+        int navType = 0; // -1: Back, 1: Next
     }
 
     private interface OnDayClickListener {
         void onDayClick(DayItem day);
     }
 
-    private static class DayAdapter extends RecyclerView.Adapter<DayAdapter.ViewHolder> {
+    private static class DayAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private static final int TYPE_DAY = 1;
+        private static final int TYPE_NAV = 2;
+
         private List<DayItem> list;
         private OnDayClickListener listener;
+        private ScheduleFragment fragment; // Thêm reference để gọi changeWeek
 
-        public DayAdapter(List<DayItem> list, OnDayClickListener listener) {
+        public DayAdapter(List<DayItem> list, OnDayClickListener listener, ScheduleFragment fragment) {
             this.list = list;
             this.listener = listener;
+            this.fragment = fragment;
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            return list.get(position).isNav ? TYPE_NAV : TYPE_DAY;
         }
 
         @NonNull
         @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_NAV) {
+                View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_week_nav, parent, false);
+                return new NavViewHolder(v);
+            }
             View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_day_selector, parent, false);
-            return new ViewHolder(v);
+            return new DayViewHolder(v);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             DayItem item = list.get(position);
-            holder.tvName.setText(item.dayName);
-            holder.tvNumber.setText(item.dayNumber);
 
-            if (item.isSelected) {
-                holder.card.setCardBackgroundColor(Color.parseColor("#9B4F4F"));
-                holder.tvName.setTextColor(Color.WHITE);
-                holder.tvNumber.setTextColor(Color.WHITE);
-            } else {
-                holder.card.setCardBackgroundColor(Color.WHITE);
-                holder.tvName.setTextColor(Color.GRAY);
-                holder.tvNumber.setTextColor(Color.BLACK);
+            if (holder instanceof DayViewHolder) {
+                DayViewHolder dHolder = (DayViewHolder) holder;
+                dHolder.tvName.setText(item.dayName);
+                dHolder.tvNumber.setText(item.dayNumber);
+
+                if (item.isSelected) {
+                    dHolder.card.setCardBackgroundColor(Color.parseColor("#9B4F4F"));
+                    dHolder.tvName.setTextColor(Color.WHITE);
+                    dHolder.tvNumber.setTextColor(Color.WHITE);
+                } else {
+                    dHolder.card.setCardBackgroundColor(Color.WHITE);
+                    dHolder.tvName.setTextColor(Color.GRAY);
+                    dHolder.tvNumber.setTextColor(Color.BLACK);
+                }
+
+                dHolder.itemView.setOnClickListener(v -> listener.onDayClick(item));
+            } else if (holder instanceof NavViewHolder) {
+                NavViewHolder nHolder = (NavViewHolder) holder;
+                ImageView ivNav = nHolder.itemView.findViewById(R.id.iv_nav_icon);
+                
+                if (item.navType == 1) {
+                    if (ivNav != null) {
+                        ivNav.setImageResource(R.drawable.ic_arrow_right);
+                        ivNav.setRotation(0);
+                    }
+                } else {
+                    if (ivNav != null) {
+                        ivNav.setImageResource(R.drawable.ic_arrow_right);
+                        ivNav.setRotation(180);
+                    }
+                }
+
+                nHolder.itemView.setOnClickListener(v -> {
+                    if (fragment != null) fragment.changeWeek(item.navType);
+                });
             }
-
-            holder.itemView.setOnClickListener(v -> listener.onDayClick(item));
         }
 
         @Override
         public int getItemCount() { return list.size(); }
 
-        static class ViewHolder extends RecyclerView.ViewHolder {
+        static class DayViewHolder extends RecyclerView.ViewHolder {
             TextView tvName, tvNumber;
             androidx.cardview.widget.CardView card;
-            public ViewHolder(@NonNull View itemView) {
+            public DayViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvName = itemView.findViewById(R.id.tv_day_name);
                 tvNumber = itemView.findViewById(R.id.tv_day_number);
                 card = itemView.findViewById(R.id.card_day);
+            }
+        }
+
+        static class NavViewHolder extends RecyclerView.ViewHolder {
+            public NavViewHolder(@NonNull View itemView) {
+                super(itemView);
             }
         }
     }
